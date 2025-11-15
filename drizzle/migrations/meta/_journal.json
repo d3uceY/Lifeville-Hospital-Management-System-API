@@ -8,6 +8,13 @@
       "when": 1756222979852,
       "tag": "0000_keen_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763231000637,
+      "tag": "0001_cynical_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -181,6 +181,7 @@ export const labTests = pgTable("lab_tests", {
 	status: text().default('to_do').notNull(),
 	comments: text(),
 	results: text(),
+	images: text("images").array(),
 	created_at: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updated_at: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [

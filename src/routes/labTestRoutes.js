@@ -1,5 +1,6 @@
 import express from "express";
 import * as labTestControllers from "../controllers/labTestControllers.js";
+import { uploadOptionalMultiple } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.post("/lab-tests", labTestControllers.createLabTest);
 router.get("/lab-tests/:id", labTestControllers.getLabTestById);
 router.get("/lab-tests/patient/:patientId", labTestControllers.getLabTestsByPatientId);
 router.get("/lab-tests/laboratory/paginated", labTestControllers.getPaginatedLabTests);
-router.put("/lab-tests/:id", labTestControllers.updateLabTest);
+router.put("/lab-tests/:id", uploadOptionalMultiple('images', 5), labTestControllers.updateLabTest);
 router.delete("/lab-tests/:id/delete", labTestControllers.deleteLabTest);
 
 

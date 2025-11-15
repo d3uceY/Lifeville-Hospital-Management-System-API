@@ -2,39 +2,13 @@ import express from "express";
 import cors from "cors";
 import env from "dotenv";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
+import apiRoutes from "./routes/index.js";
 
 import cookieParser from 'cookie-parser';
 
 import { createServer } from "http";
 //SOCKETS
 import { Server as IOServer } from "socket.io";
-
-
-//ROUTES
-import patientRoutes from "./routes/patientRoutes.js";
-import vitalSignsRoutes from "./routes/vitalSignsRoutes.js";
-import doctorRoutes from "./routes/doctorRoutes.js";
-import appointmentRoutes from "./routes/appointmentRoutes.js";
-import deathRoutes from "./routes/deathRoutes.js";
-import birthRoutes from "./routes/birthRoutes.js";
-import symptomsRoutes from "./routes/symptomsRoutes.js";
-import inpatientAdmissionsRoutes from "./routes/inpatientAdmissionsRoutes.js";
-import bedRoutes from "./routes/bedRoutes.js";
-import userRoutes from './routes/userRoutes.js'
-import billRoutes from './routes/billRoutes.js'
-import labTestRoutes from './routes/labTestRoutes.js'
-import complaintsRoutes from './routes/complaintsRouter.js'
-import physicalExaminationsRoutes from './routes/physicalExaminationsRoutes.js'
-import conditionRoutes from './routes/conditionRoutes.js'
-import diagnosesRoutes from './routes/diagnosesRoutes.js'
-import prescriptionRoutes from './routes/prescriptionRoutes.js'
-import procedureRoutes from './routes/procedureRoutes.js'
-import doctorNoteRoutes from './routes/doctorNoteRoutes.js'
-import nurseNoteRoutes from './routes/nurseNoteRoutes.js'
-import summaryRoutes from './routes/summaryRoutes.js'
-import statsRoutes from './routes/statsRoutes.js'
-import patientVisitsRoutes from './routes/patientVisitsRoutes.js'
-import notificationRoutes from './routes/notificationRoutes.js'
 
 import { specs, swaggerUiOptions as swaggerUi } from "./swagger/swagger.js";
 
@@ -69,7 +43,7 @@ app.use(
   })
 );
 
-app.use(express.json()); // HTTP server from Express app
+app.use(express.json());
 
 const httpServer = createServer(app);
 
@@ -84,40 +58,8 @@ const io = new IOServer(httpServer, {
 // Stored io instance 
 app.set("socketio", io); // lets any controller do req.app.get("socketio")
 
-// routes
-app.use("/api", patientRoutes);
-app.use("/api", vitalSignsRoutes);
-app.use("/api", doctorRoutes);
-app.use("/api", appointmentRoutes);
-app.use("/api", deathRoutes);
-app.use("/api", birthRoutes);
-app.use("/api", symptomsRoutes);
-app.use("/api", inpatientAdmissionsRoutes);
-app.use("/api", bedRoutes);
-app.use("/api", userRoutes);
-app.use("/api", billRoutes);
-app.use("/api", labTestRoutes);
-app.use("/api", complaintsRoutes);
-app.use("/api", physicalExaminationsRoutes);
-app.use("/api", conditionRoutes);
-app.use("/api", diagnosesRoutes);
-app.use("/api", prescriptionRoutes);
-app.use("/api", procedureRoutes);
-app.use("/api", doctorNoteRoutes);
-app.use("/api", nurseNoteRoutes);
-app.use("/api", summaryRoutes);
-app.use("/api", statsRoutes);
-app.use("/api", patientVisitsRoutes);
-app.use("/api", notificationRoutes);
-
-
-app.get("/api/server-time", (req, res) => {
-  res.json({
-    utc: new Date().toISOString(),
-    local: new Date().toString()
-  });
-});
-
+//api routes
+app.use("/", apiRoutes);
 
 // Swagger UI
 app.use(
@@ -139,6 +81,6 @@ seedSuperAdmin().then(() => {
   // process.exit(1);
 });
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("<h1>API dey run</h1>");
 });

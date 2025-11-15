@@ -18,6 +18,8 @@ const router = express.Router();
  *   get:
  *     summary: Get all patients
  *     tags: [Patients]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: A JSON array of patient objects
@@ -27,6 +29,8 @@ const router = express.Router();
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Patient'
+ *       401:
+ *         description: Unauthorized - Authentication required
  */
 router.get("/patients", authenticate, patientController.getPatients);
 
@@ -74,6 +78,8 @@ router.get("/patients/:id", patientController.viewPatient);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Patient'
+ *       400:
+ *         description: Bad request - Invalid input data
  */
 router.post("/patients", patientController.createPatients);
 
@@ -103,6 +109,8 @@ router.post("/patients", patientController.createPatients);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Patient'
+ *       400:
+ *         description: Bad request - Invalid input data
  *       404:
  *         description: Patient not found
  */
@@ -122,8 +130,8 @@ router.put("/patients/:id", patientController.updatePatient);
  *         required: true
  *         description: Numeric ID of the patient to delete
  *     responses:
- *       204:
- *         description: Patient deleted successfully (no content)
+ *       200:
+ *         description: Patient deleted successfully
  *       404:
  *         description: Patient not found
  */

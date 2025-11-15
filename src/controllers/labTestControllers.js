@@ -36,7 +36,11 @@ export const deleteLabTest = async (req, res) => {
 
 export const updateLabTest = async (req, res) => {
     try {
-        const labTest = await labTestServices.updateLabTest(req.params.id, req.body.status, req.body.results);
+        // Get files from multer (if any were uploaded)
+        const files = req.files || (req.file ? [req.file] : []);
+        
+        // Pass form data and files to service
+        const labTest = await labTestServices.updateLabTest(req.params.id, req.body, files);
         if (!labTest) {
             return res.status(400).json({ error: "Failed to update lab test" });
         }
