@@ -85,7 +85,7 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     imageUrls = [];
     for (const file of files) {
       try {
-        const uploadedUrl = await uploadToCloudinary(file.buffer, 'lab-tests');
+        const uploadedUrl = await uploadToCloudinary(file.buffer, 'lab-test-docs');
         imageUrls.push(uploadedUrl);
       } catch (error) {
         console.error('Error uploading image:', error);
