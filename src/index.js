@@ -81,6 +81,6 @@ seedSuperAdmin().then(() => {
   // process.exit(1);
 });
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("<h1>API dey run</h1>");
 });
