@@ -1,6 +1,8 @@
 import { db } from "../../drizzle-db.js";
 import { labTests, labTestTypes, patients } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
+import { uploadToCloudinary } from "../utils/uploadImage.js";
+import deleteImage from "../utils/deleteImage.js";
 
 export const getLabTests = async () => {
   return db.select().from(labTests);
@@ -52,13 +54,60 @@ export const createLabTest = async (labTest) => {
 
 
 
-export const updateLabTest = async (id, formRequest) => {
-  return console.log(id, formRequest.body, formRequest.file);
+export const updateLabTest = async (id, formRequest, files = []) => {
+  // Get the existing lab test
+  const existingLabTest = await db
+    .select()
+    .from(labTests)
+    .where(eq(labTests.id, id))
+    .then(res => res[0]);
+
+  if (!existingLabTest) {
+    throw new Error('Lab test not found');
+  }
+
+  let imageUrls = existingLabTest.images || [];
+
+  // Handle image upload if user uploaded new images
+  if (files && files.length > 0) {
+    // If images already exist in db, delete them from cloudinary
+    if (imageUrls.length > 0) {
+      for (const imageUrl of imageUrls) {
+        try {
+          await deleteImage(imageUrl);
+        } catch (error) {
+          console.error('Error deleting old image:', error);
+        }
+      }
+    }
+
+    // Upload new images to cloudinary and store in array
+    imageUrls = [];
+    for (const file of files) {
+      try {
+        const uploadedUrl = await uploadToCloudinary(file.buffer, 'lab-tests');
+        imageUrls.push(uploadedUrl);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        throw new Error('Failed to upload image');
+      }
+    }
+  }
+
+  // Step 4: Update lab test in db
+  const updateData = {
+    status: formRequest.body.status,
+    results: formRequest.body.results,
+    images: imageUrls,
+    updated_at: new Date()
+  };
+
   const [updated] = await db.update(labTests)
-    .set({ status, results, updated_at: new Date() })
+    .set(updateData)
     .where(eq(labTests.id, id))
     .returning();
 
+  // Get patient details for response
   const patient = await db.select({
     first_name: patients.first_name,
     surname: patients.surname,

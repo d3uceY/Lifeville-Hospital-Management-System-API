@@ -93,3 +93,55 @@ export const uploadOptionalSingle = (fieldName) => {
         });
     };
 };
+
+/**
+ * Creates middleware for optional multiple file uploads
+ * Handles multipart/form-data with optional file fields (array)
+ * 
+ * @param {string} fieldName - The name of the file input field in the form
+ * @param {number} maxCount - Maximum number of files allowed (default: 10)
+ * @returns {Function} Express middleware function
+ * 
+ * @description
+ * - If files are provided: Available in req.files (array)
+ * - If no files provided: req.files will be [] (empty array)
+ * - All other form fields: Available in req.body
+ * - File validation: Uses the fileFilter defined above
+ * - Size limit: 5MB per file maximum
+ * 
+ * @example
+ * // In routes
+ * router.put('/lab-tests/:id', uploadOptionalMultiple('images', 5), updateLabTest);
+ * 
+ * // In controller
+ * export const updateLabTest = async (req, res) => {
+ *     console.log(req.body);   // All form fields
+ *     console.log(req.files);  // Array of file objects or []
+ *     
+ *     if (req.files && req.files.length > 0) {
+ *         // Handle multiple file uploads
+ *         for (const file of req.files) {
+ *             const imageUrl = await uploadToCloudinary(file.buffer);
+ *         }
+ *     }
+ *     // Continue processing...
+ * };
+ */
+export const uploadOptionalMultiple = (fieldName, maxCount = 10) => {
+    return (req, res, next) => {
+        upload.array(fieldName, maxCount)(req, res, (err) => {
+            // If error is about missing file, ignore it since it's optional
+            if (err instanceof multer.MulterError && err.code === 'LIMIT_UNEXPECTED_FILE') {
+                return next();
+            }
+            if (err) {
+                return next(err);
+            }
+            // Ensure req.files is always an array
+            if (!req.files) {
+                req.files = [];
+            }
+            next();
+        });
+    };
+};
