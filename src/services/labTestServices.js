@@ -52,7 +52,8 @@ export const createLabTest = async (labTest) => {
 
 
 
-export const updateLabTest = async (id, status, results) => {
+export const updateLabTest = async (id, formData) => {
+  return console.log(id, formData);
   const [updated] = await db.update(labTests)
     .set({ status, results, updated_at: new Date() })
     .where(eq(labTests.id, id))

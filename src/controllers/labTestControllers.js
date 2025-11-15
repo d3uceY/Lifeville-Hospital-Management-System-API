@@ -36,7 +36,7 @@ export const deleteLabTest = async (req, res) => {
 
 export const updateLabTest = async (req, res) => {
     try {
-        const labTest = await labTestServices.updateLabTest(req.params.id, req.body.status, req.body.results);
+        const labTest = await labTestServices.updateLabTest(req.params.id, req.body);
         if (!labTest) {
             return res.status(400).json({ error: "Failed to update lab test" });
         }
