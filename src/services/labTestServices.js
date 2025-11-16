@@ -125,6 +125,20 @@ export const updateLabTest = async (id, formRequest, files = []) => {
 
 
 export const deleteLabTest = async (id) => {
+  const existingLabTest = await db
+    .select()
+    .from(labTests)
+    .where(eq(labTests.id, id))
+    .then(res => res[0]);
+
+  for (const imageUrl of existingLabTest.images || []) {
+    try {
+      await deleteImage(imageUrl);
+    } catch (error) {
+      console.error('Error deleting old image:', error);
+    }
+  }
+
   const [deleted] = await db.delete(labTests)
     .where(eq(labTests.id, id))
     .returning();
