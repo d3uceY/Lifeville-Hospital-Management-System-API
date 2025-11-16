@@ -1,5 +1,5 @@
 import cloudinary from '../lib/cloudinary-config.js';
-import { extractPublicId } from './extractCloudinaryPublicId';
+import { extractPublicId } from './extractCloudinaryPublicId.js';
 
 /**
  * Deletes an image from Cloudinary storage
