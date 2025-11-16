@@ -52,8 +52,6 @@ export const createLabTest = async (labTest) => {
   };
 };
 
-
-
 export const updateLabTest = async (id, formRequest, files = []) => {
   // Get the existing lab test
 
@@ -200,6 +198,7 @@ export const getPaginatedLabTests = async (
       first_name: patients.first_name,
       surname: patients.surname,
       hospital_number: patients.hospital_number,
+      images: labTests.images
     })
     .from(labTests)
     .innerJoin(patients, eq(labTests.patient_id, patients.patient_id))
