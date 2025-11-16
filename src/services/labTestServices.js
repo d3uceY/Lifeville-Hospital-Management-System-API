@@ -52,8 +52,6 @@ export const createLabTest = async (labTest) => {
   };
 };
 
-
-
 export const updateLabTest = async (id, formRequest, files = []) => {
   // Get the existing lab test
 
@@ -127,6 +125,20 @@ export const updateLabTest = async (id, formRequest, files = []) => {
 
 
 export const deleteLabTest = async (id) => {
+  const existingLabTest = await db
+    .select()
+    .from(labTests)
+    .where(eq(labTests.id, id))
+    .then(res => res[0]);
+
+  for (const imageUrl of existingLabTest.images || []) {
+    try {
+      await deleteImage(imageUrl);
+    } catch (error) {
+      console.error('Error deleting old image:', error);
+    }
+  }
+
   const [deleted] = await db.delete(labTests)
     .where(eq(labTests.id, id))
     .returning();
@@ -200,6 +212,7 @@ export const getPaginatedLabTests = async (
       first_name: patients.first_name,
       surname: patients.surname,
       hospital_number: patients.hospital_number,
+      images: labTests.images
     })
     .from(labTests)
     .innerJoin(patients, eq(labTests.patient_id, patients.patient_id))
