@@ -56,6 +56,11 @@ export const createLabTest = async (labTest) => {
 
 export const updateLabTest = async (id, formRequest, files = []) => {
   // Get the existing lab test
+
+  if (!formRequest.status || !formRequest.results) {
+    throw new Error('Status and results are required');
+  }
+
   const existingLabTest = await db
     .select()
     .from(labTests)
@@ -94,10 +99,10 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     }
   }
 
-  // Step 4: Update lab test in db
+  // Update lab test in db
   const updateData = {
-    status: formRequest.body.status,
-    results: formRequest.body.results,
+    status: formRequest.status,
+    results: formRequest.results,
     images: imageUrls,
     updated_at: new Date()
   };
