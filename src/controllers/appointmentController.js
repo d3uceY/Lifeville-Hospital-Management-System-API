@@ -1,3 +1,4 @@
+import { priorityLevels } from "../constants/notification.js";
 import * as appointmentService from "../services/appointmentServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -48,7 +49,7 @@ export const createAppointment = async (req, res) => {
         first_name: newAppointment.first_name,
         surname: newAppointment.surname,
         patient_id: newAppointment.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "receptionist"];
 
@@ -116,7 +117,7 @@ export const updateAppointment = async (req, res) => {
         first_name: updatedAppointment.first_name,
         surname: updatedAppointment.surname,
         patient_id: updatedAppointment.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "receptionist"];
 
@@ -172,7 +173,7 @@ export const updateAppointmentStatusController = async (req, res) => {
         first_name: updatedAppointment.first_name,
         surname: updatedAppointment.surname,
         patient_id: updatedAppointment.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "receptionist"];
 

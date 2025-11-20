@@ -1,3 +1,4 @@
+import { priorityLevels } from "../constants/notification.js";
 import * as patientServices from "../services/patientServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -33,7 +34,7 @@ export const createPatients = async (req, res) => {
         first_name: newPatient.first_name,
         surname: newPatient.surname,
         patient_id: newPatient.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
 
       const roles = ["superadmin", "doctor", "lab", "receptionist", "nurse"];

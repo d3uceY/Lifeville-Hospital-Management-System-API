@@ -1,3 +1,4 @@
+import { priorityLevels } from "../constants/notification.js";
 import * as labTestServices from "../services/labTestServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -55,7 +56,7 @@ export const updateLabTest = async (req, res) => {
                 patient_id: labTest.patient_id,
                 status: labTest.status,
                 test_type: labTest.test_type,
-                priority: "normal",
+                priority: priorityLevels.normal,
             }
             const roles = ["superadmin", "doctor", "lab"];
 
@@ -113,7 +114,7 @@ export async function createLabTest(req, res) {
                 patient_id: labTest.patient_id,
                 status: labTest.status,
                 test_type: labTest.test_type,
-                priority: "normal",
+                priority: priorityLevels.normal,
             }
             const roles = ["superadmin", "doctor", "lab"];
 

@@ -1,5 +1,6 @@
 
 
+import { priorityLevels } from "../constants/notification.js";
 import * as inpatientServices from "../services/inpatientAdmissionsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -53,7 +54,7 @@ export const createInpatientAdmission = async (req, res) => {
         first_name: newAdmission.firstName,
         surname: newAdmission.surname,
         patient_id: newAdmission.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "receptionist", "nurse"];
 
@@ -161,7 +162,7 @@ export const dischargeInpatientAdmission = async (req, res) => {
         first_name: discharged.first_name,
         surname: discharged.surname,
         patient_id: discharged.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "lab", "receptionist", "nurse"];
 

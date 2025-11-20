@@ -1,3 +1,4 @@
+import { priorityLevels } from "../constants/notification.js";
 import * as vitalSignServices from '../services/vitalSignServices.js';
 import { addNotification } from "../services/notificationServices.js";
 
@@ -16,7 +17,7 @@ export const createVitalSign = async (req, res) => {
         surname: createdVitalSign.surname,
         patient_id: createdVitalSign.patient_id,
         recorded_by: createdVitalSign.recorded_by,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "nurse", "lab"];
 

@@ -1,3 +1,4 @@
+import { priorityLevels } from "../constants/notification.js";
 import * as complaintsServices from "../services/complaintsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -34,7 +35,7 @@ export async function createComplaint(req, res) {
                 patient_id: complaint.patient_id,
                 complaint: complaint.complaint,
                 recorded_by: complaint.recorded_by,
-                priority: "normal",
+                priority: priorityLevels.normal,
             }
             const roles = ["superadmin", "doctor", "nurse"];
 
