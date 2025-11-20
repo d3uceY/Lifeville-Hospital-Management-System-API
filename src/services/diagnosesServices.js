@@ -16,7 +16,17 @@ export async function createDiagnosis(diagnosisData) {
     })
     .returning();
 
-  return newDiagnosis;
+  // Get patient details for notification
+  const patient = await db.select({
+    first_name: patients.first_name,
+    surname: patients.surname,
+  }).from(patients).where(eq(patients.patient_id, patient_id));
+
+  return {
+    ...newDiagnosis,
+    first_name: patient[0].first_name,
+    surname: patient[0].surname,
+  };
 }
 
 // GET all diagnoses for a patient (joined with patient info)

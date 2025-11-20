@@ -56,7 +56,19 @@ export const createPhysicalExamination = async (examData) => {
         ]
     );
 
-    return rows[0];
+    const examination = rows[0];
+
+    // Get patient details for notification
+    const patientResult = await query(
+        `SELECT first_name, surname FROM patients WHERE patient_id = $1;`,
+        [patient_id]
+    );
+
+    return {
+        ...examination,
+        first_name: patientResult.rows[0].first_name,
+        surname: patientResult.rows[0].surname,
+    };
 };
 
 

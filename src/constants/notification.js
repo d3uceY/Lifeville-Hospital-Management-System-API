@@ -1,0 +1,23 @@
+const priorityLevels = {
+    low: 'Low',
+    normal: 'Normal',
+    high: 'High',
+    critical: 'Critical',
+};
+
+const NOTIFICATION_TYPES = {
+    APPOINTMENT: "APPOINTMENT",
+    LAB_TEST: "LAB_TEST",
+    PATIENT: "PATIENT",
+    INPATIENT: "INPATIENT",
+    INPATIENT_DISCHARGED: "INPATIENT_DISCHARGED",
+    PATIENT_VISIT: "PATIENT_VISIT",
+    VITAL_SIGNS: "VITAL_SIGNS",
+    COMPLAINT: "COMPLAINT",
+    DOCTOR_NOTE: "DOCTOR_NOTE",
+    NURSE_NOTE: "NURSE_NOTE",
+    PHYSICAL_EXAMINATION: "PHYSICAL_EXAMINATION",
+    DIAGNOSIS: "DIAGNOSIS"
+};
+
+export { priorityLevels, NOTIFICATION_TYPES };

@@ -1,5 +1,6 @@
 
 
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as inpatientServices from "../services/inpatientAdmissionsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -53,13 +54,13 @@ export const createInpatientAdmission = async (req, res) => {
         first_name: newAdmission.firstName,
         surname: newAdmission.surname,
         patient_id: newAdmission.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "receptionist", "nurse"];
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "INPATIENT",
+        type: NOTIFICATION_TYPES.INPATIENT,
         title: "Patient Admitted",
         message: `Patient ${newAdmission.firstName} ${newAdmission.surname} has been admitted`,
         data,
@@ -161,13 +162,13 @@ export const dischargeInpatientAdmission = async (req, res) => {
         first_name: discharged.first_name,
         surname: discharged.surname,
         patient_id: discharged.patient_id,
-        priority: "normal",
+        priority: priorityLevels.normal,
       }
       const roles = ["superadmin", "doctor", "lab", "receptionist", "nurse"];
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "INPATIENT_DISCHARGED",
+        type: NOTIFICATION_TYPES.INPATIENT_DISCHARGED,
         title: "Patient Discharged",
         message: `Patient ${discharged.first_name} ${discharged.surname} has been discharged`,
         data,

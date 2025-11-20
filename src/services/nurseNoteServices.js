@@ -35,7 +35,17 @@ export const createNurseNote = async (noteData) => {
     })
     .returning();
 
-  return newNote;
+  // Get patient details for notification
+  const patient = await db.select({
+    first_name: patients.first_name,
+    surname: patients.surname,
+  }).from(patients).where(eq(patients.patient_id, patientId));
+
+  return {
+    ...newNote,
+    first_name: patient[0].first_name,
+    surname: patient[0].surname,
+  };
 };
 
 // Update nurse note
