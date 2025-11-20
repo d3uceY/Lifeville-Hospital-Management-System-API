@@ -1,4 +1,6 @@
 import * as doctorNoteServices from "../services/doctorNoteServices.js";
+import { addNotification } from "../services/notificationServices.js";
+import { formatDate } from "../utils/formatDate.js";
 
 // Get doctor's notes by patient ID
 export const getDoctorNotesByPatientId = async (req, res) => {
@@ -24,6 +26,38 @@ export const createDoctorNote = async (req, res) => {
       patientId,
       note,
       recordedBy,
+    });
+
+    // Send notification
+    try {
+      const data = {
+        first_name: newNote.first_name,
+        surname: newNote.surname,
+        patient_id: newNote.patient_id,
+        note: newNote.note,
+        recorded_by: newNote.recorded_by,
+        priority: "normal",
+      }
+      const roles = ["superadmin", "doctor", "nurse"];
+
+      const notificationInfo = roles.map(role => ({
+        recipient_role: role,
+        type: "DOCTOR_NOTE",
+        title: "Doctor's Note Added",
+        message: `Doctor's note added for ${newNote.first_name} ${newNote.surname} by ${newNote.recorded_by}`,
+        data,
+      }));
+      await addNotification(notificationInfo);
+
+    } catch (error) {
+      console.error(error);
+    }
+
+    // emit notification
+    const io = req.app.get("socketio");
+    io.emit("notification", {
+      message: `Doctor's note added by ${newNote.recorded_by}`,
+      description: `Patient: ${newNote.first_name} ${newNote.surname}`
     });
 
     res.json({

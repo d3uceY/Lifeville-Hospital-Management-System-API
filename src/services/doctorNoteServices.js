@@ -26,7 +26,19 @@ export const createDoctorNote = async (noteData) => {
         [patientId, note, recordedBy]
     );
 
-    return result.rows[0];
+    const doctorNote = result.rows[0];
+
+    // Get patient details for notification
+    const patientResult = await query(
+        `SELECT first_name, surname FROM patients WHERE patient_id = $1;`,
+        [patientId]
+    );
+
+    return {
+        ...doctorNote,
+        first_name: patientResult.rows[0].first_name,
+        surname: patientResult.rows[0].surname,
+    };
 };
 
 export const updateDoctorNote = async (updatedNoteData, noteId) => {
