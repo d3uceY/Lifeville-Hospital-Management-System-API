@@ -35,7 +35,19 @@ export const createVitalSign = async (vitalSignData) => {
     ]
   );
 
-  return result.rows[0];
+  const vitalSign = result.rows[0];
+
+  // Get patient details for notification
+  const patientResult = await query(
+    `SELECT first_name, surname FROM patients WHERE patient_id = $1;`,
+    [patientId]
+  );
+
+  return {
+    ...vitalSign,
+    first_name: patientResult.rows[0].first_name,
+    surname: patientResult.rows[0].surname,
+  };
 };
 
 
