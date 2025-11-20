@@ -1,4 +1,4 @@
-import { priorityLevels } from "../constants/notification.js";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as patientServices from "../services/patientServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -41,7 +41,7 @@ export const createPatients = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "PATIENT",
+        type: NOTIFICATION_TYPES.PATIENT,
         title: "New Patient Added",
         message: `New patient ${newPatient.first_name} ${newPatient.surname} has been added`,
         data,
@@ -118,7 +118,7 @@ export const updatePatient = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "PATIENT",
+        type: NOTIFICATION_TYPES.PATIENT,
         title: "Patient Updated",
         message: `Patient ${updatedPatient.first_name} ${updatedPatient.surname} has been updated`,
         data,

@@ -1,4 +1,4 @@
-import { priorityLevels } from "../constants/notification.js";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as vitalSignServices from '../services/vitalSignServices.js';
 import { addNotification } from "../services/notificationServices.js";
 
@@ -23,7 +23,7 @@ export const createVitalSign = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "VITAL_SIGNS",
+        type: NOTIFICATION_TYPES.VITAL_SIGNS,
         title: "Vital Signs Recorded",
         message: `Vital signs recorded for ${createdVitalSign.first_name} ${createdVitalSign.surname} by ${createdVitalSign.recorded_by}`,
         data,

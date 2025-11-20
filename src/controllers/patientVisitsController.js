@@ -1,4 +1,4 @@
-import { priorityLevels } from "../constants/notification.js";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as patientVisitsServices from "../services/patientVisitsServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -24,7 +24,7 @@ export const createPatientVisit = async (req, res) => {
 
             const notificationInfo = roles.map(role => ({
                 recipient_role: role,
-                type: "PATIENT_VISIT",
+                type: NOTIFICATION_TYPES.PATIENT_VISIT,
                 title: "Patient Visit Created",
                 message: `Patient visit on ${formatDate(patientVisit.created_at)} has been created`,
                 data,

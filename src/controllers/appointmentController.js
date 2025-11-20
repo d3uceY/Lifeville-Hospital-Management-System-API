@@ -1,4 +1,4 @@
-import { priorityLevels } from "../constants/notification.js";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as appointmentService from "../services/appointmentServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -55,7 +55,7 @@ export const createAppointment = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "APPOINTMENT",
+        type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "New Appointment",
         message: `New appointment on ${formatDate(newAppointment.appointment_date)} has been created`,
         data,
@@ -123,7 +123,7 @@ export const updateAppointment = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "APPOINTMENT",
+        type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "Appointment Updated",
         message: `Appointment on ${formatDate(updatedAppointment.appointment_date)} has been updated (status: ${updatedAppointment.status})`,
         data,
@@ -179,7 +179,7 @@ export const updateAppointmentStatusController = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "APPOINTMENT",
+        type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "Appointment Updated",
         message: `Appointment on ${formatDate(updatedAppointment.appointment_date)} has been updated to ${updatedAppointment.status}`,
         data,

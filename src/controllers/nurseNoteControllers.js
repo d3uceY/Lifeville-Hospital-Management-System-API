@@ -1,4 +1,4 @@
-import { priorityLevels } from "../constants/notification.js";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as nurseNoteServices from "../services/nurseNoteServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -43,7 +43,7 @@ export const createNurseNote = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "NURSE_NOTE",
+        type: NOTIFICATION_TYPES.NURSE_NOTE,
         title: "Nurse's Note Added",
         message: `Nurse's note added for ${newNote.first_name} ${newNote.surname} by ${newNote.recorded_by}`,
         data,

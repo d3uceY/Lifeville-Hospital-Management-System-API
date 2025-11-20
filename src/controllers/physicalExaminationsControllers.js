@@ -1,4 +1,4 @@
-import { priorityLevels } from "../constants/notification.js";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as physicalExaminationsServices from "../services/physicalExaminationsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -21,7 +21,7 @@ export const createPhysicalExamination = async (req, res) => {
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
-        type: "PHYSICAL_EXAMINATION",
+        type: NOTIFICATION_TYPES.PHYSICAL_EXAMINATION,
         title: "Physical Examination Recorded",
         message: `Physical examination recorded for ${physicalExamination.first_name} ${physicalExamination.surname} by ${physicalExamination.recorded_by}`,
         data,
