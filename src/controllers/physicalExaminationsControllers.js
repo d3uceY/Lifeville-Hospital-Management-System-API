@@ -16,7 +16,7 @@ export const createPhysicalExamination = async (req, res) => {
         findings: physicalExamination.findings,
         priority: "normal",
       }
-      const roles = ["superadmin", "doctor", "nurse"];
+      const roles = ["superadmin", "doctor", "nurse", "lab"];
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
