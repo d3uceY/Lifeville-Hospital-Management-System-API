@@ -5,9 +5,9 @@ import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/births", authenticate, birthControllers.getBirthRecords);
-router.post("/births", birthControllers.createBirthRecord);
-router.put("/births/:id", birthControllers.updateBirthRecord);
-router.delete("/births/:id", birthControllers.deleteBirthRecord);
+router.get("/births",  authenticate, birthControllers.getBirthRecords);
+router.post("/births", authenticate, birthControllers.createBirthRecord);
+router.put("/births/:id", authenticate, birthControllers.updateBirthRecord);
+router.delete("/births/:id", authenticate, birthControllers.deleteBirthRecord);
 
 export default router;
