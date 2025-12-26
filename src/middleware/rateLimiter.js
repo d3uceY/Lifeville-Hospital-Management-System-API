@@ -3,6 +3,7 @@
  * Limits the number of requests from a single IP address within a time window
  */
 
+
 class RateLimiter {
   constructor(options = {}) {
     this.windowMs = options.windowMs || 15 * 60 * 1000; // 15 minutes default
@@ -25,6 +26,14 @@ class RateLimiter {
         }
       }
     }, 5 * 60 * 1000);
+  }
+
+  formatRetryAfter(seconds) {
+    if (seconds >= 60) {
+      const minutes = Math.ceil(seconds / 60);
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+    return `${seconds} second${seconds !== 1 ? 's' : ''}`;
   }
 
   middleware() {
@@ -60,7 +69,7 @@ class RateLimiter {
         res.setHeader('Retry-After', retryAfter);
         
         return res.status(this.statusCode).json({
-          error: this.message,
+          error: `${this.message}${retryAfter ? ` Try again in ${this.formatRetryAfter(retryAfter)}.` : ''}`,
           retryAfter: retryAfter
         });
       }
@@ -115,7 +124,7 @@ export const createRateLimiter = (options) => {
 export const strictRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // 50 requests per window
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP'
 });
 
 export const standardRateLimiter = createRateLimiter({
@@ -126,7 +135,7 @@ export const standardRateLimiter = createRateLimiter({
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 login attempts per window
-  message: 'Too many login attempts, please try again later.',
+  message: 'Too many login attempts',
   skipSuccessfulRequests: true // Only count failed attempts
 });
 
