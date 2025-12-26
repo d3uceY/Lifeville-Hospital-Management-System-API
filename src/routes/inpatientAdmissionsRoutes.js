@@ -14,12 +14,12 @@ const router = express.Router();
  */
 
 router.get("/inpatients", authenticate, inpatientControllers.getInpatientAdmissions);
-router.post("/inpatients", inpatientControllers.createInpatientAdmission);
-router.get("/inpatients/:id", inpatientControllers.viewInpatientAdmission);
-router.put("/inpatients/:id", inpatientControllers.updateInpatientAdmission);
-router.delete("/inpatients/:id", inpatientControllers.deleteInpatientAdmission);
-router.get("/inpatients/:patientId/admissions", inpatientControllers.getInpatientAdmissionsByPatientId);
-router.post("/inpatients/:id/discharge", inpatientControllers.dischargeInpatientAdmission);
-router.get("/inpatients/:id/discharge-summary", inpatientControllers.getDischargeSummaryByAdmissionId);
+router.post("/inpatients", authenticate, inpatientControllers.createInpatientAdmission);
+router.get("/inpatients/:id", authenticate, inpatientControllers.viewInpatientAdmission);
+router.put("/inpatients/:id", authenticate, inpatientControllers.updateInpatientAdmission);
+router.delete("/inpatients/:id", authenticate, inpatientControllers.deleteInpatientAdmission);
+router.get("/inpatients/:patientId/admissions", authenticate, inpatientControllers.getInpatientAdmissionsByPatientId);
+router.post("/inpatients/:id/discharge", authenticate, inpatientControllers.dischargeInpatientAdmission);
+router.get("/inpatients/:id/discharge-summary", authenticate, inpatientControllers.getDischargeSummaryByAdmissionId);
 
 export default router;
