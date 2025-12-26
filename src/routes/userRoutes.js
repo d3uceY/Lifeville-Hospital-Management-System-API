@@ -2,10 +2,11 @@ import express from "express";
 import * as userControllers from '../controllers/userControllers.js';
 import { authenticate } from "../middleware/auth.js";
 import { authorize } from "../middleware/authorize.js";
+import { authRateLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
-router.post("/auth/login", userControllers.loginController);
+router.post("/auth/login", authRateLimiter, userControllers.loginController);
 router.post("/auth/refresh", userControllers.refreshController);
 router.post("/auth/logout", authenticate, userControllers.logoutController);
 
