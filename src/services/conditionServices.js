@@ -23,7 +23,7 @@ export async function getConditions() {
 export async function deleteCondition(conditionId) {
   const [deleted] = await db
     .delete(conditions)
-    .where(eq(conditions.condition_id, conditionId))
+    .where(eq(conditions.conditionId, conditionId))
     .returning();
 
   return deleted;
@@ -36,7 +36,7 @@ export async function updateCondition(conditionId, conditionData) {
     .set({
       name: conditionData.name,
     })
-    .where(eq(conditions.condition_id, conditionId))
+    .where(eq(conditions.conditionId, conditionId))
     .returning();
 
   return updated;

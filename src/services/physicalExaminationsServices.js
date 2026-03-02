@@ -76,17 +76,17 @@ export const getPhysicalExaminationsByPatientId = async (patientId) => {
     const rows = await db
       .select({
         ...physicalExaminations, // expands into all physical_examinations columns
-        first_name: patients.first_name,
+        first_name: patients.firstName,
         surname: patients.surname,
-        hospital_number: patients.hospital_number,
+        hospitalNumber: patients.hospitalNumber,
       })
       .from(physicalExaminations)
       .innerJoin(
         patients,
-        eq(physicalExaminations.patient_id, patients.patient_id)
+        eq(physicalExaminations.patientId, patients.patientId)
       )
-      .where(eq(physicalExaminations.patient_id, patientId))
-      .orderBy(desc(physicalExaminations.created_at));
+      .where(eq(physicalExaminations.patientId, patientId))
+      .orderBy(desc(physicalExaminations.createdAt));
   
     return rows;
   };

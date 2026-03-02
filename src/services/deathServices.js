@@ -7,19 +7,19 @@ export async function getDeathRecords() {
   return await db
     .select({
       id: deathRecords.id,
-      patient_id: deathRecords.patient_id,
-      death_date: deathRecords.death_date,
+      patientId: deathRecords.patientId,
+      deathDate: deathRecords.deathDate,
       guardian: deathRecords.guardian,
       report: deathRecords.report,
-      patient_first_name: patients.first_name,
-      patient_surname: patients.surname,
-      hospital_number: patients.hospital_number,
-      next_of_kin: patients.next_of_kin,
+      patientFirstName: patients.firstName,
+      patientSurname: patients.surname,
+      hospitalNumber: patients.hospitalNumber,
+      nextOfKin: patients.nextOfKin,
       relationship: patients.relationship,
       sex: patients.sex,
     })
     .from(deathRecords)
-    .innerJoin(patients, eq(deathRecords.patient_id, patients.patient_id));
+    .innerJoin(patients, eq(deathRecords.patientId, patients.patientId));
 }
 
 // Create a new death record
@@ -30,7 +30,7 @@ export async function createDeathRecord(deathData) {
   const existing = await db
     .select()
     .from(deathRecords)
-    .where(eq(deathRecords.patient_id, patientId));
+    .where(eq(deathRecords.patientId, patientId));
 
   if (existing.length > 0) {
     const err = new Error("This death record already exists");
@@ -41,8 +41,8 @@ export async function createDeathRecord(deathData) {
   const [newRecord] = await db
     .insert(deathRecords)
     .values({
-      patient_id: patientId,
-      death_date: deathDate,
+      patientId: patientId,
+      deathDate: deathDate,
       guardian,
       report,
     })
@@ -68,8 +68,8 @@ export async function updateDeathRecord(id, deathData) {
   const [updated] = await db
     .update(deathRecords)
     .set({
-      patient_id: patientId,
-      death_date: deathDate,
+      patientId: patientId,
+      deathDate: deathDate,
       guardian,
       report,
     })

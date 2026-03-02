@@ -21,29 +21,29 @@ export const getPaginatedAppointments = async (
     let dataQuery = db
       .select({
         ...appointments, // selects all columns from appointments
-        patient_first_name: patients.first_name,
+        patient_first_name: patients.firstName,
         patient_surname: patients.surname,
-        hospital_number: patients.hospital_number,
-        patient_phone_number: patients.phone_number,
+        hospital_number: patients.hospitalNumber,
+        patient_phone_number: patients.phoneNumber,
         doctor_name: users.name,
       })
       .from(appointments)
-      .leftJoin(patients, eq(appointments.patient_id, patients.patient_id))
-      .leftJoin(users, eq(appointments.doctor_id, users.id));
+      .leftJoin(patients, eq(appointments.patientId, patients.patientId))
+      .leftJoin(users, eq(appointments.doctorId, users.id));
 
     // 2. Build the base query for counting the total items
     let countQuery = db
       .select({ count: sql`count(*)` })
       .from(appointments)
-      .leftJoin(patients, eq(appointments.patient_id, patients.patient_id))
-      .leftJoin(users, eq(appointments.doctor_id, users.id));
+      .leftJoin(patients, eq(appointments.patientId, patients.patientId))
+      .leftJoin(users, eq(appointments.doctorId, users.id));
 
     // 3. Apply the search filter to BOTH queries if a search term exists
     if (q) {
       const whereClause = or(
-        ilike(patients.first_name, term),
+        ilike(patients.firstName, term),
         ilike(patients.surname, term),
-        ilike(patients.hospital_number, term),
+        ilike(patients.hospitalNumber, term),
         ilike(users.name, term), // Search by doctor's name
         ilike(appointments.status, term) // Search by appointment status
       );
@@ -53,7 +53,7 @@ export const getPaginatedAppointments = async (
 
     // 4. Execute both queries
     const data = await dataQuery
-      .orderBy(desc(appointments.created_at))
+      .orderBy(desc(appointments.createdAt))
       .limit(pageSizeNumber)
       .offset(offset);
 
@@ -92,17 +92,17 @@ export const getAppointmentsByPatientId = async (patientId) => {
     const rows = await db
       .select({
         ...appointments, // selects all columns from appointments
-        patient_first_name: patients.first_name,
+        patient_first_name: patients.firstName,
         patient_surname: patients.surname,
-        hospital_number: patients.hospital_number,
-        patient_phone_number: patients.phone_number,
+        hospital_number: patients.hospitalNumber,
+        patient_phone_number: patients.phoneNumber,
         doctor_name: users.name,
       })
       .from(appointments)
-      .innerJoin(patients, eq(appointments.patient_id, patients.patient_id))
-      .innerJoin(users, eq(appointments.doctor_id, users.id))
-      .where(eq(appointments.patient_id, patientId))
-      .orderBy(desc(appointments.created_at));
+      .innerJoin(patients, eq(appointments.patientId, patients.patientId))
+      .innerJoin(users, eq(appointments.doctorId, users.id))
+      .where(eq(appointments.patientId, patientId))
+      .orderBy(desc(appointments.createdAt));
     return rows;
   } catch (error) {
     console.error(error);
@@ -117,7 +117,7 @@ export const viewAppointment = async (appointmentId) => {
   const rows = await db
     .select()
     .from(appointments)
-    .where(eq(appointments.appointment_id, appointmentId));
+    .where(eq(appointments.appointmentId, appointmentId));
   return rows[0];
 };
 
@@ -126,21 +126,21 @@ export const createAppointment = async (appointmentData) => {
   const { patientId, doctorId, appointmentDate, notes } = appointmentData;
 
   const rows = await db.insert(appointments).values({
-    patient_id: patientId,
-    doctor_id: doctorId,
-    appointment_date: appointmentDate,
+    patientId: patientId,
+    doctorId: doctorId,
+    appointmentDate: appointmentDate,
     notes,
     status: "scheduled",
   }).returning();
 
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, rows[0].patient_id));
+  }).from(patients).where(eq(patients.patientId, rows[0].patientId));
 
   const doctor = await db.select({
     name: users.name,
-  }).from(users).where(eq(users.id, rows[0].doctor_id));
+  }).from(users).where(eq(users.id, rows[0].doctorId));
 
   return {
     ...rows[0],
@@ -157,20 +157,20 @@ export const updateAppointment = async (appointment_id, appointmentData) => {
 
   const rows = await db.update(appointments)
     .set({
-      patient_id: patientId,
-      doctor_id: doctorId,
-      appointment_date: appointmentDate,
+      patientId: patientId,
+      doctorId: doctorId,
+      appointmentDate: appointmentDate,
       notes,
       status,
-      updated_at: new Date(),
+      updatedAt: new Date(),
     })
-    .where(eq(appointments.appointment_id, appointment_id))
+    .where(eq(appointments.appointmentId, appointment_id))
     .returning();
 
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, rows[0].patient_id));
+  }).from(patients).where(eq(patients.patientId, rows[0].patientId));
 
   return {
     ...rows[0],
@@ -183,15 +183,15 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
   const rows = await db.update(appointments)
     .set({
       status,
-      updated_at: new Date(),
+      updatedAt: new Date(),
     })
-    .where(eq(appointments.appointment_id, appointmentId))
+    .where(eq(appointments.appointmentId, appointmentId))
     .returning();
 
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, rows[0].patient_id));
+  }).from(patients).where(eq(patients.patientId, rows[0].patientId));
 
   return {
     ...rows[0],
@@ -204,7 +204,7 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
 // Delete an appointment
 export const deleteAppointment = async (appointmentId) => {
   const rows = await db.delete(appointments)
-    .where(eq(appointments.appointment_id, appointmentId))
+    .where(eq(appointments.appointmentId, appointmentId))
     .returning();
 
   return rows[0];

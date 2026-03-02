@@ -5,9 +5,9 @@ import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
 export const getPatientStatusDistribution = async () => {
     const patientData = []
 
-    const admittedCount = await db.select({ count: sql`count(*)` }).from(patients).where(eq(patients.patient_type, "INPATIENT"));
+    const admittedCount = await db.select({ count: sql`count(*)` }).from(patients).where(eq(patients.patientType, "INPATIENT"));
     patientData.push({ name: "Admitted", value: Number(admittedCount[0].count), fill:"var(--color-chart-1)" });
-    const dischargedCount = await db.select({ count: sql`count(*)` }).from(patients).where(eq(patients.patient_type, "OUTPATIENT"));
+    const dischargedCount = await db.select({ count: sql`count(*)` }).from(patients).where(eq(patients.patientType, "OUTPATIENT"));
     patientData.push({ name: "Discharged", value: Number(dischargedCount[0].count), fill:"var(--color-chart-2)" });
 
     return patientData
@@ -64,8 +64,8 @@ export const getAppointmensToday = async () => {
         .select({ count: sql`count(*)`.mapWith(Number) })
         .from(appointments)
         .where(
-            sql`${appointments.appointment_date} >= CURRENT_DATE
-        AND ${appointments.appointment_date} < CURRENT_DATE + INTERVAL '1 day'`
+            sql`${appointments.appointmentDate} >= CURRENT_DATE
+        AND ${appointments.appointmentDate} < CURRENT_DATE + INTERVAL '1 day'`
         );
 
     return todayCount;

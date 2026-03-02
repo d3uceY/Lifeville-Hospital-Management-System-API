@@ -12,13 +12,13 @@ export const getComplaintsByPatientId = async (patientId) => {
     return await db
         .select({
             ...complaints,
-            first_name: patients.first_name,
+            first_name: patients.firstName,
             surname: patients.surname,
         })
         .from(complaints)
-        .innerJoin(patients, eq(complaints.patient_id, patients.patient_id))
-        .where(eq(complaints.patient_id, patientId))
-        .orderBy(desc(complaints.created_at));
+        .innerJoin(patients, eq(complaints.patientId, patients.patientId))
+        .where(eq(complaints.patientId, patientId))
+        .orderBy(desc(complaints.createdAt));
 };
 
 // Create new complaint
@@ -26,18 +26,18 @@ export const createComplaint = async (complaint) => {
     const [newComplaint] = await db
         .insert(complaints)
         .values({
-            patient_id: complaint.patientId,
+            patientId: complaint.patientId,
             complaint: complaint.complaint,
-            recorded_by: complaint.recordedBy,
-            created_at: new Date(),
+            recordedBy: complaint.recordedBy,
+            createdAt: new Date(),
         })
         .returning();
 
     // Get patient details for notification
     const patient = await db.select({
-        first_name: patients.first_name,
+        first_name: patients.firstName,
         surname: patients.surname,
-    }).from(patients).where(eq(patients.patient_id, complaint.patientId));
+    }).from(patients).where(eq(patients.patientId, complaint.patientId));
 
     return {
         ...newComplaint,

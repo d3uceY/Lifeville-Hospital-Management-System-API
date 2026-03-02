@@ -5,13 +5,13 @@ import { eq, desc } from "drizzle-orm";
 
 export const getAdmissionSummaryByPatientId = async (patientId) => {
     const result = await db.select({
-        admission_date: inpatientAdmissions.created_at,
-        consultant_doctor_name: users.name,
-        discharge_condition: inpatientAdmissions.discharge_condition,
+        admissionDate: inpatientAdmissions.createdAt,
+        consultantDoctorName: users.name,
+        dischargeCondition: inpatientAdmissions.dischargeCondition,
     }).from(inpatientAdmissions)
-        .innerJoin(users, eq(inpatientAdmissions.consultant_doctor_id, users.id))
-        .where(eq(inpatientAdmissions.patient_id, patientId))
-        .orderBy(desc(inpatientAdmissions.created_at))
+        .innerJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
+        .where(eq(inpatientAdmissions.patientId, patientId))
+        .orderBy(desc(inpatientAdmissions.createdAt))
         .limit(8);
 
     return result;
@@ -20,25 +20,25 @@ export const getAdmissionSummaryByPatientId = async (patientId) => {
 export const getDiagnosisSummaryByPatientId = async (patientId) => {
 
     const result = await db.select({
-        diagnosis_date: diagnoses.diagnosis_date,
-        consultant_doctor_name: diagnoses.recorded_by,
+        diagnosisDate: diagnoses.diagnosisDate,
+        consultantDoctorName: diagnoses.recordedBy,
         condition: diagnoses.condition,
     }).from(diagnoses)
-        .where(eq(diagnoses.patient_id, patientId))
-        .orderBy(desc(diagnoses.diagnosis_date))
+        .where(eq(diagnoses.patientId, patientId))
+        .orderBy(desc(diagnoses.diagnosisDate))
         .limit(8);
     return result;
 }
 
 export const getLabTestSummaryByPatientId = async (patientId) => {
     const result = await db.select({
-        test_date: labTests.created_at,
-        consultant_doctor_name: labTests.prescribed_by,
-        test_type: labTests.test_type,
+        testDate: labTests.createdAt,
+        consultantDoctorName: labTests.prescribedBy,
+        testType: labTests.testType,
         status: labTests.status,
     }).from(labTests)
-        .where(eq(labTests.patient_id, patientId))
-        .orderBy(desc(labTests.created_at))
+        .where(eq(labTests.patientId, patientId))
+        .orderBy(desc(labTests.createdAt))
         .limit(8);
     return result;
 }
@@ -46,8 +46,8 @@ export const getLabTestSummaryByPatientId = async (patientId) => {
 export const getVitalSignSummaryByPatientId = async (patientId) => {
     const result = await db.select()
         .from(vitalSigns)
-        .where(eq(vitalSigns.patient_id, patientId))
-        .orderBy(desc(vitalSigns.created_at))
+        .where(eq(vitalSigns.patientId, patientId))
+        .orderBy(desc(vitalSigns.createdAt))
         .limit(3);
 
     return result;

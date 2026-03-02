@@ -12,14 +12,14 @@ export const getLabTestsByPatientId = async (patientId) => {
   return db
     .select({
       ...labTests,
-      first_name: patients.first_name,
+      first_name: patients.firstName,
       surname: patients.surname,
-      hospital_number: patients.hospital_number,
+      hospital_number: patients.hospitalNumber,
     })
     .from(labTests)
-    .innerJoin(patients, eq(patients.patient_id, labTests.patient_id))
-    .where(eq(labTests.patient_id, patientId))
-    .orderBy(desc(labTests.created_at));
+    .innerJoin(patients, eq(patients.patientId, labTests.patientId))
+    .where(eq(labTests.patientId, patientId))
+    .orderBy(desc(labTests.createdAt));
 };
 
 export const getLabTestById = async (id) => {
@@ -32,18 +32,18 @@ export const getLabTestById = async (id) => {
 
 export const createLabTest = async (labTest) => {
   const [newTest] = await db.insert(labTests).values({
-    patient_id: labTest.patientId,
-    test_type: labTest.testType,
+    patientId: labTest.patientId,
+    testType: labTest.testType,
     comments: labTest.comments,
-    prescribed_by: labTest.prescribedBy,
+    prescribedBy: labTest.prescribedBy,
     status: 'to do',
   }).returning();
 
   // get patient details for notification
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, labTest.patientId));
+  }).from(patients).where(eq(patients.patientId, labTest.patientId));
 
   return {
     ...newTest,
@@ -102,7 +102,7 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     status: formRequest.status,
     results: formRequest.results,
     images: imageUrls,
-    updated_at: new Date()
+    updatedAt: new Date()
   };
 
   const [updated] = await db.update(labTests)
@@ -112,9 +112,9 @@ export const updateLabTest = async (id, formRequest, files = []) => {
 
   // Get patient details for response
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, updated.patient_id));
+  }).from(patients).where(eq(patients.patientId, updated.patientId));
 
   return {
     ...updated,
@@ -165,16 +165,16 @@ export const getPaginatedLabTests = async (
   const filters = [];
 
   if (normalize(firstName)) {
-    filters.push(ilike(patients.first_name, `%${normalize(firstName)}%`));
+    filters.push(ilike(patients.firstName, `%${normalize(firstName)}%`));
   }
   if (normalize(surname)) {
     filters.push(ilike(patients.surname, `%${normalize(surname)}%`));
   }
   if (normalize(hospitalNumber)) {
-    filters.push(ilike(patients.hospital_number, `%${normalize(hospitalNumber)}%`));
+    filters.push(ilike(patients.hospitalNumber, `%${normalize(hospitalNumber)}%`));
   }
   if (normalize(testType)) {
-    filters.push(ilike(labTests.test_type, `%${normalize(testType)}%`));
+    filters.push(ilike(labTests.testType, `%${normalize(testType)}%`));
   }
   if (normalize(status)) {
     filters.push(ilike(labTests.status, `%${normalize(status)}%`));
@@ -183,7 +183,7 @@ export const getPaginatedLabTests = async (
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (!isNaN(start) && !isNaN(end)) {
-      filters.push(between(labTests.created_at, start, end));
+      filters.push(between(labTests.createdAt, start, end));
     }
   }
 
@@ -192,7 +192,7 @@ export const getPaginatedLabTests = async (
   const [{ total }] = await db
     .select({ total: count() })
     .from(labTests)
-    .innerJoin(patients, eq(labTests.patient_id, patients.patient_id))
+    .innerJoin(patients, eq(labTests.patientId, patients.patientId))
     .where(where ?? sql`true`);
 
   const totalItems = Number(total);
@@ -201,23 +201,23 @@ export const getPaginatedLabTests = async (
   const rows = await db
     .select({
       lab_test_id: labTests.id,
-      patient_id: labTests.patient_id,
-      test_type: labTests.test_type,
+      patient_id: labTests.patientId,
+      test_type: labTests.testType,
       status: labTests.status,
       results: labTests.results,
       comments: labTests.comments,
-      prescribed_by: labTests.prescribed_by,
-      created_at: labTests.created_at,
-      updated_at: labTests.updated_at,
-      first_name: patients.first_name,
+      prescribed_by: labTests.prescribedBy,
+      created_at: labTests.createdAt,
+      updated_at: labTests.updatedAt,
+      first_name: patients.firstName,
       surname: patients.surname,
-      hospital_number: patients.hospital_number,
+      hospital_number: patients.hospitalNumber,
       images: labTests.images
     })
     .from(labTests)
-    .innerJoin(patients, eq(labTests.patient_id, patients.patient_id))
+    .innerJoin(patients, eq(labTests.patientId, patients.patientId))
     .where(where ?? sql`true`)
-    .orderBy(desc(labTests.created_at))
+    .orderBy(desc(labTests.createdAt))
     .limit(pageSizeNumber)
     .offset(offset);
 

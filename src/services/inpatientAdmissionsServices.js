@@ -1,6 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
-import { inpatientAdmissions, patients, users, discharge_summary } from "../../drizzle/migrations/schema.js";
+import { inpatientAdmissions, patients, users, dischargeSummary } from "../../drizzle/migrations/schema.js";
 
 /**
  * Fetch all inpatient admission records (joined with patient data)
@@ -10,34 +10,34 @@ export const getInpatientAdmissions = async () => {
     .select({
       // inpatient_admissions fields
       id: inpatientAdmissions.id,
-      patient_id: inpatientAdmissions.patient_id,
-      symptom_types: inpatientAdmissions.symptom_types,
-      symptom_description: inpatientAdmissions.symptom_description,
+      patientId: inpatientAdmissions.patientId,
+      symptomTypes: inpatientAdmissions.symptomTypes,
+      symptomDescription: inpatientAdmissions.symptomDescription,
       note: inpatientAdmissions.note,
-      previous_medical_issue: inpatientAdmissions.previous_medical_issue,
-      admission_date: inpatientAdmissions.admission_date,
-      consultant_doctor_id: inpatientAdmissions.consultant_doctor_id,
-      bed_group: inpatientAdmissions.bed_group,
-      bed_number: inpatientAdmissions.bed_number,
-      created_at: inpatientAdmissions.created_at,
-      updated_at: inpatientAdmissions.updated_at,
-      discharge_condition: inpatientAdmissions.discharge_condition,
+      previousMedicalIssue: inpatientAdmissions.previousMedicalIssue,
+      admissionDate: inpatientAdmissions.admissionDate,
+      consultantDoctorId: inpatientAdmissions.consultantDoctorId,
+      bedGroup: inpatientAdmissions.bedGroup,
+      bedNumber: inpatientAdmissions.bedNumber,
+      createdAt: inpatientAdmissions.createdAt,
+      updatedAt: inpatientAdmissions.updatedAt,
+      dischargeCondition: inpatientAdmissions.dischargeCondition,
       // patients fields
-      hospital_number: patients.hospital_number,
-      first_name: patients.first_name,
-      other_names: patients.other_names,
+      hospitalNumber: patients.hospitalNumber,
+      firstName: patients.firstName,
+      otherNames: patients.otherNames,
       surname: patients.surname,
       sex: patients.sex,
-      date_of_birth: patients.date_of_birth,
-      phone_number: patients.phone_number,
+      dateOfBirth: patients.dateOfBirth,
+      phoneNumber: patients.phoneNumber,
       // users fields
       consultant_doctor_name: users.name,
     })
     .from(inpatientAdmissions)
-    .innerJoin(patients, eq(inpatientAdmissions.patient_id, patients.patient_id))
-    .leftJoin(users, eq(inpatientAdmissions.consultant_doctor_id, users.id))
-    .where(eq(inpatientAdmissions.discharge_condition, "on admission"))
-    .orderBy(desc(inpatientAdmissions.created_at));
+    .innerJoin(patients, eq(inpatientAdmissions.patientId, patients.patientId))
+    .leftJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
+    .where(eq(inpatientAdmissions.dischargeCondition, "on admission"))
+    .orderBy(desc(inpatientAdmissions.createdAt));
 };
 
 
@@ -47,35 +47,35 @@ export const getInpatientAdmissionsByPatientId = async (patientId) => {
     .select({
       // inpatient_admissions fields
       id: inpatientAdmissions.id,
-      patient_id: inpatientAdmissions.patient_id,
-      symptom_types: inpatientAdmissions.symptom_types,
-      symptom_description: inpatientAdmissions.symptom_description,
+      patientId: inpatientAdmissions.patientId,
+      symptomTypes: inpatientAdmissions.symptomTypes,
+      symptomDescription: inpatientAdmissions.symptomDescription,
       note: inpatientAdmissions.note,
-      end_date: inpatientAdmissions.end_date,
-      previous_medical_issue: inpatientAdmissions.previous_medical_issue,
-      admission_date: inpatientAdmissions.admission_date,
-      consultant_doctor_id: inpatientAdmissions.consultant_doctor_id,
-      bed_group: inpatientAdmissions.bed_group,
-      bed_number: inpatientAdmissions.bed_number,
-      created_at: inpatientAdmissions.created_at,
-      updated_at: inpatientAdmissions.updated_at,
-      discharge_condition: inpatientAdmissions.discharge_condition,
+      endDate: inpatientAdmissions.endDate,
+      previousMedicalIssue: inpatientAdmissions.previousMedicalIssue,
+      admissionDate: inpatientAdmissions.admissionDate,
+      consultantDoctorId: inpatientAdmissions.consultantDoctorId,
+      bedGroup: inpatientAdmissions.bedGroup,
+      bedNumber: inpatientAdmissions.bedNumber,
+      createdAt: inpatientAdmissions.createdAt,
+      updatedAt: inpatientAdmissions.updatedAt,
+      dischargeCondition: inpatientAdmissions.dischargeCondition,
       // patients fields
-      hospital_number: patients.hospital_number,
-      first_name: patients.first_name,
-      other_names: patients.other_names,
+      hospitalNumber: patients.hospitalNumber,
+      firstName: patients.firstName,
+      otherNames: patients.otherNames,
       surname: patients.surname,
       sex: patients.sex,
-      date_of_birth: patients.date_of_birth,
-      phone_number: patients.phone_number,
+      dateOfBirth: patients.dateOfBirth,
+      phoneNumber: patients.phoneNumber,
       // users fields
       consultant_doctor_name: users.name,
     })
     .from(inpatientAdmissions)
-    .innerJoin(patients, eq(inpatientAdmissions.patient_id, patients.patient_id))
-    .leftJoin(users, eq(inpatientAdmissions.consultant_doctor_id, users.id))
-    .where(eq(inpatientAdmissions.patient_id, patientId))
-    .orderBy(desc(inpatientAdmissions.created_at));
+    .innerJoin(patients, eq(inpatientAdmissions.patientId, patients.patientId))
+    .leftJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
+    .where(eq(inpatientAdmissions.patientId, patientId))
+    .orderBy(desc(inpatientAdmissions.createdAt));
 };
 
 
@@ -89,52 +89,50 @@ export const viewInpatientAdmission = async (admissionId) => {
     .select({
       // inpatient_admissions fields
       id: inpatientAdmissions.id,
-      patient_id: inpatientAdmissions.patient_id,
-      symptom_types: inpatientAdmissions.symptom_types,
-      symptom_description: inpatientAdmissions.symptom_description,
+      patientId: inpatientAdmissions.patientId,
+      symptomTypes: inpatientAdmissions.symptomTypes,
+      symptomDescription: inpatientAdmissions.symptomDescription,
       note: inpatientAdmissions.note,
-      previous_medical_issue: inpatientAdmissions.previous_medical_issue,
-      admission_date: inpatientAdmissions.admission_date,
-      consultant_doctor_id: inpatientAdmissions.consultant_doctor_id,
-      bed_group: inpatientAdmissions.bed_group,
-      bed_number: inpatientAdmissions.bed_number,
-      created_at: inpatientAdmissions.created_at,
-      updated_at: inpatientAdmissions.updated_at,
+      previousMedicalIssue: inpatientAdmissions.previousMedicalIssue,
+      admissionDate: inpatientAdmissions.admissionDate,
+      consultantDoctorId: inpatientAdmissions.consultantDoctorId,
+      bedGroup: inpatientAdmissions.bedGroup,
+      bedNumber: inpatientAdmissions.bedNumber,
+      createdAt: inpatientAdmissions.createdAt,
+      updatedAt: inpatientAdmissions.updatedAt,
       // patients fields
-      hospital_number: patients.hospital_number,
-      first_name: patients.first_name,
-      other_names: patients.other_names,
+      hospitalNumber: patients.hospitalNumber,
+      firstName: patients.firstName,
+      otherNames: patients.otherNames,
       surname: patients.surname,
       sex: patients.sex,
-      marital_status: patients.marital_status,
-      date_of_birth: patients.date_of_birth,
-      phone_number: patients.phone_number,
+      maritalStatus: patients.maritalStatus,
+      dateOfBirth: patients.dateOfBirth,
+      phoneNumber: patients.phoneNumber,
       address: patients.address,
       occupation: patients.occupation,
-      place_of_work_address: patients.place_of_work_address,
+      placeOfWorkAddress: patients.placeOfWorkAddress,
       religion: patients.religion,
       nationality: patients.nationality,
-      next_of_kin: patients.next_of_kin,
+      nextOfKin: patients.nextOfKin,
       relationship: patients.relationship,
-      next_of_kin_phone: patients.next_of_kin_phone,
-      next_of_kin_address: patients.next_of_kin_address,
-      past_surgical_history: patients.past_surgical_history,
-      family_history: patients.family_history,
-      social_history: patients.social_history,
-      drug_history: patients.drug_history,
+      nextOfKinPhone: patients.nextOfKinPhone,
+      nextOfKinAddress: patients.nextOfKinAddress,
+      pastSurgicalHistory: patients.pastSurgicalHistory,
+      familyHistory: patients.familyHistory,
+      socialHistory: patients.socialHistory,
+      drugHistory: patients.drugHistory,
       allergies: patients.allergies,
-      dietary_restrictions: patients.dietary_restrictions,
-      diet_allergies_to_drugs: patients.diet_allergies_to_drugs,
-      past_medical_history: patients.past_medical_history,
-      patient_type: patients.patient_type,
+      dietaryRestrictions: patients.dietaryRestrictions,
+      dietAllergiesToDrugs: patients.dietAllergiesToDrugs,
+      pastMedicalHistory: patients.pastMedicalHistory,
+      patientType: patients.patientType,
       // users fields
-      consultant_doctor_first_name: users.first_name,
-      consultant_doctor_last_name: users.last_name,
-      consultant_doctor_specialty: users.specialty,
+      consultantDoctorName: users.name,
     })
     .from(inpatientAdmissions)
-    .innerJoin(patients, eq(inpatientAdmissions.patient_id, patients.patient_id))
-    .leftJoin(users, eq(inpatientAdmissions.consultant_doctor_id, users.doctor_id))
+    .innerJoin(patients, eq(inpatientAdmissions.patientId, patients.patientId))
+    .leftJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
     .where(eq(inpatientAdmissions.id, admissionId));
 
   return admission || null;
@@ -162,8 +160,8 @@ export const createInpatientAdmission = async (admissionData) => {
       .from(inpatientAdmissions)
       .where(
         and(
-          eq(inpatientAdmissions.patient_id, patientId),
-          eq(inpatientAdmissions.discharge_condition, "on admission")
+          eq(inpatientAdmissions.patientId, patientId),
+          eq(inpatientAdmissions.dischargeCondition, "on admission")
         )
       );
 
@@ -176,21 +174,21 @@ export const createInpatientAdmission = async (admissionData) => {
   }
 
   const [updatedPatient] = await db.update(patients).set({
-    patient_type: "INPATIENT",
-  }).where(eq(patients.patient_id, patientId)).returning();
+    patientType: "INPATIENT",
+  }).where(eq(patients.patientId, patientId)).returning();
 
   const [newAdmission] = await db
     .insert(inpatientAdmissions)
     .values({
-      patient_id: patientId,
-      symptom_types: symptomTypes,
-      symptom_description: symptomsDescription,
+      patientId: patientId,
+      symptomTypes: symptomTypes,
+      symptomDescription: symptomsDescription,
       note,
-      previous_medical_issue: previousMedicalIssue,
-      admission_date: admissionDate,
-      consultant_doctor_id: consultantDoctorId,
-      bed_group: bedGroup,
-      bed_number: bedNumber,
+      previousMedicalIssue: previousMedicalIssue,
+      admissionDate: admissionDate,
+      consultantDoctorId: consultantDoctorId,
+      bedGroup: bedGroup,
+      bedNumber: bedNumber,
     })
     .returning();
 
@@ -204,7 +202,7 @@ export const createInpatientAdmission = async (admissionData) => {
   return {
     ...newAdmission,
     doctorName: doctorName.doctor_name,
-    firstName: updatedPatient.first_name,
+    firstName: updatedPatient.firstName,
     surname: updatedPatient.surname,
   };
 };
@@ -238,15 +236,15 @@ export const updateInpatientAdmission = async (admissionId, admissionData) => {
   } = admissionData;
 
   const updateData = {
-    ...(patientId !== undefined && { patient_id: patientId }),
-    ...(symptomTypes !== undefined && { symptom_types: symptomTypes }),
-    ...(symptomsDescription !== undefined && { symptom_description: symptomsDescription }),
+    ...(patientId !== undefined && { patientId: patientId }),
+    ...(symptomTypes !== undefined && { symptomTypes: symptomTypes }),
+    ...(symptomsDescription !== undefined && { symptomDescription: symptomsDescription }),
     ...(note !== undefined && { note }),
-    ...(previousMedicalIssue !== undefined && { previous_medical_issue: previousMedicalIssue }),
-    ...(admissionDate !== undefined && { admission_date: admissionDate }),
-    ...(consultantDoctorId !== undefined && { consultant_doctor_id: consultantDoctorId }),
-    ...(bedGroup !== undefined && { bed_group: bedGroup }),
-    ...(bedNumber !== undefined && { bed_number: bedNumber }),
+    ...(previousMedicalIssue !== undefined && { previousMedicalIssue: previousMedicalIssue }),
+    ...(admissionDate !== undefined && { admissionDate: admissionDate }),
+    ...(consultantDoctorId !== undefined && { consultantDoctorId: consultantDoctorId }),
+    ...(bedGroup !== undefined && { bedGroup: bedGroup }),
+    ...(bedNumber !== undefined && { bedNumber: bedNumber }),
   };
 
   const [updatedAdmission] = await db
@@ -267,14 +265,14 @@ export const deleteInpatientAdmission = async (admissionId) => {
     .where(eq(inpatientAdmissions.id, admissionId))
     .returning();
 
-  if (deletedAdmission.discharge_condition == "on admission") {
+  if (deletedAdmission.dischargeCondition == "on admission") {
     await db.update(patients).set({
-      patient_type: "OUTPATIENT",
-    }).where(eq(patients.patient_id, deletedAdmission.patient_id));
+      patientType: "OUTPATIENT",
+    }).where(eq(patients.patientId, deletedAdmission.patientId));
   }
 
-  await db.delete(discharge_summary)
-    .where(eq(discharge_summary.admission_id, admissionId));
+  await db.delete(dischargeSummary)
+    .where(eq(dischargeSummary.admissionId, admissionId));
 
 
   return !!deletedAdmission;
@@ -311,25 +309,25 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
 
 
   // check if patient in admission has already been discharged
-  const [dischargeExist] = await db.select().from(discharge_summary).where(eq(discharge_summary.admission_id, admission_id))
+  const [dischargeExist] = await db.select().from(dischargeSummary).where(eq(dischargeSummary.admissionId, admission_id))
   if (dischargeExist) {
     const err = new Error("Patient has already been discharged")
     throw err;
   }
 
   // create new discharge summary
-  const [newDischarge] = await db.insert(discharge_summary).values({
-    patient_id,
-    admission_id,
-    recorded_by,
-    final_diagnosis,
-    diagnosis_details,
-    treatment_given,
+  const [newDischarge] = await db.insert(dischargeSummary).values({
+    patientId: patient_id,
+    admissionId: admission_id,
+    recordedBy: recorded_by,
+    finalDiagnosis: final_diagnosis,
+    diagnosisDetails: diagnosis_details,
+    treatmentGiven: treatment_given,
     outcome,
     condition,
-    discharge_date_time: new Date(discharge_date_time),
-    follow_up,
-    doctor_id
+    dischargeDateTime: new Date(discharge_date_time),
+    followUp: follow_up,
+    doctorId: doctor_id
   }).returning();
 
   if (!newDischarge) {
@@ -342,8 +340,8 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
   // update inpatient admission
   try {
     await db.update(inpatientAdmissions).set({
-      discharge_condition: condition,
-      end_date: new Date(discharge_date_time)
+      dischargeCondition: condition,
+      endDate: new Date(discharge_date_time)
     }).where(eq(inpatientAdmissions.id, admission_id));
   } catch (err) {
     console.error("Error updating inpatient admission:", err);
@@ -354,8 +352,8 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
   try {
     const [dischargedPatient] = await db.update(patients).set({
 
-      patient_type: "OUTPATIENT",
-    }).where(eq(patients.patient_id, patient_id)).returning();
+      patientType: "OUTPATIENT",
+    }).where(eq(patients.patientId, patient_id)).returning();
     return dischargedPatient;
 
   } catch (err) {
@@ -368,13 +366,13 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
 export const getDischargeSummaryByAdmissionId = async (admissionId) => {
   const result = await db.select(
     {
-      ...discharge_summary,
+      ...dischargeSummary,
       doctor_name: users.name
     }
   )
-    .from(discharge_summary)
-    .innerJoin(users, eq(discharge_summary.doctor_id, users.id))
-    .where(eq(discharge_summary.admission_id, admissionId));
+    .from(dischargeSummary)
+    .innerJoin(users, eq(dischargeSummary.doctorId, users.id))
+    .where(eq(dischargeSummary.admissionId, admissionId));
 
   if (result.length > 0) {
     return result;

@@ -8,17 +8,17 @@ export const getNurseNotesByPatientId = async (patientId) => {
     .select({
       id: nursesNotes.id,
       note: nursesNotes.note,
-      recorded_by: nursesNotes.recorded_by,
-      updated_by: nursesNotes.updated_by,
-      created_at: nursesNotes.created_at,
-      updated_at: nursesNotes.updated_at,
+      recordedBy: nursesNotes.recordedBy,
+      updatedBy: nursesNotes.updatedBy,
+      createdAt: nursesNotes.createdAt,
+      updatedAt: nursesNotes.updatedAt,
       surname: patients.surname,
-      first_name: patients.first_name,
+      first_name: patients.firstName,
     })
     .from(nursesNotes)
-    .innerJoin(patients, eq(nursesNotes.patient_id, patients.patient_id))
-    .where(eq(nursesNotes.patient_id, patientId))
-    .orderBy(desc(nursesNotes.created_at));
+    .innerJoin(patients, eq(nursesNotes.patientId, patients.patientId))
+    .where(eq(nursesNotes.patientId, patientId))
+    .orderBy(desc(nursesNotes.createdAt));
 };
 
 // Create nurse note
@@ -28,18 +28,18 @@ export const createNurseNote = async (noteData) => {
   const [newNote] = await db
     .insert(nursesNotes)
     .values({
-      patient_id: patientId,
+      patientId: patientId,
       note,
-      recorded_by: recordedBy,
-      created_at: new Date(), // if your schema uses default now(), you can omit
+      recordedBy: recordedBy,
+      createdAt: new Date(),
     })
     .returning();
 
   // Get patient details for notification
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, patientId));
+  }).from(patients).where(eq(patients.patientId, patientId));
 
   return {
     ...newNote,
@@ -54,8 +54,8 @@ export const updateNurseNote = async (noteId, updatedBy, newNote) => {
     .update(nursesNotes)
     .set({
       note: newNote,
-      updated_by: updatedBy,
-      updated_at: new Date(),
+      updatedBy: updatedBy,
+      updatedAt: new Date(),
     })
     .where(eq(nursesNotes.id, noteId))
     .returning();
