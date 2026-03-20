@@ -2,7 +2,13 @@ import * as birthServices from "../services/birthServices.js";
 
 export const getBirthRecords = async (req, res) => {
   try {
-    const birthRecords = await birthServices.getBirthRecords();
+    const { page = 1, pageSize = 10, search = "", gender = "" } = req.query;
+    const birthRecords = await birthServices.getBirthRecords({
+      page: Number(page),
+      pageSize: Number(pageSize),
+      search,
+      gender,
+    });
     res.status(200).json(birthRecords);
   } catch (err) {
     res.status(500).json({ message: err.message });
