@@ -99,7 +99,7 @@ export const getPrescriptions = async (patient_id) => {
   
   
 export const deletePrescription = async (prescriptionId) => {
-    const deletedPrescription = db.delete(prescriptions).where(eq(prescriptions.prescription_id, prescriptionId)).returning();
+    const deletedPrescription = db.delete(prescriptions).where(eq(prescriptions.prescriptionId, prescriptionId)).returning();
     return deletedPrescription;
 };
 

@@ -1,8 +1,15 @@
 // import query connection
 import { query } from "../../drizzle-db.js";
 
+// ─── In-memory cache ────────────────────────────────────────────────────────
+let doctorsCache = null;
+export const invalidateDoctorsCache = () => { doctorsCache = null; };
+// ────────────────────────────────────────────────────────────────────────────
+
 export const getDoctors = async () => {
+  if (doctorsCache) return doctorsCache;
   const { rows } = await query("SELECT id, role, name, email FROM users where role = 'doctor'");
+  doctorsCache = rows;
   return rows;
 };
 
@@ -17,6 +24,7 @@ export const deleteDoctor = async (doctorId) => {
   const { rowCount } = await query("DELETE FROM doctors WHERE doctor_id = $1", [
     doctorId,
   ]);
+  invalidateDoctorsCache();
   return rowCount > 0;
 };
 
@@ -31,6 +39,7 @@ export const createDoctor = async (doctorData) => {
     [firstName, lastName, specialty]
   );
 
+  invalidateDoctorsCache();
   return rows[0];
 };
 
@@ -45,5 +54,6 @@ export const updateDoctor = async (doctorData) => {
     [firstName, lastName, specialty, doctorId]
   );
 
+  invalidateDoctorsCache();
   return rows[0];
 };

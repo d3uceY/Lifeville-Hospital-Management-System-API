@@ -6,17 +6,17 @@ export const createPatientVisit = async (patientVisitData) => {
     const { patientId, doctorId, recordedBy, purpose } = patientVisitData;
 
     const [rows] = await db.insert(patientVisits).values({
-        patient_id: patientId,
-        doctor_id: doctorId,
-        recorded_by: recordedBy,
+        patientId: patientId,
+        doctorId: doctorId,
+        recordedBy: recordedBy,
         purpose,
-        created_at: new Date(),
+        createdAt: new Date(),
     }).returning();
 
     const patientData = await db.select({
-        first_name: patients.first_name,
+        first_name: patients.firstName,
         surname: patients.surname,
-    }).from(patients).where(eq(patients.patient_id, patientId));
+    }).from(patients).where(eq(patients.patientId, patientId));
 
     const [doctorData] = await db.select({
         name: users.name,
@@ -46,16 +46,16 @@ export const getPaginatedPatientVisits = async (
 
 
     if (normalize(firstName)) {
-        filters.push(ilike(patients.first_name, `%${normalize(firstName)}%`));
+        filters.push(ilike(patients.firstName, `%${normalize(firstName)}%`));
     }
     if (normalize(surname)) {
         filters.push(ilike(patients.surname, `%${normalize(surname)}%`));
     }
     if (normalize(phoneNumber)) {
-        filters.push(ilike(patients.phone_number, `%${normalize(phoneNumber)}%`));
+        filters.push(ilike(patients.phoneNumber, `%${normalize(phoneNumber)}%`));
     }
     if (normalize(hospitalNumber)) {
-        filters.push(ilike(patients.hospital_number, `%${normalize(hospitalNumber)}%`));
+        filters.push(ilike(patients.hospitalNumber, `%${normalize(hospitalNumber)}%`));
     }
 
     if (startDate && endDate) {
@@ -63,7 +63,7 @@ export const getPaginatedPatientVisits = async (
         const end = new Date(endDate);
 
         if (!isNaN(start) && !isNaN(end)) {
-            filters.push(between(patientVisits.created_at, start, end));
+            filters.push(between(patientVisits.createdAt, start, end));
         }
     }
 
@@ -72,7 +72,7 @@ export const getPaginatedPatientVisits = async (
     const [{ total }] = await db
         .select({ total: count() })
         .from(patientVisits)
-        .leftJoin(patients, eq(patientVisits.patient_id, patients.patient_id))
+        .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
         .where(where ?? sql`true`);
 
     const totalItems = Number(total);
@@ -81,21 +81,21 @@ export const getPaginatedPatientVisits = async (
     const rows = await db
         .select({
             visitId: patientVisits.id,
-            doctorId: patientVisits.doctor_id,
-            patientId: patientVisits.patient_id,
-            recordedBy: patientVisits.recorded_by,
+            doctorId: patientVisits.doctorId,
+            patientId: patientVisits.patientId,
+            recordedBy: patientVisits.recordedBy,
             purpose: patientVisits.purpose,
-            createdAt: patientVisits.created_at,
-            firstName: patients.first_name,
+            createdAt: patientVisits.createdAt,
+            firstName: patients.firstName,
             surname: patients.surname,
-            otherNames: patients.other_names,
-            phoneNumber: patients.phone_number,
-            hospitalNumber: patients.hospital_number,
+            otherNames: patients.otherNames,
+            phoneNumber: patients.phoneNumber,
+            hospitalNumber: patients.hospitalNumber,
         })
         .from(patientVisits)
-        .leftJoin(patients, eq(patientVisits.patient_id, patients.patient_id))
+        .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
         .where(where ?? sql`true`)
-        .orderBy(desc(patientVisits.created_at))
+        .orderBy(desc(patientVisits.createdAt))
         .limit(pageSizeNumber)
         .offset(offset);
 
@@ -129,16 +129,16 @@ export const getPatientVisitsByPatientId = async (patientId) => {
     const rows = await db
         .select({
             ...patientVisits,
-            patient_first_name: patients.first_name,
+            patient_first_name: patients.firstName,
             patient_surname: patients.surname,
-            hospital_number: patients.hospital_number,
-            patient_phone_number: patients.phone_number,
+            hospital_number: patients.hospitalNumber,
+            patient_phone_number: patients.phoneNumber,
             doctor_name: users.name,
         })
         .from(patientVisits)
-        .innerJoin(patients, eq(patientVisits.patient_id, patients.patient_id))
-        .leftJoin(users, eq(patientVisits.doctor_id, users.id))
-        .where(eq(patientVisits.patient_id, patientId))
-        .orderBy(desc(patientVisits.created_at));
+        .innerJoin(patients, eq(patientVisits.patientId, patients.patientId))
+        .leftJoin(users, eq(patientVisits.doctorId, users.id))
+        .where(eq(patientVisits.patientId, patientId))
+        .orderBy(desc(patientVisits.createdAt));
     return rows;
 };

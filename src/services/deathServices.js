@@ -1,25 +1,63 @@
 import { db } from "../../drizzle-db.js";
 import { deathRecords, patients } from "../../drizzle/migrations/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
 
-// Get all death records with patient info
-export async function getDeathRecords() {
-  return await db
-    .select({
-      id: deathRecords.id,
-      patient_id: deathRecords.patient_id,
-      death_date: deathRecords.death_date,
-      guardian: deathRecords.guardian,
-      report: deathRecords.report,
-      patient_first_name: patients.first_name,
-      patient_surname: patients.surname,
-      hospital_number: patients.hospital_number,
-      next_of_kin: patients.next_of_kin,
-      relationship: patients.relationship,
-      sex: patients.sex,
-    })
-    .from(deathRecords)
-    .innerJoin(patients, eq(deathRecords.patient_id, patients.patient_id));
+const DEATH_SELECT_FIELDS = {
+  id: deathRecords.id,
+  patientId: deathRecords.patientId,
+  deathDate: deathRecords.deathDate,
+  guardian: deathRecords.guardian,
+  report: deathRecords.report,
+  patientFirstName: patients.firstName,
+  patientSurname: patients.surname,
+  hospitalNumber: patients.hospitalNumber,
+  nextOfKin: patients.nextOfKin,
+  relationship: patients.relationship,
+  sex: patients.sex,
+};
+
+// Get paginated death records with patient info
+export async function getDeathRecords({ page = 1, pageSize = 10, search = "", sex = "" } = {}) {
+  const offset = (page - 1) * pageSize;
+  const conditions = [];
+
+  if (search) {
+    conditions.push(
+      or(
+        ilike(patients.firstName, `%${search}%`),
+        ilike(patients.surname, `%${search}%`),
+        ilike(sql`CAST(${patients.hospitalNumber} AS TEXT)`, `%${search}%`)
+      )
+    );
+  }
+  if (sex) conditions.push(eq(patients.sex, sex));
+
+  const where = conditions.length ? and(...conditions) : undefined;
+
+  const [data, countResult] = await Promise.all([
+    db
+      .select(DEATH_SELECT_FIELDS)
+      .from(deathRecords)
+      .innerJoin(patients, eq(deathRecords.patientId, patients.patientId))
+      .where(where)
+      .orderBy(desc(deathRecords.deathDate))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(deathRecords)
+      .innerJoin(patients, eq(deathRecords.patientId, patients.patientId))
+      .where(where),
+  ]);
+
+  const totalItems = Number(countResult[0].count);
+  return {
+    data,
+    totalItems,
+    totalPages: Math.ceil(totalItems / pageSize),
+    page: Number(page),
+    pageSize: Number(pageSize),
+  };
 }
 
 // Create a new death record
@@ -30,7 +68,7 @@ export async function createDeathRecord(deathData) {
   const existing = await db
     .select()
     .from(deathRecords)
-    .where(eq(deathRecords.patient_id, patientId));
+    .where(eq(deathRecords.patientId, patientId));
 
   if (existing.length > 0) {
     const err = new Error("This death record already exists");
@@ -41,8 +79,8 @@ export async function createDeathRecord(deathData) {
   const [newRecord] = await db
     .insert(deathRecords)
     .values({
-      patient_id: patientId,
-      death_date: deathDate,
+      patientId: patientId,
+      deathDate: deathDate,
       guardian,
       report,
     })
@@ -68,8 +106,8 @@ export async function updateDeathRecord(id, deathData) {
   const [updated] = await db
     .update(deathRecords)
     .set({
-      patient_id: patientId,
-      death_date: deathDate,
+      patientId: patientId,
+      deathDate: deathDate,
       guardian,
       report,
     })

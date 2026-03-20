@@ -9,8 +9,8 @@ export async function createDiagnosis(diagnosisData) {
   const [newDiagnosis] = await db
     .insert(diagnoses)
     .values({
-      patient_id,
-      recorded_by,
+      patientId: patient_id,
+      recordedBy: recorded_by,
       condition,
       notes,
     })
@@ -18,9 +18,9 @@ export async function createDiagnosis(diagnosisData) {
 
   // Get patient details for notification
   const patient = await db.select({
-    first_name: patients.first_name,
+    first_name: patients.firstName,
     surname: patients.surname,
-  }).from(patients).where(eq(patients.patient_id, patient_id));
+  }).from(patients).where(eq(patients.patientId, patient_id));
 
   return {
     ...newDiagnosis,
@@ -33,43 +33,43 @@ export async function createDiagnosis(diagnosisData) {
 export async function getDiagnosesByPatientId(patientId) {
   return await db
     .select({
-      diagnosis_id: diagnoses.diagnosis_id,
-      patient_id: diagnoses.patient_id,
-      recorded_by: diagnoses.recorded_by,
+      diagnosisId: diagnoses.diagnosisId,
+      patientId: diagnoses.patientId,
+      recordedBy: diagnoses.recordedBy,
       condition: diagnoses.condition,
       notes: diagnoses.notes,
-      diagnosis_date: diagnoses.diagnosis_date,
-      updated_by: diagnoses.updated_by,
-      updated_at: diagnoses.updated_at,
-      first_name: patients.first_name,
+      diagnosisDate: diagnoses.diagnosisDate,
+      updatedBy: diagnoses.updatedBy,
+      updatedAt: diagnoses.updatedAt,
+      first_name: patients.firstName,
       surname: patients.surname,
-      hospital_number: patients.hospital_number,
+      hospitalNumber: patients.hospitalNumber,
     })
     .from(diagnoses)
-    .innerJoin(patients, eq(diagnoses.patient_id, patients.patient_id))
-    .where(eq(diagnoses.patient_id, patientId))
-    .orderBy(desc(diagnoses.diagnosis_date));
+    .innerJoin(patients, eq(diagnoses.patientId, patients.patientId))
+    .where(eq(diagnoses.patientId, patientId))
+    .orderBy(desc(diagnoses.diagnosisDate));
 }
 
 // GET single diagnosis by ID (joined with patient info)
 export async function getDiagnosisById(diagnosisId) {
   const [result] = await db
     .select({
-      diagnosis_id: diagnoses.diagnosis_id,
-      patient_id: diagnoses.patient_id,
-      recorded_by: diagnoses.recorded_by,
+      diagnosisId: diagnoses.diagnosisId,
+      patientId: diagnoses.patientId,
+      recordedBy: diagnoses.recordedBy,
       condition: diagnoses.condition,
       notes: diagnoses.notes,
-      diagnosis_date: diagnoses.diagnosis_date,
-      updated_by: diagnoses.updated_by,
-      updated_at: diagnoses.updated_at,
-      first_name: patients.first_name,
+      diagnosisDate: diagnoses.diagnosisDate,
+      updatedBy: diagnoses.updatedBy,
+      updatedAt: diagnoses.updatedAt,
+      first_name: patients.firstName,
       surname: patients.surname,
-      hospital_number: patients.hospital_number,
+      hospitalNumber: patients.hospitalNumber,
     })
     .from(diagnoses)
-    .innerJoin(patients, eq(diagnoses.patient_id, patients.patient_id))
-    .where(eq(diagnoses.diagnosis_id, diagnosisId));
+    .innerJoin(patients, eq(diagnoses.patientId, patients.patientId))
+    .where(eq(diagnoses.diagnosisId, diagnosisId));
 
   return result;
 }
@@ -83,10 +83,10 @@ export async function updateDiagnosis(diagnosisId, updateData) {
     .set({
       condition,
       notes,
-      updated_by,
-      updated_at: new Date(),
+      updatedBy: updated_by,
+      updatedAt: new Date(),
     })
-    .where(eq(diagnoses.diagnosis_id, diagnosisId))
+    .where(eq(diagnoses.diagnosisId, diagnosisId))
     .returning();
 
   return updated;
@@ -96,7 +96,7 @@ export async function updateDiagnosis(diagnosisId, updateData) {
 export async function deleteDiagnosis(diagnosisId) {
   const [deleted] = await db
     .delete(diagnoses)
-    .where(eq(diagnoses.diagnosis_id, diagnosisId))
+    .where(eq(diagnoses.diagnosisId, diagnosisId))
     .returning();
 
   return deleted;

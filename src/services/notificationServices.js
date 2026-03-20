@@ -1,5 +1,5 @@
 import { db } from "../../drizzle-db.js";
-import { users, notifications, notificationReads } from "../../drizzle/migrations/schema.js";
+import { users, notifications as notificationsTable, notificationReads } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql, and, isNull, gte } from "drizzle-orm";
 import { timeAgo } from "../utils/getTimeAgo.js";
 
@@ -8,35 +8,35 @@ import { timeAgo } from "../utils/getTimeAgo.js";
 export const getNotificationsByUserData = async (userData) => {
     const { role, id: userId, userCreatedAt } = userData;
 
-    const notifications = await db.select(
+    const notificationsList = await db.select(
         {
-            ...notifications,
+            ...notificationsTable,
             is_read: sql`CASE WHEN ${notificationReads.id} IS NULL THEN false ELSE true END`,
         }
     )
-        .from(notifications)
+        .from(notificationsTable)
         .leftJoin(
             notificationReads,
             and(
-                eq(notifications.id, notificationReads.notification_id),
-                eq(notificationReads.user_id, userId)
+                eq(notificationsTable.id, notificationReads.notificationId),
+                eq(notificationReads.userId, userId)
             )
         )
         .where(
             and(
-                gte(notifications.created_at, userCreatedAt),   
+                gte(notificationsTable.createdAt, userCreatedAt),
                 or(
-                    eq(notifications.recipient_id, userId),
-                    eq(notifications.recipient_role, role)
+                    eq(notificationsTable.recipientId, userId),
+                    eq(notificationsTable.recipientRole, role)
                 )
             )
         )
-        .orderBy(desc(notifications.created_at))
+        .orderBy(desc(notificationsTable.createdAt))
         .limit(5);
 
-    return notifications.map(notification => ({
+    return notificationsList.map(notification => ({
         ...notification,
-        time: timeAgo(notification.created_at),
+        time: timeAgo(notification.createdAt),
     }));
 }
 
@@ -46,45 +46,45 @@ export const getUnreadNotifications = async (userData) => {
 
     const unreadNotifications = await db
         .select({
-            ...notifications,
+            ...notificationsTable,
             is_read: sql`CASE WHEN ${notificationReads.id} IS NULL THEN false ELSE true END`,
         })
-        .from(notifications)
+        .from(notificationsTable)
         .leftJoin(
             notificationReads,
             and(
-                eq(notifications.id, notificationReads.notification_id),
-                eq(notificationReads.user_id, userId)
+                eq(notificationsTable.id, notificationReads.notificationId),
+                eq(notificationReads.userId, userId)
             )
         )
         .where(
             and(
-                gte(notifications.created_at, userCreatedAt),
+                gte(notificationsTable.createdAt, userCreatedAt),
                 or(
-                    eq(notifications.recipient_id, userId),
-                    eq(notifications.recipient_role, role)
+                    eq(notificationsTable.recipientId, userId),
+                    eq(notificationsTable.recipientRole, role)
                 )
             )
         )
-        .orderBy(desc(notifications.created_at))
+        .orderBy(desc(notificationsTable.createdAt))
         .limit(5);
 
     const [totalUnread] = await db
         .select({ count: sql`count(*)` })
-        .from(notifications)
+        .from(notificationsTable)
         .leftJoin(
             notificationReads,
             and(
-                eq(notifications.id, notificationReads.notification_id),
-                eq(notificationReads.user_id, userId)
+                eq(notificationsTable.id, notificationReads.notificationId),
+                eq(notificationReads.userId, userId)
             )
         )
         .where(
             and(
-                gte(notifications.created_at, userCreatedAt),
+                gte(notificationsTable.createdAt, userCreatedAt),
                 or(
-                    eq(notifications.recipient_id, userId),
-                    eq(notifications.recipient_role, role)
+                    eq(notificationsTable.recipientId, userId),
+                    eq(notificationsTable.recipientRole, role)
                 ),
                 isNull(notificationReads.id)
             )
@@ -95,7 +95,7 @@ export const getUnreadNotifications = async (userData) => {
             .filter(notification => !notification.is_read)
             .map(notification => ({
                 ...notification,
-                time: timeAgo(notification.created_at),
+                time: timeAgo(notification.createdAt),
             })),
         totalUnread: Number(totalUnread.count),
     };
@@ -115,46 +115,46 @@ export const getPaginatedNotificationsByUserData = async (
 
     const notificationsWithRead = await db
         .select({
-            id: notifications.id,
-            recipient_id: notifications.recipient_id,
-            recipient_role: notifications.recipient_role,
-            type: notifications.type,
-            title: notifications.title,
-            message: notifications.message,
-            data: notifications.data,
-            created_at: notifications.created_at,
+            id: notificationsTable.id,
+            recipientId: notificationsTable.recipientId,
+            recipientRole: notificationsTable.recipientRole,
+            type: notificationsTable.type,
+            title: notificationsTable.title,
+            message: notificationsTable.message,
+            data: notificationsTable.data,
+            createdAt: notificationsTable.createdAt,
             is_read: sql`CASE WHEN ${notificationReads.id} IS NULL THEN false ELSE true END`,
         })
-        .from(notifications)
+        .from(notificationsTable)
         .leftJoin(
             notificationReads,
             and(
-                eq(notifications.id, notificationReads.notification_id),
-                eq(notificationReads.user_id, userId)
+                eq(notificationsTable.id, notificationReads.notificationId),
+                eq(notificationReads.userId, userId)
             )
         )
         .where(
             and(
-                gte(notifications.created_at, userCreatedAt),
+                gte(notificationsTable.createdAt, userCreatedAt),
                 or(
-                    eq(notifications.recipient_id, userId),
-                    eq(notifications.recipient_role, role)
+                    eq(notificationsTable.recipientId, userId),
+                    eq(notificationsTable.recipientRole, role)
                 )
             )
         )
-        .orderBy(desc(notifications.created_at))
+        .orderBy(desc(notificationsTable.createdAt))
         .limit(pageSizeNumber)
         .offset(offset);
 
     const [totalItems] = await db
         .select({ count: sql`count(*)` })
-        .from(notifications)
+        .from(notificationsTable)
         .where(
             and(
-                gte(notifications.created_at, userCreatedAt),
+                gte(notificationsTable.createdAt, userCreatedAt),
                 or(
-                    eq(notifications.recipient_id, userId),
-                    eq(notifications.recipient_role, role)
+                    eq(notificationsTable.recipientId, userId),
+                    eq(notificationsTable.recipientRole, role)
                 )
             )
         );
@@ -162,7 +162,7 @@ export const getPaginatedNotificationsByUserData = async (
     return {
         data: notificationsWithRead.map(notification => ({
             ...notification,
-            time: timeAgo(notification.created_at),
+            time: timeAgo(notification.createdAt),
         })),
         totalItems: Number(totalItems.count),
         totalPages: Math.ceil(Number(totalItems.count) / pageSizeNumber),
@@ -176,9 +176,9 @@ export const markNotificationAsRead = async (notificationId, userData) => {
     const { id } = userData;
     await db.insert(notificationReads)
         .values({
-            notification_id: notificationId,
-            user_id: id,
-            read_at: new Date(),
+            notificationId: notificationId,
+            userId: id,
+            readAt: new Date(),
         })
 }
 
@@ -186,10 +186,10 @@ export const addNotification = async (notificationData) => {
     const createdAt = new Date();
     try {
         await Promise.all(notificationData.map(async (notification) => {
-            await db.insert(notifications)
+            await db.insert(notificationsTable)
                 .values({
                     ...notification,
-                    created_at: createdAt,
+                    createdAt: createdAt,
                 })
         }))
     } catch (error) {

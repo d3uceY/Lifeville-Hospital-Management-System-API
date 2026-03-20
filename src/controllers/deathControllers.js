@@ -2,7 +2,13 @@ import * as deathServices from "../services/deathServices.js";
 
 export const getDeathRecords = async (req, res) => {
   try {
-    const deaths = await deathServices.getDeathRecords();
+    const { page = 1, pageSize = 10, search = "", sex = "" } = req.query;
+    const deaths = await deathServices.getDeathRecords({
+      page: Number(page),
+      pageSize: Number(pageSize),
+      search,
+      sex,
+    });
     res.status(200).json(deaths);
   } catch (err) {
     res.status(500).json({ message: err.message });

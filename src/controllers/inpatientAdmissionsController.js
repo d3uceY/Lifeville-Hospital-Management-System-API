@@ -3,7 +3,6 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import * as inpatientServices from "../services/inpatientAdmissionsServices.js";
 import { addNotification } from "../services/notificationServices.js";
-import { formatDate } from "../utils/formatDate.js";
 
 /**
  * GET /inpatients
@@ -11,7 +10,13 @@ import { formatDate } from "../utils/formatDate.js";
  */
 export const getInpatientAdmissions = async (req, res) => {
   try {
-    const admissions = await inpatientServices.getInpatientAdmissions();
+    const { page = 1, pageSize = 10, search = "", sex = "" } = req.query;
+    const admissions = await inpatientServices.getInpatientAdmissions({
+      page: Number(page),
+      pageSize: Number(pageSize),
+      search,
+      sex,
+    });
     res.status(200).json(admissions);
   } catch (err) {
     console.error("error fetching inpatient admissions:", err);

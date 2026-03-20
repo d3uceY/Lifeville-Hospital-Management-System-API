@@ -3,27 +3,40 @@ import { db } from "../../drizzle-db.js";
 import { patients } from "../../drizzle/migrations/schema.js";
 import { desc, eq } from "drizzle-orm";
 
+// ─── In-memory cache ───────────────────────────────────────────────────────
+let patientsCache = null;
+
+export const invalidatePatientsCache = () => {
+  patientsCache = null;
+};
+// ───────────────────────────────────────────────────────────────────────────
+
 export const getPatients = async () => {
-  return await db
+  if (patientsCache) return patientsCache;
+
+  const result = await db
     .select({
       surname: patients.surname,
-      first_name: patients.first_name,
-      patient_id: patients.patient_id,
-      hospital_number: patients.hospital_number,
+      first_name: patients.firstName,
+      patientId: patients.patientId,
+      hospitalNumber: patients.hospitalNumber,
       sex: patients.sex,
-      date_of_birth: patients.date_of_birth,
-      phone_number: patients.phone_number,
+      dateOfBirth: patients.dateOfBirth,
+      phoneNumber: patients.phoneNumber,
     })
     .from(patients);
+
+  patientsCache = result;
+  return result;
 };
 
 export const getPatientNameId = async () => {
   return await db
     .select({
-      patient_id: patients.patient_id,
-      first_name: patients.first_name,
+      patientId: patients.patientId,
+      first_name: patients.firstName,
       surname: patients.surname,
-      hospital_number: patients.hospital_number,
+      hospitalNumber: patients.hospitalNumber,
     })
     .from(patients);
 };
@@ -65,15 +78,15 @@ export const createPatient = async (patientData) => {
   let newHospitalNumber; // default starting number
   if (!hospitalNumber) {
     const [lastPatient] = await db
-      .select({ hospital_number: patients.hospital_number })
+      .select({ hospitalNumber: patients.hospitalNumber })
       .from(patients)
-      .orderBy(desc(patients.hospital_number))
+      .orderBy(desc(patients.hospitalNumber))
       .limit(1);
 
     if (lastPatient) {
       newHospitalNumber = 1;
       // Ensure it's an integer before incrementing
-      newHospitalNumber = Number(lastPatient.hospital_number) + 1;
+      newHospitalNumber = Number(lastPatient.hospitalNumber) + 1;
     }
   }
 
@@ -83,34 +96,35 @@ export const createPatient = async (patientData) => {
     .insert(patients)
     .values({
       date,
-      hospital_number: hospitalNumber || newHospitalNumber, // auto-incremented if hospitalNumber is not provided
+      hospitalNumber: hospitalNumber || newHospitalNumber,
       surname,
-      first_name: firstName,
-      other_names: otherNames,
+      firstName: firstName,
+      otherNames: otherNames,
       sex,
-      marital_status: maritalStatus,
-      date_of_birth: dateOfBirth,
-      phone_number: phoneNumber,
+      maritalStatus: maritalStatus,
+      dateOfBirth: dateOfBirth,
+      phoneNumber: phoneNumber,
       address,
       occupation,
-      place_of_work_address: placeOfWorkAddress,
+      placeOfWorkAddress: placeOfWorkAddress,
       religion,
       nationality,
-      next_of_kin: nextOfKin,
+      nextOfKin: nextOfKin,
       relationship,
-      next_of_kin_phone: nextOfKinPhoneNumber,
-      next_of_kin_address: addressOfNextOfKin,
-      past_medical_history: pastMedicalHistory,
-      past_surgical_history: pastSurgicalHistory,
-      family_history: familyHistory,
-      social_history: socialHistory,
-      drug_history: drugHistory,
+      nextOfKinPhone: nextOfKinPhoneNumber,
+      nextOfKinAddress: addressOfNextOfKin,
+      pastMedicalHistory: pastMedicalHistory,
+      pastSurgicalHistory: pastSurgicalHistory,
+      familyHistory: familyHistory,
+      socialHistory: socialHistory,
+      drugHistory: drugHistory,
       allergies,
-      dietary_restrictions: dietaryRestrictions,
-      diet_allergies_to_drugs: dietAllergies,
+      dietaryRestrictions: dietaryRestrictions,
+      dietAllergiesToDrugs: dietAllergies,
     })
     .returning();
 
+  invalidatePatientsCache();
   return newPatient;
 };
 
@@ -119,7 +133,7 @@ export const viewPatient = async (patientId) => {
   const [patient] = await db
     .select()
     .from(patients)
-    .where(eq(patients.patient_id, patientId));
+    .where(eq(patients.patientId, patientId));
 
   return patient;
 };
@@ -129,7 +143,7 @@ export const updatePatient = async (patientId, patientData) => {
   const [existing] = await db
     .select()
     .from(patients)
-    .where(eq(patients.patient_id, patientId));
+    .where(eq(patients.patientId, patientId));
 
   if (!existing) {
     const err = new Error("Patient not found");
@@ -169,48 +183,50 @@ export const updatePatient = async (patientId, patientData) => {
 
   const updateData = {
     ...(date !== undefined && { date }),
-    ...(hospitalNumber !== undefined && { hospital_number: hospitalNumber }),
+    ...(hospitalNumber !== undefined && { hospitalNumber }),
     ...(surname !== undefined && { surname }),
-    ...(firstName !== undefined && { first_name: firstName }),
-    ...(otherNames !== undefined && { other_names: otherNames }),
+    ...(firstName !== undefined && { firstName }),
+    ...(otherNames !== undefined && { otherNames }),
     ...(sex !== undefined && { sex }),
-    ...(maritalStatus !== undefined && { marital_status: maritalStatus }),
-    ...(dateOfBirth !== undefined && { date_of_birth: dateOfBirth }),
-    ...(phoneNumber !== undefined && { phone_number: phoneNumber }),
+    ...(maritalStatus !== undefined && { maritalStatus }),
+    ...(dateOfBirth !== undefined && { dateOfBirth }),
+    ...(phoneNumber !== undefined && { phoneNumber }),
     ...(address !== undefined && { address }),
     ...(occupation !== undefined && { occupation }),
-    ...(placeOfWorkAddress !== undefined && { place_of_work_address: placeOfWorkAddress }),
+    ...(placeOfWorkAddress !== undefined && { placeOfWorkAddress }),
     ...(religion !== undefined && { religion }),
     ...(nationality !== undefined && { nationality }),
-    ...(nextOfKin !== undefined && { next_of_kin: nextOfKin }),
+    ...(nextOfKin !== undefined && { nextOfKin }),
     ...(relationship !== undefined && { relationship }),
-    ...(nextOfKinPhoneNumber !== undefined && { next_of_kin_phone: nextOfKinPhoneNumber }),
-    ...(addressOfNextOfKin !== undefined && { next_of_kin_address: addressOfNextOfKin }),
-    ...(pastMedicalHistory !== undefined && { past_medical_history: pastMedicalHistory }),
-    ...(pastSurgicalHistory !== undefined && { past_surgical_history: pastSurgicalHistory }),
-    ...(familyHistory !== undefined && { family_history: familyHistory }),
-    ...(socialHistory !== undefined && { social_history: socialHistory }),
-    ...(drugHistory !== undefined && { drug_history: drugHistory }),
+    ...(nextOfKinPhoneNumber !== undefined && { nextOfKinPhone: nextOfKinPhoneNumber }),
+    ...(addressOfNextOfKin !== undefined && { nextOfKinAddress: addressOfNextOfKin }),
+    ...(pastMedicalHistory !== undefined && { pastMedicalHistory }),
+    ...(pastSurgicalHistory !== undefined && { pastSurgicalHistory }),
+    ...(familyHistory !== undefined && { familyHistory }),
+    ...(socialHistory !== undefined && { socialHistory }),
+    ...(drugHistory !== undefined && { drugHistory }),
     ...(allergies !== undefined && { allergies }),
-    ...(dietaryRestrictions !== undefined && { dietary_restrictions: dietaryRestrictions }),
-    ...(dietAllergies !== undefined && { diet_allergies_to_drugs: dietAllergies }),
+    ...(dietaryRestrictions !== undefined && { dietaryRestrictions }),
+    ...(dietAllergies !== undefined && { dietAllergiesToDrugs: dietAllergies }),
   };
 
   // Update
   const [updatedPatient] = await db
     .update(patients)
     .set(updateData)
-    .where(eq(patients.patient_id, patientId))
+    .where(eq(patients.patientId, patientId))
     .returning();
 
+  invalidatePatientsCache();
   return updatedPatient;
 };
 
 export const deletePatient = async (patientId) => {
   const [deletedPatient] = await db
     .delete(patients)
-    .where(eq(patients.patient_id, patientId))
+    .where(eq(patients.patientId, patientId))
     .returning();
 
+  invalidatePatientsCache();
   return deletedPatient;
 };
