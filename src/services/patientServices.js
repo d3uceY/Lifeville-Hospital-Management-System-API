@@ -3,8 +3,18 @@ import { db } from "../../drizzle-db.js";
 import { patients } from "../../drizzle/migrations/schema.js";
 import { desc, eq } from "drizzle-orm";
 
+// ─── In-memory cache ───────────────────────────────────────────────────────
+let patientsCache = null;
+
+export const invalidatePatientsCache = () => {
+  patientsCache = null;
+};
+// ───────────────────────────────────────────────────────────────────────────
+
 export const getPatients = async () => {
-  return await db
+  if (patientsCache) return patientsCache;
+
+  const result = await db
     .select({
       surname: patients.surname,
       first_name: patients.firstName,
@@ -15,6 +25,9 @@ export const getPatients = async () => {
       phoneNumber: patients.phoneNumber,
     })
     .from(patients);
+
+  patientsCache = result;
+  return result;
 };
 
 export const getPatientNameId = async () => {
@@ -111,6 +124,7 @@ export const createPatient = async (patientData) => {
     })
     .returning();
 
+  invalidatePatientsCache();
   return newPatient;
 };
 
@@ -203,6 +217,7 @@ export const updatePatient = async (patientId, patientData) => {
     .where(eq(patients.patientId, patientId))
     .returning();
 
+  invalidatePatientsCache();
   return updatedPatient;
 };
 
@@ -212,5 +227,6 @@ export const deletePatient = async (patientId) => {
     .where(eq(patients.patientId, patientId))
     .returning();
 
+  invalidatePatientsCache();
   return deletedPatient;
 };

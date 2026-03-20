@@ -241,10 +241,21 @@ export const getPaginatedLabTests = async (
 
 
 // Lab Test Types
-export const getLabTestTypes = async () => db.select().from(labTestTypes);
+// ─── In-memory cache ────────────────────────────────────────────────────────
+let labTestTypesCache = null;
+export const invalidateLabTestTypesCache = () => { labTestTypesCache = null; };
+// ────────────────────────────────────────────────────────────────────────────
+
+export const getLabTestTypes = async () => {
+  if (labTestTypesCache) return labTestTypesCache;
+  const result = await db.select().from(labTestTypes);
+  labTestTypesCache = result;
+  return result;
+};
 
 export const createLabTestType = async (labTestType) => {
   const [newType] = await db.insert(labTestTypes).values(labTestType).returning();
+  invalidateLabTestTypesCache();
   return newType;
 };
 
@@ -254,6 +265,7 @@ export const updateLabTestType = async (id, labTestType) => {
     .where(eq(labTestTypes.id, id))
     .returning();
 
+  invalidateLabTestTypesCache();
   return updated;
 };
 
@@ -262,5 +274,6 @@ export const deleteLabTestType = async (id) => {
     .where(eq(labTestTypes.id, id))
     .returning();
 
+  invalidateLabTestTypesCache();
   return deleted;
 };

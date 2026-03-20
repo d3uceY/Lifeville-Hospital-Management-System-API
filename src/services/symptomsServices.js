@@ -1,8 +1,17 @@
 // import query connection
 import { query } from "../../drizzle-db.js";
 
+// ─── In-memory cache ────────────────────────────────────────────────────────
+let symptomTypesCache = null;
+export const invalidateSymptomTypesCache = () => { symptomTypesCache = null; };
+let symptomHeadsCache = null;
+export const invalidateSymptomHeadsCache = () => { symptomHeadsCache = null; };
+// ────────────────────────────────────────────────────────────────────────────
+
 export const getSymptomTypes = async () => {
+  if (symptomTypesCache) return symptomTypesCache;
   const { rows } = await query(`SELECT * FROM symptom_types`);
+  symptomTypesCache = rows;
   return rows;
 };
 
@@ -13,6 +22,7 @@ export const createSymptomType = async (symptomTypeData) => {
     `INSERT INTO symptom_types (symptom_text) VALUES ($1) RETURNING *`,
     [symptomText]
   );
+  invalidateSymptomTypesCache();
   return rows[0];
 };
 
@@ -21,6 +31,7 @@ export const deleteSymptomType = async (symptomTypeId) => {
     `DELETE FROM symptom_types WHERE symptom_type_id = $1 RETURNING *`,
     [symptomTypeId]
   );
+  invalidateSymptomTypesCache();
   return rows.length > 0;
 };
 
@@ -34,10 +45,12 @@ export const updateSymptomType = async (symptomTypeId, symptomTypeData) => {
         RETURNING *`,
     [symptomText, symptomTypeId]
   );
+  invalidateSymptomTypesCache();
   return rows[0];
 };
 
 export const getSymptomHeads = async () => {
+  if (symptomHeadsCache) return symptomHeadsCache;
   const { rows } = await query(`
     SELECT 
      sh.*, 
@@ -46,6 +59,7 @@ export const getSymptomHeads = async () => {
      FROM symptom_heads sh
      JOIN symptom_types ON sh.symptom_type_id = symptom_types.symptom_type_id;
     `);
+  symptomHeadsCache = rows;
   return rows;
 }; 
 
@@ -60,6 +74,7 @@ export const createSymptomHead = async (symptomHeadData) => {
     [symptomHeadText, symptomTypeId, symptomDescription]
   );
 
+  invalidateSymptomHeadsCache();
   return rows[0];
 };
 
@@ -68,6 +83,7 @@ export const deleteSymptomHead = async (symptomHeadId) => {
     `DELETE FROM symptom_heads WHERE symptom_head_id = $1 RETURNING *`,
     [symptomHeadId]
   );
+  invalidateSymptomHeadsCache();
   return rows.length > 0;
 };
 
@@ -82,5 +98,6 @@ export const updateSymptomHead = async (symptomHeadId, symptomHeadData) => {
         RETURNING *`,
     [symptomHeadText, symptomTypeId, symptomDescription, symptomHeadId]
   );
+  invalidateSymptomHeadsCache();
   return rows[0];
 };

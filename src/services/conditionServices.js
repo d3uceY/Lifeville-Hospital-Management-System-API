@@ -2,6 +2,11 @@ import { db } from "../../drizzle-db.js";
 import { conditions } from "../../drizzle/migrations/schema.js";
 import { eq } from "drizzle-orm";
 
+// ─── In-memory cache ────────────────────────────────────────────────────────
+let conditionsCache = null;
+export const invalidateConditionsCache = () => { conditionsCache = null; };
+// ────────────────────────────────────────────────────────────────────────────
+
 // Create condition
 export async function createCondition(conditionData) {
   const [newCondition] = await db
@@ -11,12 +16,16 @@ export async function createCondition(conditionData) {
     })
     .returning();
 
+  invalidateConditionsCache();
   return newCondition;
 }
 
 // Get all conditions
 export async function getConditions() {
-  return await db.select().from(conditions);
+  if (conditionsCache) return conditionsCache;
+  const result = await db.select().from(conditions);
+  conditionsCache = result;
+  return result;
 }
 
 // Delete condition
@@ -26,6 +35,7 @@ export async function deleteCondition(conditionId) {
     .where(eq(conditions.conditionId, conditionId))
     .returning();
 
+  invalidateConditionsCache();
   return deleted;
 }
 
@@ -39,5 +49,6 @@ export async function updateCondition(conditionId, conditionData) {
     .where(eq(conditions.conditionId, conditionId))
     .returning();
 
+  invalidateConditionsCache();
   return updated;
 }

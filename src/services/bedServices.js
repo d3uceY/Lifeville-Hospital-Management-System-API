@@ -1,6 +1,15 @@
 // services/bedServices.js
 import { query } from "../../drizzle-db.js";
 
+// ─── In-memory cache ────────────────────────────────────────────────────────
+let bedTypesCache = null;
+export const invalidateBedTypesCache = () => { bedTypesCache = null; };
+let bedGroupsCache = null;
+export const invalidateBedGroupsCache = () => { bedGroupsCache = null; };
+let bedsCache = null;
+export const invalidateBedsCache = () => { bedsCache = null; };
+// ────────────────────────────────────────────────────────────────────────────
+
 //
 // BED TYPES
 //
@@ -9,11 +18,13 @@ import { query } from "../../drizzle-db.js";
  * Fetch all bed types
  */
 export const getBedTypes = async () => {
+  if (bedTypesCache) return bedTypesCache;
   const { rows } = await query(`
     SELECT id, type_name, created_at, updated_at
     FROM bed_types
     ORDER BY type_name;
   `);
+  bedTypesCache = rows;
   return rows;
 };
 
@@ -30,6 +41,7 @@ export const createBedType = async (typeData) => {
     `,
     [typeName]
   );
+  invalidateBedTypesCache();
   return rows[0];
 };
 
@@ -48,6 +60,8 @@ export const updateBedType = async (typeId, typeData) => {
     `,
     [typeName, typeId]
   );
+  invalidateBedTypesCache();
+  invalidateBedsCache();
   return rows[0] || null;
 };
 
@@ -63,6 +77,8 @@ export const deleteBedType = async (typeId) => {
     `,
     [typeId]
   );
+  invalidateBedTypesCache();
+  invalidateBedsCache();
   return rows.length > 0;
 };
 
@@ -74,11 +90,13 @@ export const deleteBedType = async (typeId) => {
  * Fetch all bed groups
  */
 export const getBedGroups = async () => {
+  if (bedGroupsCache) return bedGroupsCache;
   const { rows } = await query(`
     SELECT id, group_name, created_at, updated_at
     FROM bed_groups
     ORDER BY group_name;
   `);
+  bedGroupsCache = rows;
   return rows;
 };
 
@@ -95,6 +113,7 @@ export const createBedGroup = async (groupData) => {
     `,
     [groupName]
   );
+  invalidateBedGroupsCache();
   return rows[0];
 };
 
@@ -113,6 +132,8 @@ export const updateBedGroup = async (groupId, groupData) => {
     `,
     [groupName, groupId]
   );
+  invalidateBedGroupsCache();
+  invalidateBedsCache();
   return rows[0] || null;
 };
 
@@ -139,6 +160,7 @@ export const deleteBedGroup = async (groupId) => {
  * Fetch all beds
  */
 export const getBeds = async () => {
+  if (bedsCache) return bedsCache;
   const { rows } = await query(`
     SELECT
       b.id,
@@ -155,6 +177,7 @@ export const getBeds = async () => {
     JOIN bed_groups bg ON b.bed_group_id = bg.id
     ORDER BY bg.group_name, b.bed_name;
   `);
+  bedsCache = rows;
   return rows;
 };
 
@@ -198,6 +221,7 @@ export const createBed = async (bedData) => {
     `,
     [bedName, used, bedTypeId, bedGroupId]
   );
+  invalidateBedsCache();
   return rows[0];
 };
 
@@ -219,6 +243,7 @@ export const updateBed = async (bedId, bedData) => {
     `,
     [bedName, inUse, bedTypeId, bedGroupId, bedId]
   );
+  invalidateBedsCache();
   return rows[0] || null;
 };
 
@@ -234,5 +259,6 @@ export const deleteBed = async (bedId) => {
     `,
     [bedId]
   );
+  invalidateBedsCache();
   return rows.length > 0;
 };
