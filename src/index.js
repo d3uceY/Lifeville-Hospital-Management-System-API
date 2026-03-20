@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import env from "dotenv";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
 import apiRoutes from "./routes/index.js";
 
@@ -11,16 +10,15 @@ import { createServer } from "http";
 import { Server as IOServer } from "socket.io";
 
 import { specs, swaggerUiOptions as swaggerUi } from "./swagger/swagger.js";
-
-env.config();
+import config from "./constants/config.js";
 
 const app = express();
 
-const port = process.env.PORT || 3000;
+const port = config.app.port;
 
 app.use(cookieParser());
 
-const FRONTEND = process.env.FRONTEND || "http://localhost:5173";
+const FRONTEND = config.app.frontend;
 const allowedOrigins = [
   FRONTEND,
   "http://localhost:5173",
