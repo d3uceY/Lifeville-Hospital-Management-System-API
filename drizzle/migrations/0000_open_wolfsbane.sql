@@ -1,6 +1,7 @@
 -- Current sql file was generated after introspecting the database
 -- If you want to run this migration please uncomment this code before executing migrations
 /*
+CREATE EXTENSION IF NOT EXISTS pg_trgm;--> statement-breakpoint
 CREATE TYPE "public"."gender_enum" AS ENUM('Male', 'Female', 'Other');--> statement-breakpoint
 CREATE TYPE "public"."patient_type_enum" AS ENUM('INPATIENT', 'OUTPATIENT', 'NULL');--> statement-breakpoint
 CREATE TABLE "patients" (
@@ -405,14 +406,13 @@ CREATE INDEX "idx_users_name" ON "users" USING btree ("name" text_ops);--> state
 CREATE INDEX "idx_users_name_trgm" ON "users" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "idx_users_role" ON "users" USING btree ("role" text_ops);--> statement-breakpoint
 CREATE INDEX "idx_notifications_recipient_id" ON "notifications" USING btree ("recipient_id" int4_ops);--> statement-breakpoint
-CREATE INDEX "idx_notifications_recipient_id_created_at" ON "notifications" USING btree ("recipient_id" int4_ops,"created_at" int4_ops);--> statement-breakpoint
+CREATE INDEX "idx_notifications_recipient_id_created_at" ON "notifications" USING btree ("recipient_id" int4_ops,"created_at" timestamp_ops);--> statement-breakpoint
 CREATE INDEX "idx_notifications_recipient_role" ON "notifications" USING btree ("recipient_role" text_ops);--> statement-breakpoint
 CREATE INDEX "idx_notifications_recipient_role_created_at" ON "notifications" USING btree ("recipient_role" text_ops,"created_at" timestamp_ops);--> statement-breakpoint
 CREATE INDEX "idx_discharge_admission" ON "discharge_summary" USING btree ("admission_id" int4_ops);--> statement-breakpoint
 CREATE INDEX "idx_notification_reads_id" ON "notification_reads" USING btree ("notification_id" int4_ops);--> statement-breakpoint
 CREATE INDEX "idx_notification_reads_notification_user" ON "notification_reads" USING btree ("notification_id" int4_ops,"user_id" int4_ops);--> statement-breakpoint
 CREATE INDEX "idx_notification_user" ON "notification_reads" USING btree ("user_id" int4_ops);--> statement-breakpoint
-CREATE INDEX "idx_inpatient_discharge_created_at" ON "inpatient_admissions" USING btree ("discharge_condition" text_ops,"created_at" text_ops);--> statement-breakpoint
-CREATE INDEX "idx_inpatient_patient_created_at" ON "inpatient_admissions" USING btree ("patient_id" timestamp_ops,"created_at" int4_ops);--> statement-breakpoint
+CREATE INDEX "idx_inpatient_discharge_created_at" ON "inpatient_admissions" USING btree ("discharge_condition" text_ops,"created_at" timestamp_ops);--> statement-breakpoint
+CREATE INDEX "idx_inpatient_patient_created_at" ON "inpatient_admissions" USING btree ("patient_id" int4_ops,"created_at" timestamp_ops);--> statement-breakpoint
 CREATE INDEX "idx_inpatient_patient_discharge" ON "inpatient_admissions" USING btree ("patient_id" int4_ops,"discharge_condition" text_ops);
-*/
