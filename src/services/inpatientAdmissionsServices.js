@@ -1,43 +1,77 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
 import { inpatientAdmissions, patients, users, dischargeSummary } from "../../drizzle/migrations/schema.js";
 
+const INPATIENT_SELECT_FIELDS = {
+  id: inpatientAdmissions.id,
+  patientId: inpatientAdmissions.patientId,
+  symptomTypes: inpatientAdmissions.symptomTypes,
+  symptomDescription: inpatientAdmissions.symptomDescription,
+  note: inpatientAdmissions.note,
+  previousMedicalIssue: inpatientAdmissions.previousMedicalIssue,
+  admissionDate: inpatientAdmissions.admissionDate,
+  consultantDoctorId: inpatientAdmissions.consultantDoctorId,
+  bedGroup: inpatientAdmissions.bedGroup,
+  bedNumber: inpatientAdmissions.bedNumber,
+  createdAt: inpatientAdmissions.createdAt,
+  updatedAt: inpatientAdmissions.updatedAt,
+  dischargeCondition: inpatientAdmissions.dischargeCondition,
+  hospitalNumber: patients.hospitalNumber,
+  firstName: patients.firstName,
+  otherNames: patients.otherNames,
+  surname: patients.surname,
+  sex: patients.sex,
+  dateOfBirth: patients.dateOfBirth,
+  phoneNumber: patients.phoneNumber,
+  consultant_doctor_name: users.name,
+};
+
 /**
- * Fetch all inpatient admission records (joined with patient data)
+ * Fetch paginated inpatient admission records (joined with patient data)
  */
-export const getInpatientAdmissions = async () => {
-  return await db
-    .select({
-      // inpatient_admissions fields
-      id: inpatientAdmissions.id,
-      patientId: inpatientAdmissions.patientId,
-      symptomTypes: inpatientAdmissions.symptomTypes,
-      symptomDescription: inpatientAdmissions.symptomDescription,
-      note: inpatientAdmissions.note,
-      previousMedicalIssue: inpatientAdmissions.previousMedicalIssue,
-      admissionDate: inpatientAdmissions.admissionDate,
-      consultantDoctorId: inpatientAdmissions.consultantDoctorId,
-      bedGroup: inpatientAdmissions.bedGroup,
-      bedNumber: inpatientAdmissions.bedNumber,
-      createdAt: inpatientAdmissions.createdAt,
-      updatedAt: inpatientAdmissions.updatedAt,
-      dischargeCondition: inpatientAdmissions.dischargeCondition,
-      // patients fields
-      hospitalNumber: patients.hospitalNumber,
-      firstName: patients.firstName,
-      otherNames: patients.otherNames,
-      surname: patients.surname,
-      sex: patients.sex,
-      dateOfBirth: patients.dateOfBirth,
-      phoneNumber: patients.phoneNumber,
-      // users fields
-      consultant_doctor_name: users.name,
-    })
-    .from(inpatientAdmissions)
-    .innerJoin(patients, eq(inpatientAdmissions.patientId, patients.patientId))
-    .leftJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
-    .where(eq(inpatientAdmissions.dischargeCondition, "on admission"))
-    .orderBy(desc(inpatientAdmissions.createdAt));
+export const getInpatientAdmissions = async ({ page = 1, pageSize = 10, search = "", sex = "" } = {}) => {
+  const offset = (page - 1) * pageSize;
+  const conditions = [eq(inpatientAdmissions.dischargeCondition, "on admission")];
+
+  if (search) {
+    conditions.push(
+      or(
+        ilike(patients.firstName, `%${search}%`),
+        ilike(patients.surname, `%${search}%`),
+        ilike(sql`CAST(${patients.hospitalNumber} AS TEXT)`, `%${search}%`),
+        ilike(patients.phoneNumber, `%${search}%`)
+      )
+    );
+  }
+  if (sex) conditions.push(eq(patients.sex, sex));
+
+  const where = and(...conditions);
+
+  const [data, countResult] = await Promise.all([
+    db
+      .select(INPATIENT_SELECT_FIELDS)
+      .from(inpatientAdmissions)
+      .innerJoin(patients, eq(inpatientAdmissions.patientId, patients.patientId))
+      .leftJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
+      .where(where)
+      .orderBy(desc(inpatientAdmissions.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(inpatientAdmissions)
+      .innerJoin(patients, eq(inpatientAdmissions.patientId, patients.patientId))
+      .where(where),
+  ]);
+
+  const totalItems = Number(countResult[0].count);
+  return {
+    data,
+    totalItems,
+    totalPages: Math.ceil(totalItems / pageSize),
+    page: Number(page),
+    pageSize: Number(pageSize),
+  };
 };
 
 
