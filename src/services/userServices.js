@@ -2,12 +2,7 @@ import { query } from "../../drizzle-db.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-import env from "dotenv";
-env.config();
-
-const ACCESS_EXPIRES = "30m";  //30m
-const REFRESH_EXPIRES = "30d";  //30d
-const SALT_ROUNDS = 12 //12
+import config from "../constants/config.js";
 
 
 export async function seedSuperAdmin() {
@@ -28,16 +23,16 @@ export const insertSeedSuperAdmin = async (email, hash) => {
 function signAccess(user) {
     return jwt.sign(
         { sub: user.id, role: user.role, createdAt: user.createdAt },
-        process.env.JWT_ACCESS_KEY,
-        { expiresIn: ACCESS_EXPIRES }
+        config.auth.jwtAccessKey,
+        { expiresIn: config.auth.accessExpires }
     );
 }
 
 function signRefresh(userId, jti) {
     return jwt.sign(
         { sub: userId, jti },
-        process.env.JWT_REFRESH_KEY,
-        { expiresIn: REFRESH_EXPIRES }
+        config.auth.jwtRefreshKey,
+        { expiresIn: config.auth.refreshExpires }
     );
 }
 
@@ -72,7 +67,7 @@ export async function login({ email, password }) {
 export async function refreshAccess(oldRefresh) {
     let payload;
     try {
-        payload = jwt.verify(oldRefresh, process.env.JWT_REFRESH_KEY);
+        payload = jwt.verify(oldRefresh, config.auth.jwtRefreshKey);
     } catch {
         const err = new Error("Invalid or expired refresh token");
         err.status = 401;

@@ -1,12 +1,10 @@
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import env from "dotenv";
-
-env.config();
+import config from "./src/constants/config.js";
 
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.PRODUCTION === "true" ? true : false,
+  connectionString: config.db.url,
+  ssl: config.app.production,
   max: 5,              
   min: 1,
   idleTimeoutMillis: 10000, 

@@ -1,16 +1,15 @@
 import * as userService from "../services/userServices.js";
 
 import bcrypt from "bcrypt";
-import env from "dotenv";
-env.config();
+import config from "../constants/config.js";
 
 
 export const seedSuperAdmin = async (req, res) => {
     try {
         const superAdmin = await userService.seedSuperAdmin();
         if (!superAdmin) {
-            const hash = await bcrypt.hash(process.env.SUPERADMIN_PASSWORD, 12);
-            await userService.insertSeedSuperAdmin(process.env.SUPERADMIN_EMAIL, hash);
+            const hash = await bcrypt.hash(config.superAdmin.password, config.auth.saltRounds);
+            await userService.insertSeedSuperAdmin(config.superAdmin.email, hash);
             res.status(200).json({
                 message: "Superadmin seeded successfully",
             });
@@ -32,9 +31,9 @@ export async function loginController(req, res) {
         res
             .cookie("refresh_token", refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
+                secure: config.app.production,
                 // sameSite: "Strict",
-                sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+                sameSite: config.app.production ? "None" : "Lax",
                 maxAge: 30 * 24 * 60 * 60 * 1000,
             })
             .json({ access_token: accessToken, user });
@@ -54,9 +53,9 @@ export async function refreshController(req, res) {
         res
             .cookie("refresh_token", refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
+                secure: config.app.production,
                 // sameSite: "Strict",
-                sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+                sameSite: config.app.production ? "None" : "Lax",
                 maxAge: 30 * 24 * 60 * 60 * 1000,
             })
             .json({ access_token: accessToken, user });
