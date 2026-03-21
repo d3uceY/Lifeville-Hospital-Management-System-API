@@ -325,8 +325,14 @@ export async function recordPayment({ invoiceId, amount, paymentMethod = "cash",
 
 // ─── List all services ────────────────────────────────────────────────────────
 
+let servicesCache = null;
+const invalidateServicesCache = () => { servicesCache = null; };
+
 export async function listServices() {
-  return db.select().from(services).orderBy(services.category, services.name);
+  if (servicesCache) return servicesCache;
+  const result = await db.select().from(services).orderBy(services.category, services.name);
+  servicesCache = result;
+  return result;
 }
 
 export async function upsertService({ id = null, name, category, price, isVariablePrice = false }) {
@@ -336,12 +342,14 @@ export async function upsertService({ id = null, name, category, price, isVariab
       .set({ name, category, price: String(price), isVariablePrice })
       .where(eq(services.id, id))
       .returning();
+    invalidateServicesCache();
     return updated;
   }
   const [created] = await db
     .insert(services)
     .values({ name, category, price: String(price), isVariablePrice })
     .returning();
+  invalidateServicesCache();
   return created;
 }
 
@@ -350,6 +358,7 @@ export async function deleteService(id) {
     .delete(services)
     .where(eq(services.id, id))
     .returning();
+  invalidateServicesCache();
   return deleted;
 }
 
