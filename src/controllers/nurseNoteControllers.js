@@ -40,16 +40,13 @@ export const createNurseNote = async (req, res) => {
         recorded_by: newNote.recorded_by,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.CLINICAL;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.CLINICAL,
         type: NOTIFICATION_TYPES.NURSE_NOTE,
         title: "Nurse's Note Added",
         message: `Nurse's note added for ${newNote.first_name} ${newNote.surname} by ${newNote.recorded_by}`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -58,7 +55,8 @@ export const createNurseNote = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
-      message: `Nurse's note added by ${newNote.recorded_by}`,
+      recipientRoles: NOTIFICATION_ROLES.CLINICAL,
+      message: `Nurse's note added by ${newNote.recordedBy}`,
       description: `Patient: ${newNote.first_name} ${newNote.surname}`
     });
 

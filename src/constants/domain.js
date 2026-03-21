@@ -8,6 +8,16 @@ export const ROLES = {
   ACCOUNTANT:   "accountant",
 };
 
+/** Human-readable labels — used to seed the roles table */
+export const ROLE_LABELS = {
+  superadmin:   "Super Admin",
+  doctor:       "Doctor",
+  nurse:        "Nurse",
+  receptionist: "Receptionist",
+  lab:          "Lab Technician",
+  accountant:   "Accountant",
+};
+
 // ─── Predefined role groups used in notifications ─────────────────────────────
 export const NOTIFICATION_ROLES = {
   /** Appointment events */

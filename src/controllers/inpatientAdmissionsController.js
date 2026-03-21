@@ -62,16 +62,13 @@ export const createInpatientAdmission = async (req, res) => {
         patient_id: newAdmission.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.ADMISSION;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ADMISSION,
         type: NOTIFICATION_TYPES.INPATIENT,
         title: "Patient Admitted",
         message: `Patient ${newAdmission.firstName} ${newAdmission.surname} has been admitted`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -79,6 +76,7 @@ export const createInpatientAdmission = async (req, res) => {
 
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ADMISSION,
       message: `Patient Admitted by ${newAdmission.doctorName}`,
       description: `Patient: ${newAdmission.firstName} ${newAdmission.surname}`
     });
@@ -170,16 +168,13 @@ export const dischargeInpatientAdmission = async (req, res) => {
         patient_id: discharged.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.ALL_STAFF;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
         type: NOTIFICATION_TYPES.INPATIENT_DISCHARGED,
         title: "Patient Discharged",
         message: `Patient ${discharged.first_name} ${discharged.surname} has been discharged`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -187,8 +182,9 @@ export const dischargeInpatientAdmission = async (req, res) => {
 
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
       message: `Patient Discharged by ${dischargeData.recorded_by}`,
-      description: `Patient: ${discharged.first_name} ${discharged.surname}`
+      description: `Patient: ${discharged.firstName} ${discharged.surname}`
     });
 
     res.status(200).json({ discharged, message: "Admission discharged successfully" });

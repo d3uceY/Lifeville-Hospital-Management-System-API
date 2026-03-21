@@ -15,7 +15,10 @@ export async function seedSuperAdmin() {
 
 export const insertSeedSuperAdmin = async (email, hash) => {
     const result = await query(
-        "INSERT INTO users (name, email, password_hash, role) VALUES ('Super Admin', $1, $2, 'superadmin') RETURNING *",
+        `INSERT INTO users (name, email, password_hash, role, role_id)
+         VALUES ('Super Admin', $1, $2, 'superadmin',
+                 (SELECT id FROM roles WHERE name = 'superadmin' LIMIT 1))
+         RETURNING *`,
         [email, hash]
     );
     return result.rows[0];
@@ -116,13 +119,13 @@ export async function logout(userId) {
     await query(`UPDATE users SET refresh_token = NULL WHERE id = $1`, [userId]);
 }
 
-export async function createStaff({ email, password, role, name }, creatorId) {
+export async function createStaff({ email, password, role, name, roleId }, creatorId) {
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
     const res = await query(
-        `INSERT INTO users(email, password_hash, role, created_by, name)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, role, name`,
-        [email.toLowerCase(), hashed, role || "staff", creatorId, name]
+        `INSERT INTO users(email, password_hash, role, role_id, created_by, name)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, email, role, role_id, name`,
+        [email.toLowerCase(), hashed, role || "staff", roleId ?? null, creatorId, name]
     );
     return res.rows[0];
 }
@@ -134,11 +137,14 @@ export async function listUsers() {
         u.name,
         u.email,
         u.role,
+        u.role_id,
+        r.label AS role_label,
         u.is_active,
         u.created_by,
         cb.name AS created_by_name,
         u.created_at
       FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN users cb ON u.created_by = cb.id
       ORDER BY u.id DESC;
     `);
@@ -147,8 +153,8 @@ export async function listUsers() {
 
 export async function updateUser(userData, userId) {
     const { rows } = await query(
-        `UPDATE users SET name = $1, email = $2, role = $3 WHERE id = $4 RETURNING *`,
-        [userData.name, userData.email, userData.role, userId]
+        `UPDATE users SET name = $1, email = $2, role = $3, role_id = $4 WHERE id = $5 RETURNING *`,
+        [userData.name, userData.email, userData.role, userData.roleId ?? null, userId]
     );
     return rows[0];
 }

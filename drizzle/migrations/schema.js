@@ -9,6 +9,15 @@ export const genderEnum = pgEnum("gender_enum", ['Male', 'Female', 'Other'])
 export const patientTypeEnum = pgEnum("patient_type_enum", ['INPATIENT', 'OUTPATIENT', 'NULL'])
 
 
+export const roles = pgTable("roles", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 50 }).notNull(),
+	label: varchar({ length: 100 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	unique("roles_name_key").on(table.name),
+]);
+
 export const patients = pgTable("patients", {
 	patientId: integer("patient_id").primaryKey().generatedAlwaysAsIdentity({ name: "patients_patient_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
 	date: date().notNull(),
@@ -222,6 +231,7 @@ export const users = pgTable("users", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	name: varchar({ length: 255 }).default('Super Admin').notNull(),
 	isActive: boolean("is_active").default(true).notNull(),
+	roleId: integer("role_id"),
 }, (table) => [
 	index("idx_users_name").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("idx_users_name_trgm").using("gin", table.name.asc().nullsLast().op("gin_trgm_ops")),
@@ -231,6 +241,11 @@ export const users = pgTable("users", {
 			foreignColumns: [table.id],
 			name: "users_created_by_fkey"
 		}),
+	foreignKey({
+			columns: [table.roleId],
+			foreignColumns: [roles.id],
+			name: "users_role_id_fkey"
+		}).onDelete("set null"),
 	unique("users_email_key").on(table.email),
 ]);
 
@@ -272,7 +287,10 @@ export const bedGroups = pgTable("bed_groups", {
 export const notifications = pgTable("notifications", {
 	id: serial().primaryKey().notNull(),
 	recipientId: integer("recipient_id"),
+	// Legacy single-role column — kept for backward compat; prefer recipientRoles
 	recipientRole: varchar("recipient_role", { length: 50 }),
+	// New: one notification row targets multiple roles
+	recipientRoles: text("recipient_roles").array(),
 	type: varchar({ length: 100 }).notNull(),
 	title: varchar({ length: 255 }),
 	message: text(),

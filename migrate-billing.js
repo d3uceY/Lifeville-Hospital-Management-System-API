@@ -5,7 +5,7 @@
  */
 
 import { query } from "./drizzle-db.js";
-import { SERVICE_CATEGORIES } from "./src/constants/domain.js";
+import { SERVICE_CATEGORIES, ROLE_LABELS } from "./src/constants/domain.js";
 
 const migrations = [
   // 1. Add id PK to patient_visits (safely)
@@ -84,6 +84,36 @@ const migrations = [
      ('Procedure Fee',          '${SERVICE_CATEGORIES.SERVICE}',      10000.00,true),
      ('Admission Fee',          '${SERVICE_CATEGORIES.SERVICE}',      2000.00, false)
    ON CONFLICT DO NOTHING;`,
+
+  // 7. Create roles table
+  `CREATE TABLE IF NOT EXISTS roles (
+     id         SERIAL PRIMARY KEY,
+     name       VARCHAR(50) NOT NULL,
+     label      VARCHAR(100) NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     CONSTRAINT roles_name_key UNIQUE (name)
+   );`,
+
+  // 8. Seed roles
+  `INSERT INTO roles (name, label) VALUES
+     ${Object.entries(ROLE_LABELS).map(([name, label]) => `('${name}', '${label}')`).join(",\n     ")}
+   ON CONFLICT DO NOTHING;`,
+
+  // 9. Add role_id to users (FK to roles)
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL;`,
+
+  // 10. Backfill role_id from existing role text column
+  `UPDATE users u SET role_id = r.id FROM roles r WHERE u.role = r.name AND u.role_id IS NULL;`,
+
+  // 11. Add recipient_roles TEXT[] to notifications (one row targets multiple roles)
+  `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS recipient_roles TEXT[];`,
+
+  // 12. GIN index for efficient array lookup
+  `CREATE INDEX IF NOT EXISTS idx_notifications_recipient_roles ON notifications USING GIN(recipient_roles);`,
+
+  // 13. Backfill: convert existing recipient_role string into the new array column
+  `UPDATE notifications SET recipient_roles = ARRAY[recipient_role]
+   WHERE recipient_role IS NOT NULL AND recipient_role <> '' AND recipient_roles IS NULL;`,
 ];
 
 export async function runBillingMigration() {

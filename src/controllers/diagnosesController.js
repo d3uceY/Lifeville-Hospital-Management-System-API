@@ -18,16 +18,13 @@ export const createDiagnosis = async (req, res) => {
                 recorded_by: diagnosis.recorded_by,
                 priority: priorityLevels.normal,
             }
-            const roles = NOTIFICATION_ROLES.CLINICAL;
-
-            const notificationInfo = roles.map(role => ({
-                recipient_role: role,
+            await addNotification({
+                recipientRoles: NOTIFICATION_ROLES.CLINICAL,
                 type: NOTIFICATION_TYPES.DIAGNOSIS,
                 title: "New Diagnosis Recorded",
                 message: `Diagnosis recorded for ${diagnosis.first_name} ${diagnosis.surname}: ${diagnosis.condition}`,
                 data,
-            }));
-            await addNotification(notificationInfo);
+            });
 
         } catch (error) {
             console.error(error);
@@ -36,7 +33,8 @@ export const createDiagnosis = async (req, res) => {
         // emit notification
         const io = req.app.get("socketio");
         io.emit("notification", {
-            message: `New diagnosis: ${diagnosis.condition} by ${diagnosis.recorded_by}`,
+            recipientRoles: NOTIFICATION_ROLES.CLINICAL,
+            message: `New diagnosis: ${diagnosis.condition} by ${diagnosis.recordedBy}`,
             description: `Patient: ${diagnosis.first_name} ${diagnosis.surname}`
         });
 

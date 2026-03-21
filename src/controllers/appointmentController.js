@@ -52,17 +52,13 @@ export const createAppointment = async (req, res) => {
         patient_id: newAppointment.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.APPOINTMENT;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
         type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "New Appointment",
         message: `New appointment on ${formatDate(newAppointment.appointment_date)} has been created`,
         data,
-      }));
-
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -70,7 +66,8 @@ export const createAppointment = async (req, res) => {
 
     const io = req.app.get("socketio");
     io.emit("notification", {
-      message: `( New Appointment on ${formatDate(newAppointment.appointment_date)} ) Doctor: ${newAppointment.doctor_name}`,
+      recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
+      message: `( New Appointment on ${formatDate(newAppointment.appointmentDate)} ) Doctor: ${newAppointment.doctor_name}`,
       description: `Patient: ${newAppointment.first_name} ${newAppointment.surname}`
     });
 
@@ -120,16 +117,13 @@ export const updateAppointment = async (req, res) => {
         patient_id: updatedAppointment.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.APPOINTMENT;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
         type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "Appointment Updated",
         message: `Appointment on ${formatDate(updatedAppointment.appointment_date)} has been updated (status: ${updatedAppointment.status})`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -137,7 +131,8 @@ export const updateAppointment = async (req, res) => {
 
     const io = req.app.get("socketio");
     io.emit("notification", {
-      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointment_date)} ) Status: ${updatedAppointment.status}`,
+      recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
+      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointmentDate)} ) Status: ${updatedAppointment.status}`,
       description: `Patient: ${updatedAppointment.first_name} ${updatedAppointment.surname}`
     });
 
@@ -176,16 +171,13 @@ export const updateAppointmentStatusController = async (req, res) => {
         patient_id: updatedAppointment.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.APPOINTMENT;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
         type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "Appointment Updated",
         message: `Appointment on ${formatDate(updatedAppointment.appointment_date)} has been updated to ${updatedAppointment.status}`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -193,7 +185,8 @@ export const updateAppointmentStatusController = async (req, res) => {
 
     const io = req.app.get("socketio");
     io.emit("notification", {
-      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointment_date)} ) Status: ${updatedAppointment.status}`,
+      recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
+      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointmentDate)} ) Status: ${updatedAppointment.status}`,
       description: `Patient: ${updatedAppointment.first_name} ${updatedAppointment.surname}`
     });
 

@@ -18,16 +18,13 @@ export const createPhysicalExamination = async (req, res) => {
         findings: physicalExamination.findings,
         priority: priorityLevels.normal,
       }
-      const roles = NOTIFICATION_ROLES.ALL_CLINICAL;
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
         type: NOTIFICATION_TYPES.PHYSICAL_EXAMINATION,
         title: "Physical Examination Recorded",
         message: `Physical examination recorded for ${physicalExamination.first_name} ${physicalExamination.surname} by ${physicalExamination.recorded_by}`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -36,6 +33,7 @@ export const createPhysicalExamination = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
       message: `Physical examination recorded by ${physicalExamination.recorded_by}`,
       description: `Patient: ${physicalExamination.first_name} ${physicalExamination.surname}`
     });

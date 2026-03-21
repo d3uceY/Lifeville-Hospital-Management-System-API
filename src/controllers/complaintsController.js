@@ -38,16 +38,13 @@ export async function createComplaint(req, res) {
                 recorded_by: complaint.recorded_by,
                 priority: priorityLevels.normal,
             }
-            const roles = NOTIFICATION_ROLES.CLINICAL;
-
-            const notificationInfo = roles.map(role => ({
-                recipient_role: role,
+            await addNotification({
+                recipientRoles: NOTIFICATION_ROLES.CLINICAL,
                 type: NOTIFICATION_TYPES.COMPLAINT,
                 title: "New Patient Complaint",
                 message: `Complaint recorded for ${complaint.first_name} ${complaint.surname} by ${complaint.recorded_by}`,
                 data,
-            }));
-            await addNotification(notificationInfo);
+            });
 
         } catch (error) {
             console.error(error);
@@ -56,7 +53,8 @@ export async function createComplaint(req, res) {
         // emit notification
         const io = req.app.get("socketio");
         io.emit("notification", {
-            message: `New complaint recorded by ${complaint.recorded_by}`,
+            recipientRoles: NOTIFICATION_ROLES.CLINICAL,
+            message: `New complaint recorded by ${complaint.recordedBy}`,
             description: `Patient: ${complaint.first_name} ${complaint.surname}`
         });
 

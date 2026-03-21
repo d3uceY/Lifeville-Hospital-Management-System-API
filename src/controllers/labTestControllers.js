@@ -59,16 +59,13 @@ export const updateLabTest = async (req, res) => {
                 test_type: labTest.test_type,
                 priority: priorityLevels.normal,
             }
-            const roles = NOTIFICATION_ROLES.LAB;
-
-            const notificationInfo = roles.map(role => ({
-                recipient_role: role,
+            await addNotification({
+                recipientRoles: NOTIFICATION_ROLES.LAB,
                 type: NOTIFICATION_TYPES.LAB_TEST,
                 title: "Lab Test Updated",
                 message: `Lab test on ${formatDate(labTest.updated_at)} has been updated to ${labTest.status}`,
                 data,
-            }));
-            await addNotification(notificationInfo);
+            });
 
         } catch (error) {
             console.error(error);
@@ -77,7 +74,8 @@ export const updateLabTest = async (req, res) => {
         // emit notification
         const io = req.app.get("socketio");
         io.emit("notification", {
-            message: `(${labTest.test_type}) ${labTest.status} by ${labTest.prescribed_by}`,
+            recipientRoles: NOTIFICATION_ROLES.LAB,
+            message: `(${labTest.testType}) ${labTest.status} by ${labTest.prescribedBy}`,
             description: `Patient: ${labTest.first_name} ${labTest.surname}`
         });
 
@@ -117,16 +115,13 @@ export async function createLabTest(req, res) {
                 test_type: labTest.test_type,
                 priority: priorityLevels.normal,
             }
-            const roles = NOTIFICATION_ROLES.LAB;
-
-            const notificationInfo = roles.map(role => ({
-                recipient_role: role,
+            await addNotification({
+                recipientRoles: NOTIFICATION_ROLES.LAB,
                 type: NOTIFICATION_TYPES.LAB_TEST,
                 title: "Lab Test Created",
                 message: `Lab test ${labTest.test_type} prescribed by ${labTest.prescribed_by} created on ${formatDate(labTest.created_at)}`,
                 data,
-            }));
-            await addNotification(notificationInfo);
+            });
 
         } catch (error) {
             console.error(error);
@@ -135,7 +130,8 @@ export async function createLabTest(req, res) {
         // emit notification
         const io = req.app.get("socketio");
         io.emit("notification", {
-            message: `(${labTest.test_type}) Prescribed by ${labTest.prescribed_by}`,
+            recipientRoles: NOTIFICATION_ROLES.LAB,
+            message: `(${labTest.testType}) Prescribed by ${labTest.prescribedBy}`,
             description: `Patient: ${labTest.first_name} ${labTest.surname}`
         });
 
