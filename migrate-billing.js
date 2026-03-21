@@ -1,15 +1,11 @@
 /**
  * migrate-billing.js
  * Event-driven billing system migration.
- * Run: node migrate-billing.js
+ * Called automatically on app startup.
  */
 
-import pg from "pg";
+import { query } from "./drizzle-db.js";
 import { SERVICE_CATEGORIES } from "./src/constants/domain.js";
-
-const DB_URL = "postgres://postgres:1001@localhost:5432/LIFEVILLE_HMS_db";
-
-const pool = new pg.Pool({ connectionString: DB_URL });
 
 const migrations = [
   // 1. Add id PK to patient_visits (safely)
@@ -90,24 +86,17 @@ const migrations = [
    ON CONFLICT DO NOTHING;`,
 ];
 
-async function run() {
-  const client = await pool.connect();
+export async function runBillingMigration() {
   try {
     console.log("  Starting billing migration...\n");
     for (let i = 0; i < migrations.length; i++) {
       console.log(`  [${i + 1}/${migrations.length}] Running step...`);
-      await client.query(migrations[i]);
+      await query(migrations[i]);
       console.log(`    Step ${i + 1} done`);
     }
-    console.log("\n  Migration complete.");
+    console.log("\n  Billing migration complete.");
   } catch (err) {
-    console.error("\n  Migration failed:", err.message);
+    console.error("\n  Billing migration failed:", err.message);
     console.error(err);
-    process.exit(1);
-  } finally {
-    client.release();
-    await pool.end();
   }
 }
-
-run();

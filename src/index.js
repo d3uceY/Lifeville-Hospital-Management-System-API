@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
+import { runBillingMigration } from "../migrate-billing.js";
 import apiRoutes from "./routes/index.js";
 
 import cookieParser from 'cookie-parser';
@@ -70,7 +71,7 @@ app.use(
 );
 
 // seed superadmin then start listening on the HTTP server
-seedSuperAdmin().then(() => {
+runBillingMigration().then(() => seedSuperAdmin()).then(() => {
   httpServer.listen(port, '0.0.0.0', () =>
     console.log(`Server + Socket.IO running on port ${port}`)
   );
