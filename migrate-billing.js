@@ -36,8 +36,20 @@ const migrations = [
      category   TEXT NOT NULL DEFAULT 'service',
      price      NUMERIC(12,2) NOT NULL DEFAULT 0,
      is_variable_price BOOLEAN NOT NULL DEFAULT false,
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     CONSTRAINT services_name_key UNIQUE (name)
    );`,
+
+  // 2a. Add unique constraint to existing tables that predate this migration
+  `DO $$
+   BEGIN
+     IF NOT EXISTS (
+       SELECT 1 FROM information_schema.table_constraints
+       WHERE table_name = 'services' AND constraint_name = 'services_name_key'
+     ) THEN
+       ALTER TABLE services ADD CONSTRAINT services_name_key UNIQUE (name);
+     END IF;
+   END $$;`,
 
   // 3. Create invoices table
   `CREATE TABLE IF NOT EXISTS invoices (
@@ -83,7 +95,7 @@ const migrations = [
      ('Utility Charge (per day)','${SERVICE_CATEGORIES.DAILY_CHARGE}',1500.00, false),
      ('Procedure Fee',          '${SERVICE_CATEGORIES.SERVICE}',      10000.00,true),
      ('Admission Fee',          '${SERVICE_CATEGORIES.SERVICE}',      2000.00, false)
-   ON CONFLICT DO NOTHING;`,
+   ON CONFLICT (name) DO NOTHING;`,
 
   // 7. Create roles table
   `CREATE TABLE IF NOT EXISTS roles (
