@@ -78,6 +78,10 @@ export const getInpatientAdmissions = async ({ page = 1, pageSize = 10, search =
 
 
 
+/** Returns all admissions for a patient joined with patient and doctor data.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getInpatientAdmissionsByPatientId = async (patientId) => {
   return await db
     .select({
@@ -426,6 +430,10 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
 
 }
 
+/** Returns the discharge summary for an admission joined with the attending doctor's name.
+ * @param {number} admissionId
+ * @returns {Promise<object[]>}
+ */
 export const getDischargeSummaryByAdmissionId = async (admissionId) => {
   const result = await db.select(
     {

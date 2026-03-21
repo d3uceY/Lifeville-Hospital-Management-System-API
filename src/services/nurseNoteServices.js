@@ -3,6 +3,10 @@ import { nursesNotes, patients } from "../../drizzle/migrations/schema.js";
 import { eq, desc } from "drizzle-orm";
 
 // Get all nurse's notes for a patient
+/** Returns all nurse notes for a patient joined with patient name.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getNurseNotesByPatientId = async (patientId) => {
   return db
     .select({
@@ -22,6 +26,10 @@ export const getNurseNotesByPatientId = async (patientId) => {
 };
 
 // Create nurse note
+/** Inserts a nurse note and returns it enriched with patient details.
+ * @param {object} noteData
+ * @returns {Promise<object>}
+ */
 export const createNurseNote = async (noteData) => {
   const { patientId, note, recordedBy } = noteData;
 
@@ -49,6 +57,12 @@ export const createNurseNote = async (noteData) => {
 };
 
 // Update nurse note
+/** Updates the note text, `updatedBy`, and `updatedAt` for a nurse note.
+ * @param {number} noteId
+ * @param {number} updatedBy - ID of the user making the update
+ * @param {string} newNote - New note content
+ * @returns {Promise<object>}
+ */
 export const updateNurseNote = async (noteId, updatedBy, newNote) => {
   const [updated] = await db
     .update(nursesNotes)
@@ -64,6 +78,10 @@ export const updateNurseNote = async (noteId, updatedBy, newNote) => {
 };
 
 // Delete nurse note
+/** Deletes a nurse note by ID and returns the deleted row.
+ * @param {number} noteId
+ * @returns {Promise<object>}
+ */
 export const deleteNurseNote = async (noteId) => {
   const [deleted] = await db
     .delete(nursesNotes)

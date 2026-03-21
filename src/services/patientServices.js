@@ -6,11 +6,15 @@ import { desc, eq } from "drizzle-orm";
 // ─── In-memory cache ───────────────────────────────────────────────────────
 let patientsCache = null;
 
+/** Clears the in-memory patients cache, forcing the next call to `getPatients` to re-query the database. */
 export const invalidatePatientsCache = () => {
   patientsCache = null;
 };
 // ───────────────────────────────────────────────────────────────────────────
 
+/** Returns all patients with basic identifying fields (in-memory cached).
+ * @returns {Promise<object[]>}
+ */
 export const getPatients = async () => {
   if (patientsCache) return patientsCache;
 
@@ -30,6 +34,9 @@ export const getPatients = async () => {
   return result;
 };
 
+/** Returns `patientId`, names, and hospital number for all patients — useful for select/combobox lookups.
+ * @returns {Promise<object[]>}
+ */
 export const getPatientNameId = async () => {
   return await db
     .select({
@@ -44,6 +51,11 @@ export const getPatientNameId = async () => {
 // alias but same as above
 export const getPatientNameAndId = getPatientNameId;
 
+/**
+ * Creates a new full patient record, auto-incrementing `hospitalNumber` if not provided.
+ * @param {object} patientData
+ * @returns {Promise<object>} The newly inserted patient row
+ */
 export const createPatient = async (patientData) => {
   const {
     hospitalNumber,
@@ -129,6 +141,10 @@ export const createPatient = async (patientData) => {
 };
 
 
+/** Fetches all columns for a single patient by ID.
+ * @param {number} patientId
+ * @returns {Promise<object>}
+ */
 export const viewPatient = async (patientId) => {
   const [patient] = await db
     .select()
@@ -138,6 +154,11 @@ export const viewPatient = async (patientId) => {
   return patient;
 };
 
+/** Partially updates a patient — only fields that are provided are merged into the existing record.
+ * @param {number} patientId
+ * @param {object} patientData
+ * @returns {Promise<object>} The updated patient row
+ */
 export const updatePatient = async (patientId, patientData) => {
   // Ensure patient exists
   const [existing] = await db
@@ -221,6 +242,10 @@ export const updatePatient = async (patientId, patientData) => {
   return updatedPatient;
 };
 
+/** Deletes a patient by ID, invalidates the patients cache, and returns the deleted row.
+ * @param {number} patientId
+ * @returns {Promise<object>}
+ */
 export const deletePatient = async (patientId) => {
   const [deletedPatient] = await db
     .delete(patients)

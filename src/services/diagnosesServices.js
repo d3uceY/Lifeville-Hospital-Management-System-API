@@ -3,6 +3,10 @@ import { diagnoses, patients } from "../../drizzle/migrations/schema.js";
 import { eq, desc } from "drizzle-orm";
 
 // CREATE diagnosis
+/** Creates a diagnosis record and returns it enriched with patient details.
+ * @param {object} diagnosisData
+ * @returns {Promise<object>}
+ */
 export async function createDiagnosis(diagnosisData) {
   const { patient_id, recorded_by, condition, notes } = diagnosisData;
 
@@ -30,6 +34,10 @@ export async function createDiagnosis(diagnosisData) {
 }
 
 // GET all diagnoses for a patient (joined with patient info)
+/** Returns all diagnoses for a patient with patient info, ordered by date descending.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export async function getDiagnosesByPatientId(patientId) {
   return await db
     .select({
@@ -52,6 +60,10 @@ export async function getDiagnosesByPatientId(patientId) {
 }
 
 // GET single diagnosis by ID (joined with patient info)
+/** Fetches one diagnosis by ID joined with patient info.
+ * @param {number} diagnosisId
+ * @returns {Promise<object>}
+ */
 export async function getDiagnosisById(diagnosisId) {
   const [result] = await db
     .select({
@@ -75,6 +87,11 @@ export async function getDiagnosisById(diagnosisId) {
 }
 
 // UPDATE diagnosis
+/** Updates condition, notes, and `updatedBy`/`updatedAt` on a diagnosis.
+ * @param {number} diagnosisId
+ * @param {{ condition?: string, notes?: string, updatedBy?: number }} updateData
+ * @returns {Promise<object>}
+ */
 export async function updateDiagnosis(diagnosisId, updateData) {
   const { condition, notes, updated_by } = updateData;
 
@@ -93,6 +110,10 @@ export async function updateDiagnosis(diagnosisId, updateData) {
 }
 
 // DELETE diagnosis
+/** Deletes a diagnosis by ID and returns the deleted row.
+ * @param {number} diagnosisId
+ * @returns {Promise<object>}
+ */
 export async function deleteDiagnosis(diagnosisId) {
   const [deleted] = await db
     .delete(diagnoses)

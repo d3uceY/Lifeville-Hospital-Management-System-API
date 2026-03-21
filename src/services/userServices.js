@@ -7,12 +7,19 @@ import config from "../constants/config.js";
 const SALT_ROUNDS = Number(config.auth.saltRounds) || 12;
 
 
+/** Returns true if a superadmin row already exists, false otherwise. */
 export async function seedSuperAdmin() {
     const { rows } = await query("SELECT id FROM users WHERE role = 'superadmin' LIMIT 1");
     return rows.length > 0;
 }
 
 
+/**
+ * Inserts the initial super-admin user with role_id resolved from the roles table.
+ * @param {string} email
+ * @param {string} hash - bcrypt-hashed password
+ * @returns {Promise<object>} The created user row
+ */
 export const insertSeedSuperAdmin = async (email, hash) => {
     const result = await query(
         `INSERT INTO users (name, email, password_hash, role, role_id)
@@ -41,6 +48,12 @@ function signRefresh(userId, jti) {
     );
 }
 
+/**
+ * Authenticates a user by email/password, rotates the refresh token (hashed JTI), and returns a JWT pair.
+ * @param {{ email: string, password: string }} credentials
+ * @returns {Promise<{ accessToken: string, refreshToken: string, user: { id: number, name: string, email: string, role: string } }>}
+ * @throws {Error} 401 if credentials are invalid or account is inactive
+ */
 export async function login({ email, password }) {
     const { rows } = await query(`SELECT name, id, password_hash, created_at, is_active, role FROM users WHERE email = $1`, [email.toLowerCase()]);
     const u = rows[0];
@@ -69,6 +82,13 @@ export async function login({ email, password }) {
     };
 }
 
+/**
+ * Verifies an existing refresh token, detects token replay (stolen token reuse), rotates to a new
+ * token pair, and returns the new JWTs together with the user object.
+ * @param {string} oldRefresh - The raw refresh JWT from the cookie
+ * @returns {Promise<{ accessToken: string, refreshToken: string, user: object }>}
+ * @throws {Error} 401 if the token is invalid/expired, 403 on replay detection, 404 if user not found
+ */
 export async function refreshAccess(oldRefresh) {
     let payload;
     try {
@@ -115,10 +135,19 @@ export async function refreshAccess(oldRefresh) {
     };
 }
 
+/** Clears the stored refresh token for the given user, effectively logging them out.
+ * @param {number} userId
+ */
 export async function logout(userId) {
     await query(`UPDATE users SET refresh_token = NULL WHERE id = $1`, [userId]);
 }
 
+/**
+ * Creates a new staff account with a bcrypt-hashed password.
+ * @param {{ email: string, password: string, role: string, name: string, roleId?: number }} staffData
+ * @param {number} creatorId - ID of the superadmin creating this account
+ * @returns {Promise<object>} The newly inserted user row
+ */
 export async function createStaff({ email, password, role, name, roleId }, creatorId) {
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
     const res = await query(
@@ -130,6 +159,9 @@ export async function createStaff({ email, password, role, name, roleId }, creat
     return res.rows[0];
 }
 
+/** Returns all users joined with their role label and the name of the user who created them, ordered by newest first.
+ * @returns {Promise<object[]>}
+ */
 export async function listUsers() {
     const { rows } = await query(`
       SELECT 
@@ -151,6 +183,12 @@ export async function listUsers() {
     return rows;
 }
 
+/**
+ * Updates name, email, role, and role_id for a user.
+ * @param {{ name: string, email: string, role: string, roleId?: number }} userData
+ * @param {number} userId
+ * @returns {Promise<object>} The updated user row
+ */
 export async function updateUser(userData, userId) {
     const { rows } = await query(
         `UPDATE users SET name = $1, email = $2, role = $3, role_id = $4 WHERE id = $5 RETURNING *`,
@@ -160,11 +198,19 @@ export async function updateUser(userData, userId) {
 }
 
 
+/** Deletes a user by ID and returns the deleted row.
+ * @param {number} userId
+ * @returns {Promise<object>}
+ */
 export async function deleteUser(userId) {
     const { rows } = await query(`DELETE FROM users WHERE id = $1 RETURNING *`, [userId]);
     return rows[0];
 }
 
+/** Flips the `is_active` flag and clears the refresh token for a user, forcing them to re-login.
+ * @param {number} userId
+ * @returns {Promise<object>} The updated user row
+ */
 export async function toggleUser(userId) {
     const { rows } = await query(
         `UPDATE users 

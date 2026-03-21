@@ -3,11 +3,18 @@ import { patients, complaints } from "../../drizzle/migrations/schema.js";
 import { eq, desc } from "drizzle-orm";
 
 // Get all complaints
+/** Returns all complaints from the database.
+ * @returns {Promise<object[]>}
+ */
 export const getComplaints = async () => {
     return await db.select().from(complaints);
 };
 
 // Get complaints for a specific patient, joined with patient info
+/** Returns all complaints for a patient joined with patient name.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getComplaintsByPatientId = async (patientId) => {
     return await db
         .select({
@@ -22,6 +29,10 @@ export const getComplaintsByPatientId = async (patientId) => {
 };
 
 // Create new complaint
+/** Inserts a new complaint and returns it enriched with patient name details.
+ * @param {object} complaint
+ * @returns {Promise<object>}
+ */
 export const createComplaint = async (complaint) => {
     const [newComplaint] = await db
         .insert(complaints)

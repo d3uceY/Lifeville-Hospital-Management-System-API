@@ -15,6 +15,12 @@ function userNotificationWhere(userId, role, userCreatedAt) {
     );
 }
 
+/**
+ * Returns the 5 most-recent notifications visible to a user (direct or role-based), with computed
+ * read status and a human-readable relative time string.
+ * @param {{ id: number, role: string, userCreatedAt: Date }} userData
+ * @returns {Promise<object[]>}
+ */
 export const getNotificationsByUserData = async (userData) => {
     const { role, id: userId, userCreatedAt } = userData;
 
@@ -43,6 +49,11 @@ export const getNotificationsByUserData = async (userData) => {
 }
 
 
+/**
+ * Returns the 5 most-recent **unread** notifications for a user plus a total unread count.
+ * @param {{ id: number, role: string, userCreatedAt: Date }} userData
+ * @returns {Promise<{ unreadNotifications: object[], totalUnread: number }>}
+ */
 export const getUnreadNotifications = async (userData) => {
     const { role, id: userId, userCreatedAt } = userData;
     const where = userNotificationWhere(userId, role, userCreatedAt);
@@ -89,6 +100,13 @@ export const getUnreadNotifications = async (userData) => {
 
 
 
+/**
+ * Returns a paginated list of notifications visible to a user with read status and relative timestamps.
+ * @param {{ id: number, role: string, userCreatedAt: Date }} userData
+ * @param {number} [page=1]
+ * @param {number} [pageSize=10]
+ * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
+ */
 export const getPaginatedNotificationsByUserData = async (
     userData,
     page = 1,
@@ -143,6 +161,12 @@ export const getPaginatedNotificationsByUserData = async (
     };
 };
 
+/**
+ * Inserts a read-receipt row for a notification/user pair, marking it as read for that user.
+ * @param {number} notificationId
+ * @param {{ id: number }} userData
+ * @returns {Promise<void>}
+ */
 export const markNotificationAsRead = async (notificationId, userData) => {
     const { id } = userData;
     await db.insert(notificationReads)

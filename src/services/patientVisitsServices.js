@@ -4,6 +4,12 @@ import { eq, ilike, desc, asc, count, or, sql, and, between } from "drizzle-orm"
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
+/**
+ * Creates an outpatient visit, auto-bills a consultation fee, and returns the visit enriched with
+ * patient and doctor names.
+ * @param {object} patientVisitData
+ * @returns {Promise<object>}
+ */
 export const createPatientVisit = async (patientVisitData) => {
     const { patientId, doctorId, recordedBy, purpose } = patientVisitData;
 
@@ -49,6 +55,13 @@ export const createPatientVisit = async (patientVisitData) => {
 };
 
 
+/**
+ * Returns filtered, paginated patient visits joined with patient data.
+ * @param {number} [page=1]
+ * @param {number} [pageSize=10]
+ * @param {{ firstName?: string, surname?: string, phoneNumber?: string, hospitalNumber?: string, startDate?: string, endDate?: string }} [filters={}]
+ * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
+ */
 export const getPaginatedPatientVisits = async (
     page = 1,
     pageSize = 10,
@@ -144,6 +157,10 @@ export const getPaginatedPatientVisits = async (
 };
 
 
+/** Returns all visits for a patient joined with patient and doctor data.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getPatientVisitsByPatientId = async (patientId) => {
     const rows = await db
         .select({

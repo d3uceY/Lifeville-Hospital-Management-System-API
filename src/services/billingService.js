@@ -253,6 +253,11 @@ export async function getBillForAdmission(admissionId) {
 
 // ─── Outpatient visit bill ────────────────────────────────────────────────────
 
+/**
+ * Builds the bill for an outpatient visit: stored bill items, payment history, and running totals.
+ * @param {number} visitId
+ * @returns {Promise<object>} Bill summary with items, payments, subtotal, paid, and balance
+ */
 export async function getBillForVisit(visitId) {
   const invoice = await getOrCreateInvoice({ visitId });
 
@@ -293,6 +298,11 @@ export async function getBillForVisit(visitId) {
 
 // ─── Record a payment ─────────────────────────────────────────────────────────
 
+/**
+ * Records a payment against an invoice and auto-closes it when fully settled.
+ * @param {{ invoiceId: number, amount: number, paymentMethod?: string, notes?: string|null, createdBy?: number|null }} opts
+ * @returns {Promise<object>} The inserted payment row
+ */
 export async function recordPayment({ invoiceId, amount, paymentMethod = "cash", notes = null, createdBy = null }) {
   const [payment] = await db
     .insert(billingPayments)
@@ -328,6 +338,9 @@ export async function recordPayment({ invoiceId, amount, paymentMethod = "cash",
 let servicesCache = null;
 const invalidateServicesCache = () => { servicesCache = null; };
 
+/** Returns all services ordered by category and name, using an in-memory cache.
+ * @returns {Promise<object[]>}
+ */
 export async function listServices() {
   if (servicesCache) return servicesCache;
   const result = await db.select().from(services).orderBy(services.category, services.name);
@@ -335,6 +348,11 @@ export async function listServices() {
   return result;
 }
 
+/**
+ * Creates or updates a service record and invalidates the services cache.
+ * @param {{ id?: number|null, name: string, category: string, price: number, isVariablePrice?: boolean }} serviceData
+ * @returns {Promise<object>} The upserted service row
+ */
 export async function upsertService({ id = null, name, category, price, isVariablePrice = false }) {
   if (id) {
     const [updated] = await db
@@ -353,6 +371,10 @@ export async function upsertService({ id = null, name, category, price, isVariab
   return created;
 }
 
+/** Deletes a service by ID and invalidates the services cache.
+ * @param {number} id
+ * @returns {Promise<object>} The deleted service row
+ */
 export async function deleteService(id) {
   const [deleted] = await db
     .delete(services)

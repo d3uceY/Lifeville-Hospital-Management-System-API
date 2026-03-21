@@ -6,10 +6,17 @@ import deleteImage from "../utils/deleteImage.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
+/** Returns all lab tests from the database.
+ * @returns {Promise<object[]>}
+ */
 export const getLabTests = async () => {
   return db.select().from(labTests);
 };
 
+/** Returns all lab tests for a patient with patient name and hospital number.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getLabTestsByPatientId = async (patientId) => {
   return db
     .select({
@@ -24,6 +31,10 @@ export const getLabTestsByPatientId = async (patientId) => {
     .orderBy(desc(labTests.createdAt));
 };
 
+/** Fetches one lab test by ID.
+ * @param {number} id
+ * @returns {Promise<object>}
+ */
 export const getLabTestById = async (id) => {
   return db
     .select()
@@ -32,6 +43,11 @@ export const getLabTestById = async (id) => {
     .then(res => res[0]);
 };
 
+/**
+ * Creates a lab test with status `"to do"` and auto-bills if an `admissionId` or `visitId` is provided.
+ * @param {object} labTest
+ * @returns {Promise<object>} The new lab test enriched with patient name
+ */
 export const createLabTest = async (labTest) => {
   const [newTest] = await db.insert(labTests).values({
     patientId: labTest.patientId,
@@ -74,6 +90,13 @@ export const createLabTest = async (labTest) => {
   };
 };
 
+/**
+ * Updates status, results, comments, and optionally replaces Cloudinary images for a lab test.
+ * @param {number} id
+ * @param {object} formRequest
+ * @param {object[]} [files=[]] - Uploaded files (Cloudinary handles storage)
+ * @returns {Promise<object>} The updated lab test enriched with patient name
+ */
 export const updateLabTest = async (id, formRequest, files = []) => {
   // Get the existing lab test
 
@@ -146,6 +169,10 @@ export const updateLabTest = async (id, formRequest, files = []) => {
 };
 
 
+/** Deletes a lab test by ID and removes associated Cloudinary images.
+ * @param {number} id
+ * @returns {Promise<object>} The deleted lab test row
+ */
 export const deleteLabTest = async (id) => {
   const existingLabTest = await db
     .select()
@@ -172,6 +199,13 @@ export const deleteLabTest = async (id) => {
 
 
 
+/**
+ * Returns filtered, paginated lab tests joined with patient data.
+ * @param {number} [page=1]
+ * @param {number} [pageSize=10]
+ * @param {{ firstName?: string, surname?: string, hospitalNumber?: string, testType?: string, status?: string, startDate?: string, endDate?: string }} [filters={}]
+ * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
+ */
 export const getPaginatedLabTests = async (
   page = 1,
   pageSize = 10,
@@ -265,9 +299,13 @@ export const getPaginatedLabTests = async (
 // Lab Test Types
 // ─── In-memory cache ────────────────────────────────────────────────────────
 let labTestTypesCache = null;
+/** Clears the in-memory lab test types cache, forcing the next call to re-query the database. */
 export const invalidateLabTestTypesCache = () => { labTestTypesCache = null; };
 // ────────────────────────────────────────────────────────────────────────────
 
+/** Returns all lab test types (in-memory cached).
+ * @returns {Promise<object[]>}
+ */
 export const getLabTestTypes = async () => {
   if (labTestTypesCache) return labTestTypesCache;
   const result = await db.select().from(labTestTypes);
@@ -275,12 +313,21 @@ export const getLabTestTypes = async () => {
   return result;
 };
 
+/** Inserts a new lab test type and invalidates the types cache.
+ * @param {object} labTestType
+ * @returns {Promise<object>}
+ */
 export const createLabTestType = async (labTestType) => {
   const [newType] = await db.insert(labTestTypes).values(labTestType).returning();
   invalidateLabTestTypesCache();
   return newType;
 };
 
+/** Updates a lab test type by ID and invalidates the types cache.
+ * @param {number} id
+ * @param {object} labTestType
+ * @returns {Promise<object>}
+ */
 export const updateLabTestType = async (id, labTestType) => {
   const [updated] = await db.update(labTestTypes)
     .set(labTestType)
@@ -291,6 +338,10 @@ export const updateLabTestType = async (id, labTestType) => {
   return updated;
 };
 
+/** Deletes a lab test type by ID and invalidates the types cache.
+ * @param {number} id
+ * @returns {Promise<object>}
+ */
 export const deleteLabTestType = async (id) => {
   const [deleted] = await db.delete(labTestTypes)
     .where(eq(labTestTypes.id, id))

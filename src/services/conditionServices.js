@@ -4,10 +4,15 @@ import { eq } from "drizzle-orm";
 
 // ─── In-memory cache ────────────────────────────────────────────────────────
 let conditionsCache = null;
+/** Clears the in-memory conditions cache, forcing the next call to `getConditions` to re-query the database. */
 export const invalidateConditionsCache = () => { conditionsCache = null; };
 // ────────────────────────────────────────────────────────────────────────────
 
 // Create condition
+/** Inserts a new condition by name, invalidates the conditions cache, and returns the new row.
+ * @param {{ name: string }} conditionData
+ * @returns {Promise<object>}
+ */
 export async function createCondition(conditionData) {
   const [newCondition] = await db
     .insert(conditions)
@@ -21,6 +26,9 @@ export async function createCondition(conditionData) {
 }
 
 // Get all conditions
+/** Returns all conditions ordered by name (in-memory cached).
+ * @returns {Promise<object[]>}
+ */
 export async function getConditions() {
   if (conditionsCache) return conditionsCache;
   const result = await db.select().from(conditions);
@@ -29,6 +37,10 @@ export async function getConditions() {
 }
 
 // Delete condition
+/** Deletes a condition by ID, invalidates the cache, and returns the deleted row.
+ * @param {number} conditionId
+ * @returns {Promise<object>}
+ */
 export async function deleteCondition(conditionId) {
   const [deleted] = await db
     .delete(conditions)
@@ -40,6 +52,11 @@ export async function deleteCondition(conditionId) {
 }
 
 // Update condition
+/** Updates a condition's name, invalidates the cache, and returns the updated row.
+ * @param {number} conditionId
+ * @param {{ name: string }} conditionData
+ * @returns {Promise<object>}
+ */
 export async function updateCondition(conditionId, conditionData) {
   const [updated] = await db
     .update(conditions)

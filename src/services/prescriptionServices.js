@@ -6,6 +6,12 @@ import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
 // CREATE prescription
+/**
+ * Creates a prescription header and its line items, auto-billing each drug to the linked admission
+ * or visit invoice using ID-first price lookup.
+ * @param {object} prescriptionData
+ * @returns {Promise<object>} The created prescription row
+ */
 export const createPrescription = async (prescriptionData) => {
     const {
         patient_id,
@@ -91,6 +97,10 @@ export const createPrescription = async (prescriptionData) => {
 
 
 // GET prescriptions for a patient
+/** Returns all prescriptions for a patient with items aggregated as a JSON array.
+ * @param {number} patient_id
+ * @returns {Promise<object[]>}
+ */
 export const getPrescriptions = async (patient_id) => {
     const { rows } = await query(
       `SELECT 
@@ -136,12 +146,22 @@ export const getPrescriptions = async (patient_id) => {
   };
   
   
+/** Deletes a prescription and all its line items by ID.
+ * @param {number} prescriptionId
+ * @returns {Promise<object>}
+ */
 export const deletePrescription = async (prescriptionId) => {
     const deletedPrescription = db.delete(prescriptions).where(eq(prescriptions.prescriptionId, prescriptionId)).returning();
     return deletedPrescription;
 };
 
 
+/** Updates the status, `updatedBy`, and `updatedAt` of a prescription.
+ * @param {number} prescriptionId
+ * @param {string} newStatus
+ * @param {number} updatedBy - ID of the user making the update
+ * @returns {Promise<object>}
+ */
 export const updatePrescriptionStatus = async (prescriptionId, newStatus, updatedBy) => {
     const result = await query(
         `UPDATE prescriptions

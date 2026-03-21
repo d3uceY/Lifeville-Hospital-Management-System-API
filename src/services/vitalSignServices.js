@@ -1,5 +1,9 @@
 import { query } from "../../drizzle-db.js";
 
+/** Inserts a vital sign record and returns it enriched with patient details.
+ * @param {object} vitalSignData
+ * @returns {Promise<object>}
+ */
 export const createVitalSign = async (vitalSignData) => {
   const {
     date,
@@ -51,6 +55,10 @@ export const createVitalSign = async (vitalSignData) => {
 };
 
 
+/** Returns all vital signs for a patient ordered by most recent.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getVitalSignsByPatientId = async (patientId) => {
   const result = await query(
     `SELECT * FROM vital_signs WHERE patient_id = $1 ORDER BY created_at DESC;`,
@@ -61,6 +69,11 @@ export const getVitalSignsByPatientId = async (patientId) => {
 };
 
 
+/** Updates all fields of a vital sign record by ID.
+ * @param {object} vitalSignData
+ * @param {number} vitalSignId
+ * @returns {Promise<object>}
+ */
 export const updateVitalSign = async (vitalSignData, vitalSignId) => {
   const {
     date,
