@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as patientVisitsServices from "../services/patientVisitsServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -20,7 +21,7 @@ export const createPatientVisit = async (req, res) => {
                 patient_id: patientVisit.patient_id,
                 priority: priorityLevels.normal,
             }
-            const roles = ["superadmin", "doctor", "receptionist", "lab", "nurse"];
+            const roles = NOTIFICATION_ROLES.VISIT;
 
             const notificationInfo = roles.map(role => ({
                 recipient_role: role,

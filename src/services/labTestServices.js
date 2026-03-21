@@ -1,8 +1,10 @@
 import { db } from "../../drizzle-db.js";
 import { labTests, labTestTypes, patients } from "../../drizzle/migrations/schema.js";
-import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
+import { eq, ilike, desc, asc, count, or, sql, and, between } from "drizzle-orm";
 import { uploadToCloudinary } from "../utils/uploadImage.js";
 import deleteImage from "../utils/deleteImage.js";
+import * as billingService from "./billingService.js";
+import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
 export const getLabTests = async () => {
   return db.select().from(labTests);
@@ -44,6 +46,26 @@ export const createLabTest = async (labTest) => {
     first_name: patients.firstName,
     surname: patients.surname,
   }).from(patients).where(eq(patients.patientId, labTest.patientId));
+
+  // ── Auto-billing: add a bill item for this lab test ──────────────────────
+  if (labTest.admissionId || labTest.visitId) {
+    try {
+      const labPrice = await billingService.getServicePrice("Lab Test");
+      await billingService.addItem({
+        admissionId: labTest.admissionId ? Number(labTest.admissionId) : null,
+        visitId: labTest.visitId ? Number(labTest.visitId) : null,
+        description: `Lab Test: ${labTest.testType}`,
+        category: SERVICE_CATEGORIES.LAB,
+        quantity: 1,
+        unitPrice: labTest.unitPrice ? Number(labTest.unitPrice) : labPrice,
+        billingType: "credit",
+        createdBy: labTest.createdBy || null,
+      });
+    } catch (billingErr) {
+      // Non-fatal: billing failure should not block lab test creation
+      console.error("Billing error (lab test):", billingErr.message);
+    }
+  }
 
   return {
     ...newTest,

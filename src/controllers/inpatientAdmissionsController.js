@@ -1,6 +1,7 @@
 
 
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as inpatientServices from "../services/inpatientAdmissionsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 
@@ -61,7 +62,7 @@ export const createInpatientAdmission = async (req, res) => {
         patient_id: newAdmission.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = ["superadmin", "doctor", "receptionist", "nurse"];
+      const roles = NOTIFICATION_ROLES.ADMISSION;
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,
@@ -169,7 +170,7 @@ export const dischargeInpatientAdmission = async (req, res) => {
         patient_id: discharged.patient_id,
         priority: priorityLevels.normal,
       }
-      const roles = ["superadmin", "doctor", "lab", "receptionist", "nurse"];
+      const roles = NOTIFICATION_ROLES.ALL_STAFF;
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,

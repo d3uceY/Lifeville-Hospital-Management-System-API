@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as labTestServices from "../services/labTestServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -58,7 +59,7 @@ export const updateLabTest = async (req, res) => {
                 test_type: labTest.test_type,
                 priority: priorityLevels.normal,
             }
-            const roles = ["superadmin", "doctor", "lab"];
+            const roles = NOTIFICATION_ROLES.LAB;
 
             const notificationInfo = roles.map(role => ({
                 recipient_role: role,
@@ -116,7 +117,7 @@ export async function createLabTest(req, res) {
                 test_type: labTest.test_type,
                 priority: priorityLevels.normal,
             }
-            const roles = ["superadmin", "doctor", "lab"];
+            const roles = NOTIFICATION_ROLES.LAB;
 
             const notificationInfo = roles.map(role => ({
                 recipient_role: role,

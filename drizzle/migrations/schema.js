@@ -1,6 +1,10 @@
 import { pgTable, index, unique, integer, date, varchar, text, boolean, foreignKey, serial, numeric, timestamp, check, jsonb, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
+// ─── Billing category & type enums ───────────────────────────────────────────
+export const billCategoryEnum = pgEnum("bill_category_enum", ["lab", "drug", "service", "ward", "food", "consultation", "daily_charge"])
+export const billingTypeEnum = pgEnum("billing_type_enum", ["credit", "pay_now"])
+
 export const genderEnum = pgEnum("gender_enum", ['Male', 'Female', 'Other'])
 export const patientTypeEnum = pgEnum("patient_type_enum", ['INPATIENT', 'OUTPATIENT', 'NULL'])
 
@@ -42,19 +46,83 @@ export const patients = pgTable("patients", {
 	unique("unique_hospital_number").on(table.hospitalNumber),
 ]);
 
+// ── Services (price catalog) ──────────────────────────────────────────────────
+export const services = pgTable("services", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	category: text().notNull().default("service"),
+	price: numeric({ precision: 12, scale: 2 }).notNull().default("0"),
+	isVariablePrice: boolean("is_variable_price").notNull().default(false),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ── Invoices (one per visit or admission) ─────────────────────────────────────
+export const invoices = pgTable("invoices", {
+	id: serial().primaryKey().notNull(),
+	admissionId: integer("admission_id"),
+	visitId: integer("visit_id"),
+	patientId: integer("patient_id"),
+	invoiceNumber: text("invoice_number").notNull(),
+	status: text().notNull().default("open"),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	unique("invoices_invoice_number_key").on(table.invoiceNumber),
+	foreignKey({ columns: [table.admissionId], foreignColumns: [inpatientAdmissions.id], name: "invoices_admission_id_fkey" }).onDelete("set null"),
+	foreignKey({ columns: [table.visitId], foreignColumns: [patientVisits.id], name: "invoices_visit_id_fkey" }).onDelete("set null"),
+	foreignKey({ columns: [table.patientId], foreignColumns: [patients.patientId], name: "invoices_patient_id_fkey" }).onDelete("set null"),
+]);
+
 export const billItems = pgTable("bill_items", {
 	id: serial().primaryKey().notNull(),
-	billId: integer("bill_id").notNull(),
+	// Legacy column – nullable so old bills keep working; new event-driven items use invoice_id instead
+	billId: integer("bill_id"),
+	// New event-driven columns
+	invoiceId: integer("invoice_id"),
+	serviceId: integer("service_id"),
 	description: text().notNull(),
-	unitPrice: numeric("unit_price", { precision: 12, scale:  2 }).notNull(),
+	category: text().notNull().default("service"),
+	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
 	quantity: integer().default(1).notNull(),
-	lineTotal: numeric("line_total", { precision: 12, scale:  2 }).generatedAlwaysAs(sql`(unit_price * (quantity)::numeric)`),
+	lineTotal: numeric("line_total", { precision: 12, scale: 2 }).generatedAlwaysAs(sql`(unit_price * (quantity)::numeric)`),
+	discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).notNull().default("0"),
+	billingType: text("billing_type").notNull().default("credit"),
+	createdBy: integer("created_by"),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	foreignKey({
-			columns: [table.billId],
-			foreignColumns: [bills.id],
-			name: "bill_items_bill_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.billId],
+		foreignColumns: [bills.id],
+		name: "bill_items_bill_id_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.invoiceId],
+		foreignColumns: [invoices.id],
+		name: "bill_items_invoice_id_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.serviceId],
+		foreignColumns: [services.id],
+		name: "bill_items_service_id_fkey"
+	}).onDelete("set null"),
+	foreignKey({
+		columns: [table.createdBy],
+		foreignColumns: [users.id],
+		name: "bill_items_created_by_fkey"
+	}).onDelete("set null"),
+]);
+
+// ── Billing payments ──────────────────────────────────────────────────────────
+export const billingPayments = pgTable("billing_payments", {
+	id: serial().primaryKey().notNull(),
+	invoiceId: integer("invoice_id").notNull(),
+	amount: numeric({ precision: 12, scale: 2 }).notNull(),
+	paymentMethod: text("payment_method").notNull().default("cash"),
+	notes: text(),
+	createdBy: integer("created_by"),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	foreignKey({ columns: [table.invoiceId], foreignColumns: [invoices.id], name: "billing_payments_invoice_id_fkey" }).onDelete("cascade"),
+	foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "billing_payments_created_by_fkey" }).onDelete("set null"),
 ]);
 
 export const bills = pgTable("bills", {
@@ -225,12 +293,19 @@ export const procedures = pgTable("procedures", {
 	comments: text(),
 	performedAt: timestamp("performed_at", { mode: 'string' }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	serviceId: integer("service_id"),
+	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "procedures_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.serviceId],
+			foreignColumns: [services.id],
+			name: "procedures_service_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const doctorsNotes = pgTable("doctors_notes", {
@@ -523,10 +598,17 @@ export const prescriptionItems = pgTable("prescription_items", {
 	frequency: text().notNull(),
 	duration: text().notNull(),
 	instructions: text(),
+	serviceId: integer("service_id"),
+	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0"),
 }, (table) => [
 	foreignKey({
 			columns: [table.prescriptionId],
 			foreignColumns: [prescriptions.prescriptionId],
 			name: "prescription_items_prescription_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.serviceId],
+			foreignColumns: [services.id],
+			name: "prescription_items_service_id_fkey"
+		}).onDelete("set null"),
 ]);

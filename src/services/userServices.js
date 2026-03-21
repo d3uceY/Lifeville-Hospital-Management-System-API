@@ -4,6 +4,8 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import config from "../constants/config.js";
 
+const SALT_ROUNDS = Number(config.auth.saltRounds) || 12;
+
 
 export async function seedSuperAdmin() {
     const { rows } = await query("SELECT id FROM users WHERE role = 'superadmin' LIMIT 1");

@@ -2,6 +2,8 @@ import { query } from "../../drizzle-db.js";
 import { eq, desc, and } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
 import { prescriptionItems, prescriptions } from "../../drizzle/migrations/schema.js";
+import * as billingService from "./billingService.js";
+import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
 // CREATE prescription
 export const createPrescription = async (prescriptionData) => {
@@ -9,7 +11,9 @@ export const createPrescription = async (prescriptionData) => {
         patient_id,
         prescribed_by,
         notes,
-        items // array of { drug_name, dosage, frequency, duration, instructions }
+        items, // array of { drug_name, dosage, frequency, duration, instructions, unit_price? }
+        admission_id,
+        visit_id,
     } = prescriptionData;
 
     // Insert into prescriptions table
@@ -26,7 +30,9 @@ export const createPrescription = async (prescriptionData) => {
 
     const prescription = rows[0];
 
-    // Insert prescription items
+    // Insert prescription items + auto-billing
+    const drugPrice = await billingService.getServicePrice("Drug / Prescription");
+
     for (const item of items) {
         await query(
             `INSERT INTO prescription_items (
@@ -35,17 +41,49 @@ export const createPrescription = async (prescriptionData) => {
                 dosage,
                 frequency,
                 duration,
-                instructions
-            ) VALUES ($1, $2, $3, $4, $5, $6)`,
+                instructions,
+                service_id,
+                unit_price
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
                 prescription.prescription_id,
                 item.drug_name,
-                item.dosage,
-                item.frequency,
-                item.duration,
-                item.instructions
+                item.dosage || "",
+                item.frequency || "",
+                item.duration || "",
+                item.instructions || null,
+                item.service_id || null,
+                item.unit_price != null ? Number(item.unit_price) : null,
             ]
         );
+
+        // ── Auto-billing: one bill item per drug ───────────────────────────
+        if (admission_id || visit_id) {
+            try {
+                // Prefer catalog unit_price → ID lookup → name lookup → skip
+                const itemPrice = item.unit_price != null
+                    ? Number(item.unit_price)
+                    : item.service_id
+                        ? await billingService.getServicePriceById(Number(item.service_id)).catch(() => null)
+                        : await billingService.getServicePrice(item.drug_name).catch(() => null);
+
+                if (itemPrice == null) continue; // price unknown — skip billing
+
+                await billingService.addItem({
+                    admissionId: admission_id ? Number(admission_id) : null,
+                    visitId: visit_id ? Number(visit_id) : null,
+                    serviceId: item.service_id ? Number(item.service_id) : null,
+                    description: `Drug: ${item.drug_name} (${item.dosage}, ${item.frequency})`,
+                    category: SERVICE_CATEGORIES.DRUG,
+                    quantity: 1,
+                    unitPrice: itemPrice,
+                    billingType: "credit",
+                    createdBy: prescriptionData.created_by || null,
+                });
+            } catch (billingErr) {
+                console.error("Billing error (prescription):", billingErr.message);
+            }
+        }
     }
 
     return prescription;

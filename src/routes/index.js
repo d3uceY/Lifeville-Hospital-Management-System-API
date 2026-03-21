@@ -24,8 +24,8 @@ import nurseNoteRoutes from './nurseNoteRoutes.js'
 import summaryRoutes from './summaryRoutes.js'
 import statsRoutes from './statsRoutes.js'
 import patientVisitsRoutes from './patientVisitsRoutes.js'
-import notificationRoutes from './notificationRoutes.js'
-
+import notificationRoutes from './notificationRoutes.js';
+import billingRoutes from './billingRoutes.js';
 const router = express.Router();
 
 router.use("/api", patientRoutes);
@@ -52,5 +52,6 @@ router.use("/api", summaryRoutes);
 router.use("/api", statsRoutes);
 router.use("/api", patientVisitsRoutes);
 router.use("/api", notificationRoutes);
+router.use("/api", billingRoutes);
 
 export default router;

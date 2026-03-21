@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as vitalSignServices from '../services/vitalSignServices.js';
 import { addNotification } from "../services/notificationServices.js";
 
@@ -19,7 +20,7 @@ export const createVitalSign = async (req, res) => {
         recorded_by: createdVitalSign.recorded_by,
         priority: priorityLevels.normal,
       }
-      const roles = ["superadmin", "doctor", "nurse", "lab"];
+      const roles = NOTIFICATION_ROLES.ALL_CLINICAL;
 
       const notificationInfo = roles.map(role => ({
         recipient_role: role,

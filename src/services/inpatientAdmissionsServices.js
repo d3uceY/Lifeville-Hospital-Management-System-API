@@ -1,6 +1,8 @@
 import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
 import { inpatientAdmissions, patients, users, dischargeSummary } from "../../drizzle/migrations/schema.js";
+import * as billingService from "./billingService.js";
+import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
 const INPATIENT_SELECT_FIELDS = {
   id: inpatientAdmissions.id,
@@ -232,6 +234,33 @@ export const createInpatientAdmission = async (admissionData) => {
     .from(users)
     .where(eq(users.id, consultantDoctorId));
 
+  // ── Auto-billing: admission fee at point of admission ──────────────────────
+  try {
+    const admissionFeePrice = await billingService.getServicePrice("Admission Fee");
+    const consultationPrice = await billingService.getServicePrice("Consultation Fee");
+
+    // Create invoice for this admission + add one-time charges
+    await billingService.addItem({
+      admissionId: newAdmission.id,
+      description: "Admission Fee",
+      category: SERVICE_CATEGORIES.SERVICE,
+      quantity: 1,
+      unitPrice: admissionFeePrice,
+      billingType: "credit",
+      createdBy: admissionData.createdBy || null,
+    });
+    await billingService.addItem({
+      admissionId: newAdmission.id,
+      description: "Consultation Fee",
+      category: SERVICE_CATEGORIES.CONSULTATION,
+      quantity: 1,
+      unitPrice: consultationPrice,
+      billingType: "credit",
+      createdBy: admissionData.createdBy || null,
+    });
+  } catch (billingErr) {
+    console.error("Billing error (admission):", billingErr.message);
+  }
 
   return {
     ...newAdmission,

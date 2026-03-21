@@ -1,6 +1,8 @@
 import { db } from "../../drizzle-db.js";
 import { patientVisits, patients, users } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql, and, between } from "drizzle-orm";
+import * as billingService from "./billingService.js";
+import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
 export const createPatientVisit = async (patientVisitData) => {
     const { patientId, doctorId, recordedBy, purpose } = patientVisitData;
@@ -21,6 +23,23 @@ export const createPatientVisit = async (patientVisitData) => {
     const [doctorData] = await db.select({
         name: users.name,
     }).from(users).where(eq(users.id, doctorId));
+
+    // ── Auto-billing: consultation fee for outpatient visit ────────────────
+    try {
+        const consultationPrice = await billingService.getServicePrice("Consultation Fee");
+        await billingService.addItem({
+            visitId: rows.id,
+            description: `Consultation: ${purpose}`,
+            category: SERVICE_CATEGORIES.CONSULTATION,
+            quantity: 1,
+            unitPrice: consultationPrice,
+            billingType: "credit",
+            createdBy: patientVisitData.createdBy || null,
+        });
+    } catch (billingErr) {
+        console.error("Billing error (patient visit):", billingErr.message);
+    }
+
     return {
         ...rows,
         first_name: patientData[0].first_name,

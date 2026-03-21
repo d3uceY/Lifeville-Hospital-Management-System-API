@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as complaintsServices from "../services/complaintsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -37,7 +38,7 @@ export async function createComplaint(req, res) {
                 recorded_by: complaint.recorded_by,
                 priority: priorityLevels.normal,
             }
-            const roles = ["superadmin", "doctor", "nurse"];
+            const roles = NOTIFICATION_ROLES.CLINICAL;
 
             const notificationInfo = roles.map(role => ({
                 recipient_role: role,
