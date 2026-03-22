@@ -10,7 +10,6 @@ import { createServer } from "http";
 //SOCKETS
 import { Server as IOServer } from "socket.io";
 
-import { specs, swaggerUiOptions as swaggerUi } from "./swagger/swagger.js";
 import config from "./constants/config.js";
 
 const app = express();
@@ -59,16 +58,6 @@ app.set("socketio", io); // lets any controller do req.app.get("socketio")
 
 //api routes
 app.use("/", apiRoutes);
-
-// Swagger UI
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(specs, {
-    explorer: true,
-    swaggerOptions: { persistAuthorization: true },
-  })
-);
 
 // seed superadmin then start listening on the HTTP server
 runBillingMigration().then(() => seedSuperAdmin()).then(() => {
