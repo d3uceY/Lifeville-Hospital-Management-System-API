@@ -3,6 +3,10 @@ import { db } from "../../drizzle-db.js";
 import { physicalExaminations, patients, users } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
 
+/** Inserts a full physical examination record and returns it enriched with patient details.
+ * @param {object} examData
+ * @returns {Promise<object>}
+ */
 export const createPhysicalExamination = async (examData) => {
     const {
         patient_id,
@@ -72,6 +76,10 @@ export const createPhysicalExamination = async (examData) => {
 };
 
 
+/** Returns all physical examinations for a patient joined with patient info.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getPhysicalExaminationsByPatientId = async (patientId) => {
     const rows = await db
       .select({

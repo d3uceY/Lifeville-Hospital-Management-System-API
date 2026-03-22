@@ -4,6 +4,13 @@ import { appointments, patients, users } from "../../drizzle/migrations/schema.j
 import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
 
 
+/**
+ * Returns paginated appointments joined with patient and doctor info, with optional text search.
+ * @param {number} [page=1]
+ * @param {number} [pageSize=10]
+ * @param {string} [searchTerm=""]
+ * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
+ */
 export const getPaginatedAppointments = async (
   page = 1,
   pageSize = 10,
@@ -87,6 +94,10 @@ export const getPaginatedAppointments = async (
 };
 
 
+/** Returns all appointments for a patient with doctor name, ordered by newest first.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getAppointmentsByPatientId = async (patientId) => {
   try {
     const rows = await db
@@ -113,6 +124,10 @@ export const getAppointmentsByPatientId = async (patientId) => {
 
 
 // View a specific appointment
+/** Fetches a single appointment by ID.
+ * @param {number} appointmentId
+ * @returns {Promise<object>}
+ */
 export const viewAppointment = async (appointmentId) => {
   const rows = await db
     .select()
@@ -122,6 +137,10 @@ export const viewAppointment = async (appointmentId) => {
 };
 
 // Create a new appointment
+/** Inserts a new appointment with status `"scheduled"` and returns the row enriched with patient and doctor names.
+ * @param {object} appointmentData
+ * @returns {Promise<object>}
+ */
 export const createAppointment = async (appointmentData) => {
   const { patientId, doctorId, appointmentDate, notes } = appointmentData;
 
@@ -151,6 +170,11 @@ export const createAppointment = async (appointmentData) => {
 };
 
 // Update an existing appointment
+/** Updates all mutable fields of an appointment and returns the updated row enriched with patient name.
+ * @param {number} appointment_id
+ * @param {object} appointmentData
+ * @returns {Promise<object>}
+ */
 export const updateAppointment = async (appointment_id, appointmentData) => {
   const { patientId, doctorId, appointmentDate, notes, status } =
     appointmentData;
@@ -179,6 +203,11 @@ export const updateAppointment = async (appointment_id, appointmentData) => {
   };
 };
 
+/** Updates only the status field of an appointment and returns the updated row with patient name.
+ * @param {number} appointmentId
+ * @param {string} status
+ * @returns {Promise<object>}
+ */
 export const updateAppointmentStatus = async (appointmentId, status) => {
   const rows = await db.update(appointments)
     .set({
@@ -202,6 +231,10 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
 
 
 // Delete an appointment
+/** Deletes an appointment by ID and returns the deleted row.
+ * @param {number} appointmentId
+ * @returns {Promise<object>}
+ */
 export const deleteAppointment = async (appointmentId) => {
   const rows = await db.delete(appointments)
     .where(eq(appointments.appointmentId, appointmentId))

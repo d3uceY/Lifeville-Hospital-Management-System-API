@@ -1,6 +1,10 @@
 import { query } from "../../drizzle-db.js";
 
 
+/** Returns all doctor notes for a patient joined with patient name.
+ * @param {number} patientId
+ * @returns {Promise<object[]>}
+ */
 export const getDoctorNotesByPatientId = async (patientId) => {
     const { rows } = await query(
       `SELECT dn.id, dn.note, dn.recorded_by, dn.updated_by, 
@@ -16,6 +20,10 @@ export const getDoctorNotesByPatientId = async (patientId) => {
     return rows;
   };
   
+/** Inserts a doctor note and returns it enriched with patient details.
+ * @param {object} noteData
+ * @returns {Promise<object>}
+ */
 export const createDoctorNote = async (noteData) => {
     const { patientId, note, recordedBy } = noteData;
 
@@ -41,6 +49,11 @@ export const createDoctorNote = async (noteData) => {
     };
 };
 
+/** Updates the note text and `updatedBy`/`updatedAt` for a doctor note.
+ * @param {object} updatedNoteData
+ * @param {number} noteId
+ * @returns {Promise<object>}
+ */
 export const updateDoctorNote = async (updatedNoteData, noteId) => {
     const {note, updatedBy} = updatedNoteData;
     const result = await query(
@@ -57,6 +70,10 @@ export const updateDoctorNote = async (updatedNoteData, noteId) => {
 };
 
 
+/** Deletes a doctor note by ID and returns the deleted row.
+ * @param {number} noteId
+ * @returns {Promise<object>}
+ */
 export const deleteDoctorNote = async (noteId) => {
     const result = await query(
         `DELETE FROM doctors_notes

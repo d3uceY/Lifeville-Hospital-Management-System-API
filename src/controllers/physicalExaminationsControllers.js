@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as physicalExaminationsServices from "../services/physicalExaminationsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -17,16 +18,13 @@ export const createPhysicalExamination = async (req, res) => {
         findings: physicalExamination.findings,
         priority: priorityLevels.normal,
       }
-      const roles = ["superadmin", "doctor", "nurse", "lab"];
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
         type: NOTIFICATION_TYPES.PHYSICAL_EXAMINATION,
         title: "Physical Examination Recorded",
         message: `Physical examination recorded for ${physicalExamination.first_name} ${physicalExamination.surname} by ${physicalExamination.recorded_by}`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -35,6 +33,7 @@ export const createPhysicalExamination = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
       message: `Physical examination recorded by ${physicalExamination.recorded_by}`,
       description: `Patient: ${physicalExamination.first_name} ${physicalExamination.surname}`
     });

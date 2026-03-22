@@ -7,7 +7,7 @@ const pool = new pg.Pool({
   ssl: config.app.production,
   max: 5,              
   min: 1,
-  idleTimeoutMillis: 10000, 
+  idleTimeoutMillis: 30000, 
   connectionTimeoutMillis: 10000,
 });
 

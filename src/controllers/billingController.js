@@ -1,0 +1,163 @@
+/**
+ * billingController.js
+ * Handles event-driven billing endpoints.
+ */
+
+import * as billingService from "../services/billingService.js";
+
+// ─── GET /admissions/:admissionId/bill ────────────────────────────────────────
+export const getAdmissionBill = async (req, res) => {
+  try {
+    const bill = await billingService.getBillForAdmission(Number(req.params.admissionId));
+    res.status(200).json(bill);
+  } catch (err) {
+    console.error("getAdmissionBill:", err);
+    res.status(err.message === "Admission not found" ? 404 : 500).json({ error: err.message });
+  }
+};
+
+// ─── GET /visits/:visitId/bill ────────────────────────────────────────────────
+export const getVisitBill = async (req, res) => {
+  try {
+    const bill = await billingService.getBillForVisit(Number(req.params.visitId));
+    res.status(200).json(bill);
+  } catch (err) {
+    console.error("getVisitBill:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── POST /billing/add-item ───────────────────────────────────────────────────
+export const addBillItem = async (req, res) => {
+  try {
+    const {
+      admissionId, visitId, invoiceId, serviceId,
+      description, category, quantity, unitPrice,
+      billingType, discountPercent,
+    } = req.body;
+
+    if (!description || unitPrice === undefined) {
+      return res.status(400).json({ error: "description and unitPrice are required" });
+    }
+    if (!admissionId && !visitId && !invoiceId) {
+      return res.status(400).json({ error: "admissionId, visitId, or invoiceId is required" });
+    }
+
+    const item = await billingService.addItem({
+      admissionId: admissionId ? Number(admissionId) : null,
+      visitId: visitId ? Number(visitId) : null,
+      invoiceId: invoiceId ? Number(invoiceId) : null,
+      serviceId: serviceId ? Number(serviceId) : null,
+      description,
+      category: category || "service",
+      quantity: Number(quantity) || 1,
+      unitPrice: Number(unitPrice),
+      billingType: billingType || "credit",
+      discountPercent: Number(discountPercent) || 0,
+      createdBy: req.user?.id || null,
+    });
+
+    res.status(201).json({ item, message: "Bill item added" });
+  } catch (err) {
+    console.error("addBillItem:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── POST /billing/payments ───────────────────────────────────────────────────
+export const recordPayment = async (req, res) => {
+  try {
+    const { invoiceId, amount, paymentMethod, notes } = req.body;
+    if (!invoiceId || !amount) {
+      return res.status(400).json({ error: "invoiceId and amount are required" });
+    }
+    const payment = await billingService.recordPayment({
+      invoiceId: Number(invoiceId),
+      amount: Number(amount),
+      paymentMethod: paymentMethod || "cash",
+      notes: notes || null,
+      createdBy: req.user?.id || null,
+    });
+    res.status(201).json({ payment, message: "Payment recorded" });
+  } catch (err) {
+    console.error("recordPayment:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── GET /services ────────────────────────────────────────────────────────────
+export const getServices = async (req, res) => {
+  try {
+    const list = await billingService.listServices();
+    res.status(200).json(list);
+  } catch (err) {
+    console.error("getServices:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── POST /services ───────────────────────────────────────────────────────────
+export const createService = async (req, res) => {
+  try {
+    const { name, category, price, isVariablePrice } = req.body;
+    if (!name || !category || price === undefined) {
+      return res.status(400).json({ error: "name, category, and price are required" });
+    }
+    const svc = await billingService.upsertService({ name, category, price: Number(price), isVariablePrice: !!isVariablePrice });
+    res.status(201).json({ service: svc, message: "Service created" });
+  } catch (err) {
+    console.error("createService:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── PUT /services/:id ────────────────────────────────────────────────────────
+export const updateService = async (req, res) => {
+  try {
+    const { name, category, price, isVariablePrice } = req.body;
+    const svc = await billingService.upsertService({
+      id: Number(req.params.id),
+      name, category,
+      price: Number(price),
+      isVariablePrice: !!isVariablePrice,
+    });
+    res.status(200).json({ service: svc, message: "Service updated" });
+  } catch (err) {
+    console.error("updateService:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── DELETE /services/:id ─────────────────────────────────────────────────────
+export const deleteService = async (req, res) => {
+  try {
+    const deleted = await billingService.deleteService(Number(req.params.id));
+    if (!deleted) return res.status(404).json({ error: "Service not found" });
+    res.status(200).json({ message: "Service deleted" });
+  } catch (err) {
+    console.error("deleteService:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── GET /patients/:patientId/invoices ────────────────────────────────────────
+export const getPatientInvoices = async (req, res) => {
+  try {
+    const invoices = await billingService.getPatientInvoices(Number(req.params.patientId));
+    res.status(200).json(invoices);
+  } catch (err) {
+    console.error("getPatientInvoices:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── POST /patients/:patientId/invoices ───────────────────────────────────────
+export const createPatientInvoice = async (req, res) => {
+  try {
+    const invoice = await billingService.createPatientInvoice(Number(req.params.patientId));
+    res.status(201).json({ invoice, message: "Manual invoice created" });
+  } catch (err) {
+    console.error("createPatientInvoice:", err);
+    res.status(500).json({ error: err.message });
+  }
+};

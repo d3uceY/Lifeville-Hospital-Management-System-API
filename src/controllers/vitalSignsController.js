@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as vitalSignServices from '../services/vitalSignServices.js';
 import { addNotification } from "../services/notificationServices.js";
 
@@ -19,16 +20,13 @@ export const createVitalSign = async (req, res) => {
         recorded_by: createdVitalSign.recorded_by,
         priority: priorityLevels.normal,
       }
-      const roles = ["superadmin", "doctor", "nurse", "lab"];
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
         type: NOTIFICATION_TYPES.VITAL_SIGNS,
         title: "Vital Signs Recorded",
         message: `Vital signs recorded for ${createdVitalSign.first_name} ${createdVitalSign.surname} by ${createdVitalSign.recorded_by}`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -37,6 +35,7 @@ export const createVitalSign = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
       message: `Vital signs recorded by ${createdVitalSign.recorded_by}`,
       description: `Patient: ${createdVitalSign.first_name} ${createdVitalSign.surname} - BP: ${createdVitalSign.blood_pressure_systolic}/${createdVitalSign.blood_pressure_diastolic}, Temp: ${createdVitalSign.temperature}°C`
     });

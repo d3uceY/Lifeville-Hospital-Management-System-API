@@ -1,9 +1,22 @@
 import { pgTable, index, unique, integer, date, varchar, text, boolean, foreignKey, serial, numeric, timestamp, check, jsonb, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
+// ─── Billing category & type enums ───────────────────────────────────────────
+export const billCategoryEnum = pgEnum("bill_category_enum", ["lab", "drug", "service", "ward", "food", "consultation", "daily_charge"])
+export const billingTypeEnum = pgEnum("billing_type_enum", ["credit", "pay_now"])
+
 export const genderEnum = pgEnum("gender_enum", ['Male', 'Female', 'Other'])
 export const patientTypeEnum = pgEnum("patient_type_enum", ['INPATIENT', 'OUTPATIENT', 'NULL'])
 
+
+export const roles = pgTable("roles", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 50 }).notNull(),
+	label: varchar({ length: 100 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	unique("roles_name_key").on(table.name),
+]);
 
 export const patients = pgTable("patients", {
 	patientId: integer("patient_id").primaryKey().generatedAlwaysAsIdentity({ name: "patients_patient_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
@@ -42,19 +55,83 @@ export const patients = pgTable("patients", {
 	unique("unique_hospital_number").on(table.hospitalNumber),
 ]);
 
+// ── Services (price catalog) ──────────────────────────────────────────────────
+export const services = pgTable("services", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	category: text().notNull().default("service"),
+	price: numeric({ precision: 12, scale: 2 }).notNull().default("0"),
+	isVariablePrice: boolean("is_variable_price").notNull().default(false),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ── Invoices (one per visit or admission) ─────────────────────────────────────
+export const invoices = pgTable("invoices", {
+	id: serial().primaryKey().notNull(),
+	admissionId: integer("admission_id"),
+	visitId: integer("visit_id"),
+	patientId: integer("patient_id"),
+	invoiceNumber: text("invoice_number").notNull(),
+	status: text().notNull().default("open"),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	unique("invoices_invoice_number_key").on(table.invoiceNumber),
+	foreignKey({ columns: [table.admissionId], foreignColumns: [inpatientAdmissions.id], name: "invoices_admission_id_fkey" }).onDelete("set null"),
+	foreignKey({ columns: [table.visitId], foreignColumns: [patientVisits.id], name: "invoices_visit_id_fkey" }).onDelete("set null"),
+	foreignKey({ columns: [table.patientId], foreignColumns: [patients.patientId], name: "invoices_patient_id_fkey" }).onDelete("set null"),
+]);
+
 export const billItems = pgTable("bill_items", {
 	id: serial().primaryKey().notNull(),
-	billId: integer("bill_id").notNull(),
+	// Legacy column – nullable so old bills keep working; new event-driven items use invoice_id instead
+	billId: integer("bill_id"),
+	// New event-driven columns
+	invoiceId: integer("invoice_id"),
+	serviceId: integer("service_id"),
 	description: text().notNull(),
-	unitPrice: numeric("unit_price", { precision: 12, scale:  2 }).notNull(),
+	category: text().notNull().default("service"),
+	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
 	quantity: integer().default(1).notNull(),
-	lineTotal: numeric("line_total", { precision: 12, scale:  2 }).generatedAlwaysAs(sql`(unit_price * (quantity)::numeric)`),
+	lineTotal: numeric("line_total", { precision: 12, scale: 2 }).generatedAlwaysAs(sql`(unit_price * (quantity)::numeric)`),
+	discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).notNull().default("0"),
+	billingType: text("billing_type").notNull().default("credit"),
+	createdBy: integer("created_by"),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	foreignKey({
-			columns: [table.billId],
-			foreignColumns: [bills.id],
-			name: "bill_items_bill_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.billId],
+		foreignColumns: [bills.id],
+		name: "bill_items_bill_id_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.invoiceId],
+		foreignColumns: [invoices.id],
+		name: "bill_items_invoice_id_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.serviceId],
+		foreignColumns: [services.id],
+		name: "bill_items_service_id_fkey"
+	}).onDelete("set null"),
+	foreignKey({
+		columns: [table.createdBy],
+		foreignColumns: [users.id],
+		name: "bill_items_created_by_fkey"
+	}).onDelete("set null"),
+]);
+
+// ── Billing payments ──────────────────────────────────────────────────────────
+export const billingPayments = pgTable("billing_payments", {
+	id: serial().primaryKey().notNull(),
+	invoiceId: integer("invoice_id").notNull(),
+	amount: numeric({ precision: 12, scale: 2 }).notNull(),
+	paymentMethod: text("payment_method").notNull().default("cash"),
+	notes: text(),
+	createdBy: integer("created_by"),
+	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	foreignKey({ columns: [table.invoiceId], foreignColumns: [invoices.id], name: "billing_payments_invoice_id_fkey" }).onDelete("cascade"),
+	foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "billing_payments_created_by_fkey" }).onDelete("set null"),
 ]);
 
 export const bills = pgTable("bills", {
@@ -154,6 +231,7 @@ export const users = pgTable("users", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	name: varchar({ length: 255 }).default('Super Admin').notNull(),
 	isActive: boolean("is_active").default(true).notNull(),
+	roleId: integer("role_id"),
 }, (table) => [
 	index("idx_users_name").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("idx_users_name_trgm").using("gin", table.name.asc().nullsLast().op("gin_trgm_ops")),
@@ -163,6 +241,11 @@ export const users = pgTable("users", {
 			foreignColumns: [table.id],
 			name: "users_created_by_fkey"
 		}),
+	foreignKey({
+			columns: [table.roleId],
+			foreignColumns: [roles.id],
+			name: "users_role_id_fkey"
+		}).onDelete("set null"),
 	unique("users_email_key").on(table.email),
 ]);
 
@@ -204,7 +287,10 @@ export const bedGroups = pgTable("bed_groups", {
 export const notifications = pgTable("notifications", {
 	id: serial().primaryKey().notNull(),
 	recipientId: integer("recipient_id"),
+	// Legacy single-role column — kept for backward compat; prefer recipientRoles
 	recipientRole: varchar("recipient_role", { length: 50 }),
+	// New: one notification row targets multiple roles
+	recipientRoles: text("recipient_roles").array(),
 	type: varchar({ length: 100 }).notNull(),
 	title: varchar({ length: 255 }),
 	message: text(),
@@ -225,12 +311,19 @@ export const procedures = pgTable("procedures", {
 	comments: text(),
 	performedAt: timestamp("performed_at", { mode: 'string' }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	serviceId: integer("service_id"),
+	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "procedures_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.serviceId],
+			foreignColumns: [services.id],
+			name: "procedures_service_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const doctorsNotes = pgTable("doctors_notes", {
@@ -523,10 +616,66 @@ export const prescriptionItems = pgTable("prescription_items", {
 	frequency: text().notNull(),
 	duration: text().notNull(),
 	instructions: text(),
+	serviceId: integer("service_id"),
+	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0"),
 }, (table) => [
 	foreignKey({
 			columns: [table.prescriptionId],
 			foreignColumns: [prescriptions.prescriptionId],
 			name: "prescription_items_prescription_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.serviceId],
+			foreignColumns: [services.id],
+			name: "prescription_items_service_id_fkey"
+		}).onDelete("set null"),
 ]);
+
+// ─── Settings tables (all single-row config tables, id = 1) ──────────────────
+
+export const settingsHospitalInfo = pgTable("settings_hospital_info", {
+	id: integer().primaryKey().default(1).notNull(),
+	hospitalName: varchar("hospital_name", { length: 255 }).notNull().default("Lifeville Specialist Hospital"),
+	hospitalShortName: varchar("hospital_short_name", { length: 100 }).default("Lifeville"),
+	licenseNumber: varchar("license_number", { length: 100 }),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsContact = pgTable("settings_contact", {
+	id: integer().primaryKey().default(1).notNull(),
+	address: text(),
+	city: varchar({ length: 100 }),
+	country: varchar({ length: 100 }).default("Nigeria"),
+	phone: varchar({ length: 30 }),
+	email: varchar({ length: 255 }),
+	website: varchar({ length: 255 }),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsPrefixes = pgTable("settings_prefixes", {
+	id: integer().primaryKey().default(1).notNull(),
+	billNumberPrefix: varchar("bill_number_prefix", { length: 20 }).notNull().default("BILL-"),
+	patientIdPrefix: varchar("patient_id_prefix", { length: 20 }).notNull().default("PAT-"),
+	labIdPrefix: varchar("lab_id_prefix", { length: 20 }).notNull().default("LAB-"),
+	admissionIdPrefix: varchar("admission_id_prefix", { length: 20 }).notNull().default("ADM-"),
+	birthIdPrefix: varchar("birth_id_prefix", { length: 20 }).notNull().default("BIRTH-"),
+	deathIdPrefix: varchar("death_id_prefix", { length: 20 }).notNull().default("DEATH-"),
+	appointmentIdPrefix: varchar("appointment_id_prefix", { length: 20 }).notNull().default("APT-"),
+	invoiceIdPrefix: varchar("invoice_id_prefix", { length: 20 }).notNull().default("INV-"),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsBilling = pgTable("settings_billing", {
+	id: integer().primaryKey().default(1).notNull(),
+	currencyCode: varchar("currency_code", { length: 10 }).notNull().default("NGN"),
+	currencySymbolPosition: varchar("currency_symbol_position", { length: 10 }).notNull().default("before"),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsDocuments = pgTable("settings_documents", {
+	id: integer().primaryKey().default(1).notNull(),
+	labReportFooter: text("lab_report_footer"),
+	printFooterText: text("print_footer_text"),
+	showHospitalHeader: boolean("show_hospital_header").notNull().default(true),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});

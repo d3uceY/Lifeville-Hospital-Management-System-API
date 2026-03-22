@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as patientServices from "../services/patientServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
@@ -37,16 +38,13 @@ export const createPatients = async (req, res) => {
         priority: priorityLevels.normal,
       }
 
-      const roles = ["superadmin", "doctor", "lab", "receptionist", "nurse"];
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
         type: NOTIFICATION_TYPES.PATIENT,
         title: "New Patient Added",
         message: `New patient ${newPatient.first_name} ${newPatient.surname} has been added`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -55,8 +53,9 @@ export const createPatients = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
       message: "New Patient Added",
-      description: `${newPatient.first_name} ${newPatient.surname}`
+      description: `${newPatient.firstName} ${newPatient.surname}`
     });
 
     res.status(200).json({ newPatient, message: "Submitted Successfully" });
@@ -114,16 +113,13 @@ export const updatePatient = async (req, res) => {
         patient_id: updatedPatient.patient_id,
         priority: "urgent",
       }
-      const roles = ["superadmin", "doctor", "lab", "receptionist", "nurse"];
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
         type: NOTIFICATION_TYPES.PATIENT,
         title: "Patient Updated",
         message: `Patient ${updatedPatient.first_name} ${updatedPatient.surname} has been updated`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -132,8 +128,9 @@ export const updatePatient = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
       message: "Patient Updated",
-      description: `${updatedPatient.first_name} ${updatedPatient.surname}`
+      description: `${updatedPatient.firstName} ${updatedPatient.surname}`
     });
 
     res.status(200).json({ updatedPatient, message: "Updated Successfully" });

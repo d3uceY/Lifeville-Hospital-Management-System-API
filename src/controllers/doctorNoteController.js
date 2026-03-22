@@ -1,4 +1,5 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as doctorNoteServices from "../services/doctorNoteServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
@@ -39,16 +40,13 @@ export const createDoctorNote = async (req, res) => {
         recorded_by: newNote.recorded_by,
         priority: priorityLevels.normal,
       }
-      const roles = ["superadmin", "doctor", "nurse"];
-
-      const notificationInfo = roles.map(role => ({
-        recipient_role: role,
+      await addNotification({
+        recipientRoles: NOTIFICATION_ROLES.CLINICAL,
         type: NOTIFICATION_TYPES.DOCTOR_NOTE,
         title: "Doctor's Note Added",
         message: `Doctor's note added for ${newNote.first_name} ${newNote.surname} by ${newNote.recorded_by}`,
         data,
-      }));
-      await addNotification(notificationInfo);
+      });
 
     } catch (error) {
       console.error(error);
@@ -57,6 +55,7 @@ export const createDoctorNote = async (req, res) => {
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
+      recipientRoles: NOTIFICATION_ROLES.CLINICAL,
       message: `Doctor's note added by ${newNote.recorded_by}`,
       description: `Patient: ${newNote.first_name} ${newNote.surname}`
     });

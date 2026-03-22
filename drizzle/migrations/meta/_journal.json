@@ -8,6 +8,27 @@
       "when": 1772485476619,
       "tag": "0000_open_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774122645929,
+      "tag": "0001_needy_wraith",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774129692036,
+      "tag": "0002_charming_captain_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774167458888,
+      "tag": "0003_mute_kate_bishop",
+      "breakpoints": true
     }
   ]
 }

@@ -3,8 +3,24 @@ import { users, notifications as notificationsTable, notificationReads } from ".
 import { eq, ilike, desc, asc, count, or, sql, and, isNull, gte } from "drizzle-orm";
 import { timeAgo } from "../utils/getTimeAgo.js";
 
+// ─── Shared WHERE condition for a user's notifications ──────────────────────
+// Matches: direct recipient OR user's role string is in the recipient_roles array
+function userNotificationWhere(userId, role, userCreatedAt) {
+    return and(
+        gte(notificationsTable.createdAt, userCreatedAt),
+        or(
+            eq(notificationsTable.recipientId, userId),
+            sql`${role} = ANY(${notificationsTable.recipientRoles})`
+        )
+    );
+}
 
-
+/**
+ * Returns the 5 most-recent notifications visible to a user (direct or role-based), with computed
+ * read status and a human-readable relative time string.
+ * @param {{ id: number, role: string, userCreatedAt: Date }} userData
+ * @returns {Promise<object[]>}
+ */
 export const getNotificationsByUserData = async (userData) => {
     const { role, id: userId, userCreatedAt } = userData;
 
@@ -22,15 +38,7 @@ export const getNotificationsByUserData = async (userData) => {
                 eq(notificationReads.userId, userId)
             )
         )
-        .where(
-            and(
-                gte(notificationsTable.createdAt, userCreatedAt),
-                or(
-                    eq(notificationsTable.recipientId, userId),
-                    eq(notificationsTable.recipientRole, role)
-                )
-            )
-        )
+        .where(userNotificationWhere(userId, role, userCreatedAt))
         .orderBy(desc(notificationsTable.createdAt))
         .limit(5);
 
@@ -41,8 +49,14 @@ export const getNotificationsByUserData = async (userData) => {
 }
 
 
+/**
+ * Returns the 5 most-recent **unread** notifications for a user plus a total unread count.
+ * @param {{ id: number, role: string, userCreatedAt: Date }} userData
+ * @returns {Promise<{ unreadNotifications: object[], totalUnread: number }>}
+ */
 export const getUnreadNotifications = async (userData) => {
     const { role, id: userId, userCreatedAt } = userData;
+    const where = userNotificationWhere(userId, role, userCreatedAt);
 
     const unreadNotifications = await db
         .select({
@@ -57,15 +71,7 @@ export const getUnreadNotifications = async (userData) => {
                 eq(notificationReads.userId, userId)
             )
         )
-        .where(
-            and(
-                gte(notificationsTable.createdAt, userCreatedAt),
-                or(
-                    eq(notificationsTable.recipientId, userId),
-                    eq(notificationsTable.recipientRole, role)
-                )
-            )
-        )
+        .where(where)
         .orderBy(desc(notificationsTable.createdAt))
         .limit(5);
 
@@ -79,16 +85,7 @@ export const getUnreadNotifications = async (userData) => {
                 eq(notificationReads.userId, userId)
             )
         )
-        .where(
-            and(
-                gte(notificationsTable.createdAt, userCreatedAt),
-                or(
-                    eq(notificationsTable.recipientId, userId),
-                    eq(notificationsTable.recipientRole, role)
-                ),
-                isNull(notificationReads.id)
-            )
-        );
+        .where(and(where, isNull(notificationReads.id)));
 
     return {
         unreadNotifications: unreadNotifications
@@ -103,6 +100,13 @@ export const getUnreadNotifications = async (userData) => {
 
 
 
+/**
+ * Returns a paginated list of notifications visible to a user with read status and relative timestamps.
+ * @param {{ id: number, role: string, userCreatedAt: Date }} userData
+ * @param {number} [page=1]
+ * @param {number} [pageSize=10]
+ * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
+ */
 export const getPaginatedNotificationsByUserData = async (
     userData,
     page = 1,
@@ -112,12 +116,13 @@ export const getPaginatedNotificationsByUserData = async (
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
     const offset = (pageNumber - 1) * pageSizeNumber;
+    const where = userNotificationWhere(userId, role, userCreatedAt);
 
     const notificationsWithRead = await db
         .select({
             id: notificationsTable.id,
             recipientId: notificationsTable.recipientId,
-            recipientRole: notificationsTable.recipientRole,
+            recipientRoles: notificationsTable.recipientRoles,
             type: notificationsTable.type,
             title: notificationsTable.title,
             message: notificationsTable.message,
@@ -133,15 +138,7 @@ export const getPaginatedNotificationsByUserData = async (
                 eq(notificationReads.userId, userId)
             )
         )
-        .where(
-            and(
-                gte(notificationsTable.createdAt, userCreatedAt),
-                or(
-                    eq(notificationsTable.recipientId, userId),
-                    eq(notificationsTable.recipientRole, role)
-                )
-            )
-        )
+        .where(where)
         .orderBy(desc(notificationsTable.createdAt))
         .limit(pageSizeNumber)
         .offset(offset);
@@ -149,15 +146,7 @@ export const getPaginatedNotificationsByUserData = async (
     const [totalItems] = await db
         .select({ count: sql`count(*)` })
         .from(notificationsTable)
-        .where(
-            and(
-                gte(notificationsTable.createdAt, userCreatedAt),
-                or(
-                    eq(notificationsTable.recipientId, userId),
-                    eq(notificationsTable.recipientRole, role)
-                )
-            )
-        );
+        .where(where);
 
     return {
         data: notificationsWithRead.map(notification => ({
@@ -172,6 +161,12 @@ export const getPaginatedNotificationsByUserData = async (
     };
 };
 
+/**
+ * Inserts a read-receipt row for a notification/user pair, marking it as read for that user.
+ * @param {number} notificationId
+ * @param {{ id: number }} userData
+ * @returns {Promise<void>}
+ */
 export const markNotificationAsRead = async (notificationId, userData) => {
     const { id } = userData;
     await db.insert(notificationReads)
@@ -182,17 +177,24 @@ export const markNotificationAsRead = async (notificationId, userData) => {
         })
 }
 
-export const addNotification = async (notificationData) => {
-    const createdAt = new Date();
+/**
+ * addNotification
+ * Creates ONE notification row that targets multiple roles.
+ *
+ * @param {{ recipientRoles: string[], type: string, title: string, message: string, data?: object, recipientId?: number }} opts
+ */
+export const addNotification = async ({ recipientRoles, type, title, message, data, recipientId = null }) => {
     try {
-        await Promise.all(notificationData.map(async (notification) => {
-            await db.insert(notificationsTable)
-                .values({
-                    ...notification,
-                    createdAt: createdAt,
-                })
-        }))
+        await db.insert(notificationsTable).values({
+            recipientRoles: recipientRoles ?? [],
+            recipientId,
+            type,
+            title,
+            message,
+            data: data ?? null,
+            createdAt: new Date(),
+        });
     } catch (error) {
-        console.error(error)
+        console.error("addNotification error:", error);
     }
 }

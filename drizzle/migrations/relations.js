@@ -1,15 +1,31 @@
 import { relations } from "drizzle-orm/relations";
-import { bills, billItems, symptomTypes, symptomHeads, patients, appointments, users, bedTypes, beds, bedGroups, procedures, doctorsNotes, nursesNotes, notifications, notificationReads, labTests, deathRecords, inpatientAdmissions, complaints, physicalExaminations, diagnoses, prescriptions, inpatientJournal, patientVisits, prescriptionItems } from "./schema";
+import { bills, billItems, symptomTypes, symptomHeads, patients, appointments, users, bedTypes, beds, bedGroups, procedures, doctorsNotes, nursesNotes, notifications, notificationReads, labTests, deathRecords, inpatientAdmissions, complaints, physicalExaminations, diagnoses, prescriptions, inpatientJournal, patientVisits, prescriptionItems, services, invoices, billingPayments } from "./schema";
 
 export const billItemsRelations = relations(billItems, ({one}) => ({
-	bill: one(bills, {
-		fields: [billItems.billId],
-		references: [bills.id]
-	}),
+	bill: one(bills, { fields: [billItems.billId], references: [bills.id] }),
+	invoice: one(invoices, { fields: [billItems.invoiceId], references: [invoices.id] }),
+	service: one(services, { fields: [billItems.serviceId], references: [services.id] }),
+	createdByUser: one(users, { fields: [billItems.createdBy], references: [users.id] }),
 }));
 
 export const billsRelations = relations(bills, ({many}) => ({
 	billItems: many(billItems),
+}));
+
+export const servicesRelations = relations(services, ({many}) => ({
+	billItems: many(billItems),
+}));
+
+export const invoicesRelations = relations(invoices, ({one, many}) => ({
+	admission: one(inpatientAdmissions, { fields: [invoices.admissionId], references: [inpatientAdmissions.id] }),
+	visit: one(patientVisits, { fields: [invoices.visitId], references: [patientVisits.id] }),
+	billItems: many(billItems),
+	payments: many(billingPayments),
+}));
+
+export const billingPaymentsRelations = relations(billingPayments, ({one}) => ({
+	invoice: one(invoices, { fields: [billingPayments.invoiceId], references: [invoices.id] }),
+	createdByUser: one(users, { fields: [billingPayments.createdBy], references: [users.id] }),
 }));
 
 export const symptomHeadsRelations = relations(symptomHeads, ({one}) => ({
