@@ -630,3 +630,52 @@ export const prescriptionItems = pgTable("prescription_items", {
 			name: "prescription_items_service_id_fkey"
 		}).onDelete("set null"),
 ]);
+
+// ─── Settings tables (all single-row config tables, id = 1) ──────────────────
+
+export const settingsHospitalInfo = pgTable("settings_hospital_info", {
+	id: integer().primaryKey().default(1).notNull(),
+	hospitalName: varchar("hospital_name", { length: 255 }).notNull().default("Lifeville Specialist Hospital"),
+	hospitalShortName: varchar("hospital_short_name", { length: 100 }).default("Lifeville"),
+	licenseNumber: varchar("license_number", { length: 100 }),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsContact = pgTable("settings_contact", {
+	id: integer().primaryKey().default(1).notNull(),
+	address: text(),
+	city: varchar({ length: 100 }),
+	country: varchar({ length: 100 }).default("Nigeria"),
+	phone: varchar({ length: 30 }),
+	email: varchar({ length: 255 }),
+	website: varchar({ length: 255 }),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsPrefixes = pgTable("settings_prefixes", {
+	id: integer().primaryKey().default(1).notNull(),
+	billNumberPrefix: varchar("bill_number_prefix", { length: 20 }).notNull().default("BILL-"),
+	patientIdPrefix: varchar("patient_id_prefix", { length: 20 }).notNull().default("PAT-"),
+	labIdPrefix: varchar("lab_id_prefix", { length: 20 }).notNull().default("LAB-"),
+	admissionIdPrefix: varchar("admission_id_prefix", { length: 20 }).notNull().default("ADM-"),
+	birthIdPrefix: varchar("birth_id_prefix", { length: 20 }).notNull().default("BIRTH-"),
+	deathIdPrefix: varchar("death_id_prefix", { length: 20 }).notNull().default("DEATH-"),
+	appointmentIdPrefix: varchar("appointment_id_prefix", { length: 20 }).notNull().default("APT-"),
+	invoiceIdPrefix: varchar("invoice_id_prefix", { length: 20 }).notNull().default("INV-"),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsBilling = pgTable("settings_billing", {
+	id: integer().primaryKey().default(1).notNull(),
+	currencyCode: varchar("currency_code", { length: 10 }).notNull().default("NGN"),
+	currencySymbolPosition: varchar("currency_symbol_position", { length: 10 }).notNull().default("before"),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsDocuments = pgTable("settings_documents", {
+	id: integer().primaryKey().default(1).notNull(),
+	labReportFooter: text("lab_report_footer"),
+	printFooterText: text("print_footer_text"),
+	showHospitalHeader: boolean("show_hospital_header").notNull().default(true),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
