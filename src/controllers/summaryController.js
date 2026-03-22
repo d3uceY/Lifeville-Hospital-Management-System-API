@@ -1,5 +1,16 @@
 import * as summaryServices from "../services/summaryServices.js";
 
+export const getPatientDashboardSummary = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const result = await summaryServices.getPatientDashboardSummary(patientId);
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to get patient dashboard summary" });
+    }
+}
+
 export const getAdmissionSummaryByPatientId = async (req, res) => {
     try {
         const { patientId } = req.params;
