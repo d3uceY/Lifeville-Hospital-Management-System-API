@@ -146,7 +146,13 @@ export async function upsertDocuments({ labReportFooter, printFooterText, showHo
 
 // ─── All settings (combined GET) ─────────────────────────────────────────────
 
+let settingsCache = null;
+
+export const invalidateSettingsCache = () => { settingsCache = null; };
+
 export async function getAllSettings() {
+  if (settingsCache) return settingsCache;
+
   const [hospitalInfo, contact, prefixes, billing, documents] = await Promise.all([
     getHospitalInfo(),
     getContact(),
@@ -154,7 +160,8 @@ export async function getAllSettings() {
     getBilling(),
     getDocuments(),
   ]);
-  return { hospitalInfo, contact, prefixes, billing, documents };
+  settingsCache = { hospitalInfo, contact, prefixes, billing, documents };
+  return settingsCache;
 }
 
 // ─── Unified update — routes each field to the correct table ─────────────────
@@ -228,5 +235,6 @@ export async function updateAllSettings(payload) {
   }
 
   await Promise.all(tasks);
+  invalidateSettingsCache();
   return results;
 }
