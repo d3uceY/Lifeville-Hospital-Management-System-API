@@ -25,7 +25,7 @@ export const createPatientVisit = async (req, res) => {
                 recipientRoles: NOTIFICATION_ROLES.VISIT,
                 type: NOTIFICATION_TYPES.PATIENT_VISIT,
                 title: "Patient Visit Created",
-                message: `Patient visit on ${formatDate(patientVisit.created_at)} has been created`,
+                message: `Patient visit on ${formatDate(patientVisit.checkInTime)} has been created`,
                 data,
             });
 
@@ -36,13 +36,16 @@ export const createPatientVisit = async (req, res) => {
         const io = req.app.get("socketio");
         io.emit("notification", {
             recipientRoles: NOTIFICATION_ROLES.VISIT,
-            message: `( New Patient Visit on ${formatDate(patientVisit.createdAt)} ) Doctor: ${patientVisit.doctor_name}`,
+            message: `( New Patient Visit on ${formatDate(patientVisit.checkInTime)} ) Doctor: ${patientVisit.doctor_name}`,
             description: `Patient: ${patientVisit.first_name} ${patientVisit.surname}`
         });
 
 
         res.status(201).json(patientVisit);
     } catch (error) {
+        if (error.code === "ONGOING_VISIT_EXISTS") {
+            return res.status(409).json({ error: error.message });
+        }
         console.error("Error creating patient visit:", error);
         res.status(500).json({ error: "Failed to create patient visit" });
     }
@@ -67,5 +70,25 @@ export const getPatientVisitsByPatientId = async (req, res) => {
     } catch (error) {
         console.error("Error fetching patient visits:", error);
         res.status(500).json({ error: "Failed to fetch patient visits" });
+    }
+};
+
+export const checkOutPatientVisit = async (req, res) => {
+    try {
+        const visitId = Number(req.params.visitId);
+        const updated = await patientVisitsServices.checkOutPatientVisit(visitId);
+        res.status(200).json({ visit: updated, message: "Patient checked out successfully" });
+    } catch (error) {
+        if (error.code === "VISIT_NOT_FOUND") {
+            return res.status(404).json({ error: error.message });
+        }
+        if (error.code === "INPATIENT_CHECKOUT_NOT_ALLOWED") {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.code === "ALREADY_CHECKED_OUT") {
+            return res.status(409).json({ error: error.message });
+        }
+        console.error("Error checking out patient visit:", error);
+        res.status(500).json({ error: "Failed to check out patient visit" });
     }
 };

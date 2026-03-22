@@ -594,6 +594,10 @@ export const patientVisits = pgTable("patient_visits", {
 	patientId: integer("patient_id").notNull(),
 	recordedBy: text("recorded_by").notNull(),
 	purpose: text().notNull(),
+	visitType: text("visit_type").default("outpatient").notNull(),
+	checkInTime: timestamp("check_in_time", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	checkOutTime: timestamp("check_out_time", { withTimezone: true, mode: 'string' }),
+	admissionId: integer("admission_id"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	foreignKey({
@@ -606,6 +610,11 @@ export const patientVisits = pgTable("patient_visits", {
 			foreignColumns: [patients.patientId],
 			name: "patient_visits_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.admissionId],
+			foreignColumns: [inpatientAdmissions.id],
+			name: "patient_visits_admission_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const prescriptionItems = pgTable("prescription_items", {

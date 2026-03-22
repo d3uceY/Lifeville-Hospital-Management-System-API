@@ -1,6 +1,6 @@
 import { db } from "../../drizzle-db.js";
 import { patientVisits, patients, users } from "../../drizzle/migrations/schema.js";
-import { eq, ilike, desc, asc, count, or, sql, and, between } from "drizzle-orm";
+import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
@@ -13,12 +13,32 @@ import { SERVICE_CATEGORIES } from "../constants/domain.js";
 export const createPatientVisit = async (patientVisitData) => {
     const { patientId, doctorId, recordedBy, purpose } = patientVisitData;
 
+    // ── Guard: reject if the patient already has an ongoing visit ─────────
+    const [ongoingVisit] = await db
+        .select({ id: patientVisits.id })
+        .from(patientVisits)
+        .where(
+            and(
+                eq(patientVisits.patientId, patientId),
+                isNull(patientVisits.checkOutTime)
+            )
+        )
+        .limit(1);
+
+    if (ongoingVisit) {
+        const err = new Error("Patient already has an ongoing visit. Please check out the current visit before recording a new one.");
+        err.code = "ONGOING_VISIT_EXISTS";
+        throw err;
+    }
+
+    const now = new Date();
     const [rows] = await db.insert(patientVisits).values({
         patientId: patientId,
         doctorId: doctorId,
         recordedBy: recordedBy,
         purpose,
-        createdAt: new Date(),
+        visitType: "outpatient",
+        checkInTime: now,
     }).returning();
 
     const patientData = await db.select({
@@ -95,7 +115,7 @@ export const getPaginatedPatientVisits = async (
         const end = new Date(endDate);
 
         if (!isNaN(start) && !isNaN(end)) {
-            filters.push(between(patientVisits.createdAt, start, end));
+            filters.push(between(patientVisits.checkInTime, start, end));
         }
     }
 
@@ -117,6 +137,10 @@ export const getPaginatedPatientVisits = async (
             patientId: patientVisits.patientId,
             recordedBy: patientVisits.recordedBy,
             purpose: patientVisits.purpose,
+            visitType: patientVisits.visitType,
+            checkInTime: patientVisits.checkInTime,
+            checkOutTime: patientVisits.checkOutTime,
+            admissionId: patientVisits.admissionId,
             createdAt: patientVisits.createdAt,
             firstName: patients.firstName,
             surname: patients.surname,
@@ -127,7 +151,7 @@ export const getPaginatedPatientVisits = async (
         .from(patientVisits)
         .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
         .where(where ?? sql`true`)
-        .orderBy(desc(patientVisits.createdAt))
+        .orderBy(desc(patientVisits.checkInTime))
         .limit(pageSizeNumber)
         .offset(offset);
 
@@ -143,6 +167,10 @@ export const getPaginatedPatientVisits = async (
         phone_number: row.phoneNumber,
         recorded_by: row.recordedBy,
         purpose: row.purpose,
+        visit_type: row.visitType,
+        check_in_time: row.checkInTime,
+        check_out_time: row.checkOutTime,
+        admission_id: row.admissionId,
         created_at: row.createdAt,
     }));
 
@@ -164,7 +192,16 @@ export const getPaginatedPatientVisits = async (
 export const getPatientVisitsByPatientId = async (patientId) => {
     const rows = await db
         .select({
-            ...patientVisits,
+            id: patientVisits.id,
+            doctor_id: patientVisits.doctorId,
+            patient_id: patientVisits.patientId,
+            recorded_by: patientVisits.recordedBy,
+            purpose: patientVisits.purpose,
+            visit_type: patientVisits.visitType,
+            check_in_time: patientVisits.checkInTime,
+            check_out_time: patientVisits.checkOutTime,
+            admission_id: patientVisits.admissionId,
+            created_at: patientVisits.createdAt,
             patient_first_name: patients.firstName,
             patient_surname: patients.surname,
             hospital_number: patients.hospitalNumber,
@@ -175,6 +212,46 @@ export const getPatientVisitsByPatientId = async (patientId) => {
         .innerJoin(patients, eq(patientVisits.patientId, patients.patientId))
         .leftJoin(users, eq(patientVisits.doctorId, users.id))
         .where(eq(patientVisits.patientId, patientId))
-        .orderBy(desc(patientVisits.createdAt));
+        .orderBy(desc(patientVisits.checkInTime));
     return rows;
+};
+
+
+/**
+ * Checks out an outpatient visit by setting check_out_time.
+ * Inpatient visits can only be checked out via the discharge flow.
+ * @param {number} visitId
+ * @returns {Promise<object>}
+ */
+export const checkOutPatientVisit = async (visitId) => {
+    const [visit] = await db
+        .select()
+        .from(patientVisits)
+        .where(eq(patientVisits.id, visitId));
+
+    if (!visit) {
+        const err = new Error("Visit not found");
+        err.code = "VISIT_NOT_FOUND";
+        throw err;
+    }
+
+    if (visit.visitType !== "outpatient") {
+        const err = new Error("Inpatient visits can only be checked out via the discharge process");
+        err.code = "INPATIENT_CHECKOUT_NOT_ALLOWED";
+        throw err;
+    }
+
+    if (visit.checkOutTime) {
+        const err = new Error("Patient has already been checked out");
+        err.code = "ALREADY_CHECKED_OUT";
+        throw err;
+    }
+
+    const [updated] = await db
+        .update(patientVisits)
+        .set({ checkOutTime: new Date() })
+        .where(eq(patientVisits.id, visitId))
+        .returning();
+
+    return updated;
 };

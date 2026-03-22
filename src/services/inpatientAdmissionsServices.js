@@ -1,6 +1,6 @@
 import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
-import { inpatientAdmissions, patients, users, dischargeSummary } from "../../drizzle/migrations/schema.js";
+import { inpatientAdmissions, patients, users, dischargeSummary, patientVisits } from "../../drizzle/migrations/schema.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
@@ -266,6 +266,21 @@ export const createInpatientAdmission = async (admissionData) => {
     console.error("Billing error (admission):", billingErr.message);
   }
 
+  // ── Auto-create an inpatient visit linked to this admission ──────────────
+  try {
+    await db.insert(patientVisits).values({
+      patientId: patientId,
+      doctorId: consultantDoctorId,
+      recordedBy: admissionData.recordedBy || admissionData.createdBy || "system",
+      purpose: symptomsDescription || (Array.isArray(symptomTypes) ? symptomTypes.join(", ") : "Inpatient Admission"),
+      visitType: "inpatient",
+      admissionId: newAdmission.id,
+      checkInTime: admissionDate ? new Date(admissionDate) : new Date(),
+    });
+  } catch (visitErr) {
+    console.error("Visit creation error (admission):", visitErr.message);
+  }
+
   return {
     ...newAdmission,
     doctorName: doctorName.doctor_name,
@@ -413,6 +428,15 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
   } catch (err) {
     console.error("Error updating inpatient admission:", err);
     throw err;
+  }
+
+  // set check_out_time on the linked inpatient visit
+  try {
+    await db.update(patientVisits)
+      .set({ checkOutTime: new Date(discharge_date_time) })
+      .where(eq(patientVisits.admissionId, admission_id));
+  } catch (err) {
+    console.error("Error updating inpatient visit check_out_time:", err);
   }
 
   // update patient type
