@@ -1,13 +1,44 @@
 import { query } from "../../drizzle-db.js";
+import * as billingService from "./billingService.js";
+import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
-export async function addProcedure({ patient_id, recorded_by, procedure_name, comments, performed_at, service_id = null, unit_price = null }) {
+export async function addProcedure({ patient_id, recorded_by, procedure_name, comments, performed_at, service_id = null, admission_id = null, visit_id = null }) {
+    let unit_price = null;
+    if (service_id) {
+        try {
+            unit_price = await billingService.getServicePriceById(Number(service_id));
+        } catch (err) {
+            console.error("Failed to fetch service price:", err.message);
+        }
+    }
+
     const { rows } = await query(
         `INSERT INTO procedures (patient_id, recorded_by, procedure_name, comments, performed_at, service_id, unit_price)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
         [patient_id, recorded_by, procedure_name, comments, performed_at, service_id, unit_price]
     );
-    return rows[0];
+    const procedure = rows[0];
+
+    // Auto-billing: link to active admission or visit if provided
+    if ((admission_id || visit_id) && unit_price) {
+        try {
+            await billingService.addItem({
+                admissionId: admission_id ? Number(admission_id) : null,
+                visitId: visit_id ? Number(visit_id) : null,
+                serviceId: service_id ? Number(service_id) : null,
+                description: `Procedure: ${procedure_name}`,
+                category: SERVICE_CATEGORIES.SERVICE,
+                quantity: 1,
+                unitPrice: Number(unit_price),
+                billingType: "credit",
+            });
+        } catch (billingErr) {
+            console.error("Billing error (procedure):", billingErr.message);
+        }
+    }
+
+    return procedure;
 }
 
 export async function getProceduresByPatientId(patient_id) {

@@ -35,10 +35,7 @@ export const createPrescription = async (prescriptionData) => {
     );
 
     const prescription = rows[0];
-
-    // Insert prescription items + auto-billing
-    const drugPrice = await billingService.getServicePrice("Drug / Prescription");
-
+    
     for (const item of items) {
         await query(
             `INSERT INTO prescription_items (
@@ -66,11 +63,11 @@ export const createPrescription = async (prescriptionData) => {
         // ── Auto-billing: one bill item per drug ───────────────────────────
         if (admission_id || visit_id) {
             try {
-                // Prefer catalog unit_price → ID lookup → name lookup → skip
-                const itemPrice = item.unit_price != null
-                    ? Number(item.unit_price)
-                    : item.service_id
-                        ? await billingService.getServicePriceById(Number(item.service_id)).catch(() => null)
+                // Prefer service table (by ID) → argument unit_price → name lookup → skip
+                const itemPrice = item.service_id
+                    ? await billingService.getServicePriceById(Number(item.service_id)).catch(() => null)
+                    : item.unit_price != null
+                        ? Number(item.unit_price)
                         : await billingService.getServicePrice(item.drug_name).catch(() => null);
 
                 if (itemPrice == null) continue; // price unknown — skip billing

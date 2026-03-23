@@ -23,7 +23,7 @@ import {
   patientVisits,
   patients,
 } from "../../drizzle/migrations/schema.js";
-import { eq, and, or, sum, sql } from "drizzle-orm";
+import { eq, and, or, sum, sql, isNull } from "drizzle-orm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -463,4 +463,48 @@ export async function createPatientInvoice(patientId) {
     .values({ patientId, invoiceNumber })
     .returning();
   return created;
+}
+
+// ─── GET /patients/:patientId/billing-context ─────────────────────────────────
+/**
+ * Returns the active billing context for a patient in a single round-trip.
+ * Priority: active inpatient admission > active outpatient visit > null.
+ */
+export async function getPatientBillingContext(patientId) {
+  const [activeAdmissions, activeVisits] = await Promise.all([
+    db
+      .select({ id: inpatientAdmissions.id })
+      .from(inpatientAdmissions)
+      .where(
+        and(
+          eq(inpatientAdmissions.patientId, patientId),
+          eq(inpatientAdmissions.dischargeCondition, "on admission")
+        )
+      )
+      .limit(1),
+    db
+      .select({ id: patientVisits.id })
+      .from(patientVisits)
+      .where(
+        and(
+          eq(patientVisits.patientId, patientId),
+          isNull(patientVisits.checkOutTime)
+        )
+      )
+      .limit(1),
+  ]);
+
+  const admission = activeAdmissions[0] ?? null;
+  // Only use visit if there is no active admission
+  const visit = !admission ? (activeVisits[0] ?? null) : null;
+
+  return {
+    admissionId: admission?.id ?? null,
+    visitId: visit?.id ?? null,
+    billingLabel: admission
+      ? `Admission #${admission.id}`
+      : visit
+      ? `Visit #${visit.id}`
+      : null,
+  };
 }

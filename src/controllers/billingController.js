@@ -161,3 +161,14 @@ export const createPatientInvoice = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// ─── GET /patients/:patientId/billing-context ─────────────────────────────────
+export const getPatientBillingContext = async (req, res) => {
+  try {
+    const context = await billingService.getPatientBillingContext(Number(req.params.patientId));
+    res.status(200).json(context);
+  } catch (err) {
+    console.error("getPatientBillingContext:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
