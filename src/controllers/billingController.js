@@ -106,6 +106,9 @@ export const createService = async (req, res) => {
     const svc = await billingService.upsertService({ name, category, price: Number(price), isVariablePrice: !!isVariablePrice });
     res.status(201).json({ service: svc, message: "Service created" });
   } catch (err) {
+    if (err.code === "DUPLICATE_SERVICE_NAME") {
+      return res.status(409).json({ error: err.message });
+    }
     console.error("createService:", err);
     res.status(500).json({ error: err.message });
   }

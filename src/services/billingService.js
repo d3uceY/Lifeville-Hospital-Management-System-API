@@ -363,6 +363,19 @@ export async function upsertService({ id = null, name, category, price, isVariab
     invalidateServicesCache();
     return updated;
   }
+
+  // Guard: reject if a service with this name already exists
+  const [existing] = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(eq(services.name, name))
+    .limit(1);
+  if (existing) {
+    const err = new Error(`A service named "${name}" already exists.`);
+    err.code = "DUPLICATE_SERVICE_NAME";
+    throw err;
+  }
+
   const [created] = await db
     .insert(services)
     .values({ name, category, price: String(price), isVariablePrice })
