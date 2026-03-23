@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
-import { runBillingMigration } from "../migrate-billing.js";
+import { runBillingMigration } from "../migrate.js";
 import apiRoutes from "./routes/index.js";
 
 import cookieParser from 'cookie-parser';
