@@ -75,3 +75,13 @@ export const getLabTestPending = async () => {
     const pendingCount = await db.select({ count: sql`count(*)` }).from(labTests).where(eq(labTests.status, "to do"));
     return Number(pendingCount[0].count)
 }
+
+export const getDashboardStats = async () => {
+    const [staffRolesDistribution, appointmentStatusDistribution, appointmentsToday, labTestPending] = await Promise.all([
+        getStaffRolesDistribution(),
+        getAppointmentStatusDistribution(),
+        getAppointmensToday(),
+        getLabTestPending(),
+    ]);
+    return { staffRolesDistribution, appointmentStatusDistribution, appointmentsToday, labTestPending };
+}

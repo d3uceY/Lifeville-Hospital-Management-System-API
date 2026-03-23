@@ -8,5 +8,6 @@ router.get("/stats/staff-roles-distribution", authenticate, statsController.getS
 router.get("/stats/appointment-status-distribution", authenticate, statsController.getAppointmentStatusDistribution);
 router.get("/stats/appointments-today", authenticate, statsController.getAppointmensToday);
 router.get("/stats/lab-test-pending", authenticate, statsController.getLabTestPending);
+router.get("/stats/dashboard", authenticate, statsController.getDashboardStats);
 export default router;
 
