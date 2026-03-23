@@ -24,4 +24,7 @@ router.delete("/services/:id", authenticate, billingController.deleteService);
 router.get("/patients/:patientId/invoices", authenticate, billingController.getPatientInvoices);
 router.post("/patients/:patientId/invoices", authenticate, billingController.createPatientInvoice);
 
+// Active billing context (single optimized call)
+router.get("/patients/:patientId/billing-context", authenticate, billingController.getPatientBillingContext);
+
 export default router;

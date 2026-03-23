@@ -106,6 +106,9 @@ export const createService = async (req, res) => {
     const svc = await billingService.upsertService({ name, category, price: Number(price), isVariablePrice: !!isVariablePrice });
     res.status(201).json({ service: svc, message: "Service created" });
   } catch (err) {
+    if (err.code === "DUPLICATE_SERVICE_NAME") {
+      return res.status(409).json({ error: err.message });
+    }
     console.error("createService:", err);
     res.status(500).json({ error: err.message });
   }
@@ -135,6 +138,9 @@ export const deleteService = async (req, res) => {
     if (!deleted) return res.status(404).json({ error: "Service not found" });
     res.status(200).json({ message: "Service deleted" });
   } catch (err) {
+    if (err.code === "SYSTEM_SERVICE") {
+      return res.status(403).json({ error: err.message });
+    }
     console.error("deleteService:", err);
     res.status(500).json({ error: err.message });
   }
@@ -158,6 +164,17 @@ export const createPatientInvoice = async (req, res) => {
     res.status(201).json({ invoice, message: "Manual invoice created" });
   } catch (err) {
     console.error("createPatientInvoice:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── GET /patients/:patientId/billing-context ─────────────────────────────────
+export const getPatientBillingContext = async (req, res) => {
+  try {
+    const context = await billingService.getPatientBillingContext(Number(req.params.patientId));
+    res.status(200).json(context);
+  } catch (err) {
+    console.error("getPatientBillingContext:", err);
     res.status(500).json({ error: err.message });
   }
 };

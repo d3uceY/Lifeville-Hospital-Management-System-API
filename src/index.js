@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
-import { runBillingMigration } from "../migrate-billing.js";
+import { runBillingMigration } from "../migrate.js";
 import apiRoutes from "./routes/index.js";
 
 import cookieParser from 'cookie-parser';
@@ -10,7 +10,6 @@ import { createServer } from "http";
 //SOCKETS
 import { Server as IOServer } from "socket.io";
 
-import { specs, swaggerUiOptions as swaggerUi } from "./swagger/swagger.js";
 import config from "./constants/config.js";
 
 const app = express();
@@ -37,7 +36,7 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -59,16 +58,6 @@ app.set("socketio", io); // lets any controller do req.app.get("socketio")
 
 //api routes
 app.use("/", apiRoutes);
-
-// Swagger UI
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(specs, {
-    explorer: true,
-    swaggerOptions: { persistAuthorization: true },
-  })
-);
 
 // seed superadmin then start listening on the HTTP server
 runBillingMigration().then(() => seedSuperAdmin()).then(() => {

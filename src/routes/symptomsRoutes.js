@@ -15,4 +15,7 @@ router.post("/symptom-heads", authenticate, symptomsController.createSymptomHead
 router.put("/symptom-heads/:id", authenticate, symptomsController.updateSymptomHead);
 router.delete("/symptom-heads/:id", authenticate, symptomsController.deleteSymptomHead);
 
+// Combined
+router.get("/symptoms-data", authenticate, symptomsController.getSymptomsData);
+
 export default router;

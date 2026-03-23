@@ -102,3 +102,16 @@ export const updateSymptomHead = async (req, res) => {
     });
   }
 };
+
+export const getSymptomsData = async (req, res) => {
+  try {
+    const [symptomTypes, symptomHeads] = await Promise.all([
+      symptomsServices.getSymptomTypes(),
+      symptomsServices.getSymptomHeads(),
+    ]);
+    res.status(200).json({ symptomTypes, symptomHeads });
+  } catch (err) {
+    console.error("error fetching symptoms data:", err);
+    res.status(500).json({ message: "internal server error" });
+  }
+};
