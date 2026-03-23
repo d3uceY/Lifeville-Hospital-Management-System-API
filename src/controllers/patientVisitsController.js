@@ -53,8 +53,8 @@ export const createPatientVisit = async (req, res) => {
 
 export const getPaginatedPatientVisits = async (req, res) => {
     try {
-        const { page, pageSize, firstName, surname, phoneNumber, hospitalNumber, startDate, endDate } = req.query;
-        const patientVisits = await patientVisitsServices.getPaginatedPatientVisits(page, pageSize, { firstName, surname, phoneNumber, hospitalNumber, startDate, endDate });
+        const { page, pageSize, search, startDate, endDate } = req.query;
+        const patientVisits = await patientVisitsServices.getPaginatedPatientVisits(page, pageSize, { search, startDate, endDate });
         res.status(200).json(patientVisits);
     } catch (error) {
         console.error("Error fetching patient visits:", error);

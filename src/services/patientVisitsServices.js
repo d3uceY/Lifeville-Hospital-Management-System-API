@@ -85,7 +85,7 @@ export const createPatientVisit = async (patientVisitData) => {
 export const getPaginatedPatientVisits = async (
     page = 1,
     pageSize = 10,
-    { firstName, surname, phoneNumber, hospitalNumber, startDate, endDate } = {}
+    { search, startDate, endDate } = {}
 ) => {
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
@@ -97,17 +97,13 @@ export const getPaginatedPatientVisits = async (
     const filters = [];
 
 
-    if (normalize(firstName)) {
-        filters.push(ilike(patients.firstName, `%${normalize(firstName)}%`));
-    }
-    if (normalize(surname)) {
-        filters.push(ilike(patients.surname, `%${normalize(surname)}%`));
-    }
-    if (normalize(phoneNumber)) {
-        filters.push(ilike(patients.phoneNumber, `%${normalize(phoneNumber)}%`));
-    }
-    if (normalize(hospitalNumber)) {
-        filters.push(ilike(patients.hospitalNumber, `%${normalize(hospitalNumber)}%`));
+    if (normalize(search)) {
+        filters.push(or(
+            ilike(patients.firstName, `%${normalize(search)}%`),
+            ilike(patients.surname, `%${normalize(search)}%`),
+            ilike(patients.phoneNumber, `%${normalize(search)}%`),
+            ilike(patients.hospitalNumber, `%${normalize(search)}%`),
+        ));
     }
 
     if (startDate && endDate) {
