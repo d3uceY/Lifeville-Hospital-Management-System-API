@@ -129,6 +129,20 @@ export const getBeds = async (req, res) => {
   }
 };
 
+export const getBedData = async (req, res) => {
+  try {
+    const [beds, bedGroups, bedTypes] = await Promise.all([
+      bedServices.getBeds(),
+      bedServices.getBedGroups(),
+      bedServices.getBedTypes(),
+    ]);
+    res.status(200).json({ beds, bedGroups, bedTypes });
+  } catch (err) {
+    console.error("Error fetching bed data:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const viewBed = async (req, res) => {
   try {
     const bedId = req.params.id;

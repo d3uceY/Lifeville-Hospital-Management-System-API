@@ -77,11 +77,12 @@ export const getLabTestPending = async () => {
 }
 
 export const getDashboardStats = async () => {
-    const [staffRolesDistribution, appointmentStatusDistribution, appointmentsToday, labTestPending] = await Promise.all([
+    const [patientStatusDistribution, staffRolesDistribution, appointmentStatusDistribution, appointmentsToday, labTestPending] = await Promise.all([
+        getPatientStatusDistribution(),
         getStaffRolesDistribution(),
         getAppointmentStatusDistribution(),
         getAppointmensToday(),
         getLabTestPending(),
     ]);
-    return { staffRolesDistribution, appointmentStatusDistribution, appointmentsToday, labTestPending };
+    return { patientStatusDistribution, staffRolesDistribution, appointmentStatusDistribution, appointmentsToday, labTestPending };
 }

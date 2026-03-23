@@ -24,4 +24,7 @@ router.post("/beds", bedControllers.createBed);
 router.put("/beds/:id", bedControllers.updateBed);
 router.delete("/beds/:id", bedControllers.deleteBed);
 
+// Combined
+router.get("/beds-data", bedControllers.getBedData);
+
 export default router;
