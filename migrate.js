@@ -36,9 +36,13 @@ const migrations = [
      category   TEXT NOT NULL DEFAULT 'service',
      price      NUMERIC(12,2) NOT NULL DEFAULT 0,
      is_variable_price BOOLEAN NOT NULL DEFAULT false,
+     is_system  BOOLEAN NOT NULL DEFAULT false,
      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      CONSTRAINT services_name_key UNIQUE (name)
    );`,
+
+  // 2b. Add is_system column to existing services table
+  `ALTER TABLE services ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT false;`,
 
   // 2a. Add unique constraint to existing tables that predate this migration
   `DO $$
@@ -86,16 +90,16 @@ const migrations = [
    );`,
 
   // 6. Seed default services (skip if they already exist)
-  `INSERT INTO services (name, category, price, is_variable_price) VALUES
-     ('Consultation Fee',       '${SERVICE_CATEGORIES.CONSULTATION}', 5000.00, false),
-     ('Lab Test',               '${SERVICE_CATEGORIES.LAB}',          3000.00, true),
-     ('Drug / Prescription',    '${SERVICE_CATEGORIES.DRUG}',         1000.00, true),
-     ('Bed Charge (per day)',   '${SERVICE_CATEGORIES.DAILY_CHARGE}', 5000.00, false),
-     ('Nursing Fee (per day)',  '${SERVICE_CATEGORIES.DAILY_CHARGE}', 3000.00, false),
-     ('Utility Charge (per day)','${SERVICE_CATEGORIES.DAILY_CHARGE}',1500.00, false),
-     ('Procedure Fee',          '${SERVICE_CATEGORIES.SERVICE}',      10000.00,true),
-     ('Admission Fee',          '${SERVICE_CATEGORIES.SERVICE}',      2000.00, false)
-   ON CONFLICT (name) DO NOTHING;`,
+  `INSERT INTO services (name, category, price, is_variable_price, is_system) VALUES
+     ('Consultation Fee',       '${SERVICE_CATEGORIES.CONSULTATION}', 5000.00, false, true),
+     ('Lab Test',               '${SERVICE_CATEGORIES.LAB}',          3000.00, true,  true),
+     ('Drug / Prescription',    '${SERVICE_CATEGORIES.DRUG}',         1000.00, true,  true),
+     ('Bed Charge (per day)',   '${SERVICE_CATEGORIES.DAILY_CHARGE}', 5000.00, false, true),
+     ('Nursing Fee (per day)',  '${SERVICE_CATEGORIES.DAILY_CHARGE}', 3000.00, false, true),
+     ('Utility Charge (per day)','${SERVICE_CATEGORIES.DAILY_CHARGE}',1500.00, false, true),
+     ('Procedure Fee',          '${SERVICE_CATEGORIES.SERVICE}',      10000.00,true,  true),
+     ('Admission Fee',          '${SERVICE_CATEGORIES.SERVICE}',      2000.00, false, true)
+   ON CONFLICT (name) DO UPDATE SET is_system = true;`,
 
   // 7. Create roles table
   `CREATE TABLE IF NOT EXISTS roles (

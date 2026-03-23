@@ -36,6 +36,13 @@
       "when": 1774193211692,
       "tag": "0004_brown_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774298740241,
+      "tag": "0005_wakeful_garia",
+      "breakpoints": true
     }
   ]
 }

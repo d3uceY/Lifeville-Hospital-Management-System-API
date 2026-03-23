@@ -389,6 +389,17 @@ export async function upsertService({ id = null, name, category, price, isVariab
  * @returns {Promise<object>} The deleted service row
  */
 export async function deleteService(id) {
+  const [svc] = await db
+    .select({ id: services.id, isSystem: services.isSystem })
+    .from(services)
+    .where(eq(services.id, id))
+    .limit(1);
+  if (!svc) return null;
+  if (svc.isSystem) {
+    const err = new Error("System services cannot be deleted.");
+    err.code = "SYSTEM_SERVICE";
+    throw err;
+  }
   const [deleted] = await db
     .delete(services)
     .where(eq(services.id, id))

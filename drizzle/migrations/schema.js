@@ -62,6 +62,7 @@ export const services = pgTable("services", {
 	category: text().notNull().default("service"),
 	price: numeric({ precision: 12, scale: 2 }).notNull().default("0"),
 	isVariablePrice: boolean("is_variable_price").notNull().default(false),
+	isSystem: boolean("is_system").notNull().default(false),
 	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 });
 
