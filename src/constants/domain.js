@@ -52,3 +52,11 @@ export const BILLING_TYPES = {
   CREDIT:   "credit",
   PAY_NOW:  "pay_now",
 };
+// ─── Invoice statuses ──────────────────────────────────────────────
+export const INVOICE_STATUSES = {
+  OPEN:      "open",      // no payment made yet
+  PARTIAL:   "partial",   // some payment made, balance remaining
+  PAID:      "paid",      // fully settled
+  OVERDUE:   "overdue",   // past due, unpaid
+  CANCELLED: "cancelled",
+};

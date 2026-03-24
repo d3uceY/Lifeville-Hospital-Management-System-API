@@ -13,7 +13,7 @@
  */
 
 import { db } from "../../drizzle-db.js";
-import { SERVICE_CATEGORIES } from "../constants/domain.js";
+import { SERVICE_CATEGORIES, INVOICE_STATUSES } from "../constants/domain.js";
 import {
   billItems,
   invoices,
@@ -357,13 +357,19 @@ export async function recordPayment({ invoiceId, amount, paymentMethod = "cash",
   if (total > 0 && totalPaidSoFar >= total) {
     await db
       .update(invoices)
-      .set({ status: "paid" })
+      .set({ status: INVOICE_STATUSES.PAID })
       .where(eq(invoices.id, invoiceId));
-  } else if (total > 0) {
-    // Reopen if a previously paid invoice receives additional charges or a payment adjustment
+  } else if (total > 0 && totalPaidSoFar > 0) {
+    // Partial payment — some paid, balance still remaining
     await db
       .update(invoices)
-      .set({ status: "unpaid" })
+      .set({ status: INVOICE_STATUSES.PARTIAL })
+      .where(eq(invoices.id, invoiceId));
+  } else if (total > 0) {
+    // No payment at all, revert to open
+    await db
+      .update(invoices)
+      .set({ status: INVOICE_STATUSES.OPEN })
       .where(eq(invoices.id, invoiceId));
   }
 
