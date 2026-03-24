@@ -299,6 +299,42 @@ export async function getBillForVisit(visitId) {
 // ─── Record a payment ─────────────────────────────────────────────────────────
 
 /**
+ * Computes the full total for an invoice, including virtual daily charges for admissions.
+ * @param {number} invoiceId
+ * @param {object|null} invoiceRow  pre-fetched invoice row (optional, avoids extra query)
+ * @returns {Promise<number>}
+ */
+async function computeInvoiceTotal(invoiceId, invoiceRow = null) {
+  const inv = invoiceRow ?? (await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1))[0];
+  if (!inv) return 0;
+
+  // Stored items total
+  const [totRow] = await db
+    .select({ total: sql`COALESCE(SUM(line_total),0)` })
+    .from(billItems)
+    .where(eq(billItems.invoiceId, invoiceId));
+  const storedTotal = parseFloat(totRow?.total || 0);
+
+  // Add virtual daily charges for admission invoices
+  if (inv.admissionId) {
+    const [admission] = await db
+      .select()
+      .from(inpatientAdmissions)
+      .where(eq(inpatientAdmissions.id, inv.admissionId));
+    if (admission) {
+      const admissionDate = new Date(admission.admissionDate);
+      const endDate = admission.endDate ? new Date(admission.endDate) : new Date();
+      const days = Math.max(1, Math.ceil((endDate - admissionDate) / (1000 * 60 * 60 * 24)));
+      const dailyServices = await getServicesByCategory(SERVICE_CATEGORIES.DAILY_CHARGE);
+      const dailyTotal = dailyServices.reduce((acc, svc) => acc + parseFloat(svc.price) * days, 0);
+      return storedTotal + dailyTotal;
+    }
+  }
+
+  return storedTotal;
+}
+
+/**
  * Records a payment against an invoice and auto-closes it when fully settled.
  * @param {{ invoiceId: number, amount: number, paymentMethod?: string, notes?: string|null, createdBy?: number|null }} opts
  * @returns {Promise<object>} The inserted payment row
@@ -309,24 +345,25 @@ export async function recordPayment({ invoiceId, amount, paymentMethod = "cash",
     .values({ invoiceId, amount: String(amount), paymentMethod, notes, createdBy })
     .returning();
 
-  // Auto-close invoice if fully paid
-  const [totRow] = await db
-    .select({ total: sql`COALESCE(SUM(line_total),0)` })
-    .from(billItems)
-    .where(eq(billItems.invoiceId, invoiceId));
+  // Auto-close invoice if fully paid — include virtual daily charges for admissions
+  const total = await computeInvoiceTotal(invoiceId);
 
-  const paid = await db
+  const [paidRow] = await db
     .select({ paid: sql`COALESCE(SUM(amount),0)` })
     .from(billingPayments)
     .where(eq(billingPayments.invoiceId, invoiceId));
+  const totalPaidSoFar = parseFloat(paidRow?.paid || 0);
 
-  const total = parseFloat(totRow?.total || 0);
-  const totalPaidSoFar = parseFloat(paid[0]?.paid || 0);
-
-  if (totalPaidSoFar >= total && total > 0) {
+  if (total > 0 && totalPaidSoFar >= total) {
     await db
       .update(invoices)
       .set({ status: "paid" })
+      .where(eq(invoices.id, invoiceId));
+  } else if (total > 0) {
+    // Reopen if a previously paid invoice receives additional charges or a payment adjustment
+    await db
+      .update(invoices)
+      .set({ status: "unpaid" })
       .where(eq(invoices.id, invoiceId));
   }
 
@@ -441,21 +478,17 @@ export async function getPatientInvoices(patientId) {
     .where(or(...conditions))
     .orderBy(sql`${invoices.createdAt} DESC`);
 
-  // For each invoice, compute totals
+  // For each invoice, compute totals (including virtual daily charges for admissions)
   const enriched = await Promise.all(allInvoices.map(async (inv) => {
-    const [totRow] = await db
-      .select({ total: sql`COALESCE(SUM(line_total), 0)` })
-      .from(billItems)
-      .where(eq(billItems.invoiceId, inv.id));
+    const total = await computeInvoiceTotal(inv.id, inv);
 
     const [paidRow] = await db
       .select({ paid: sql`COALESCE(SUM(amount), 0)` })
       .from(billingPayments)
       .where(eq(billingPayments.invoiceId, inv.id));
 
-    const total = parseFloat(totRow?.total || 0);
     const totalPaid = parseFloat(paidRow?.paid || 0);
-    const balance = Math.max(0, total - totalPaid);
+    const balance = total - totalPaid;
 
     // Determine invoice type
     let type = "manual";
