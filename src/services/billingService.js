@@ -23,7 +23,7 @@ import {
   patientVisits,
   patients,
 } from "../../drizzle/migrations/schema.js";
-import { eq, and, or, sum, sql, isNull } from "drizzle-orm";
+import { eq, and, or, sum, sql, isNull, ilike, desc, count } from "drizzle-orm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -563,5 +563,118 @@ export async function getPatientBillingContext(patientId) {
       : visit
       ? `Visit #${visit.id}`
       : null,
+  };
+}
+
+// ─── Paginated all-invoices list ──────────────────────────────────────────────
+
+/**
+ * Returns a paginated, searchable list of all invoices across all patients.
+ * Includes computed totals (stored items + virtual daily charges for admissions).
+ * @param {{ page?: number, pageSize?: number, search?: string, status?: string }} opts
+ */
+export async function getPaginatedInvoices({ page = 1, pageSize = 10, search = "", status = "" } = {}) {
+  const pageNum = Math.max(1, Number(page));
+  const pageSizeNum = Math.max(1, Number(pageSize));
+
+  const normalize = (v) => (typeof v === "string" && v.trim() !== "" && v !== "undefined" ? v.trim() : null);
+  const searchVal = normalize(search);
+  const statusVal = normalize(status);
+
+  // DB-level filter: only status (search is applied post-enrichment because it needs patient name)
+  const whereClause = statusVal ? ilike(invoices.status, `%${statusVal}%`) : undefined;
+
+  // Fetch all matching rows ordered newest-first (pagination applied after search filter)
+  const rows = await db
+    .select()
+    .from(invoices)
+    .where(whereClause)
+    .orderBy(desc(invoices.createdAt));
+
+  // Enrich each invoice with patient info + computed totals
+  const enriched = await Promise.all(rows.map(async (inv) => {
+    let type = "manual";
+    let typeLabel = "Manual Bill";
+    let linkId = null;
+    let patientName = "—";
+    let hospitalNumber = null;
+    let patientId = inv.patientId;
+
+    if (inv.admissionId) {
+      type = "admission";
+      typeLabel = "Inpatient Admission";
+      linkId = inv.admissionId;
+      const [adm] = await db
+        .select({ patientId: inpatientAdmissions.patientId })
+        .from(inpatientAdmissions)
+        .where(eq(inpatientAdmissions.id, inv.admissionId))
+        .limit(1);
+      if (adm) patientId = adm.patientId;
+    } else if (inv.visitId) {
+      type = "visit";
+      typeLabel = "Outpatient Visit";
+      linkId = inv.visitId;
+      const [vis] = await db
+        .select({ patientId: patientVisits.patientId })
+        .from(patientVisits)
+        .where(eq(patientVisits.id, inv.visitId))
+        .limit(1);
+      if (vis) patientId = vis.patientId;
+    }
+
+    if (patientId) {
+      const [pt] = await db
+        .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
+        .from(patients)
+        .where(eq(patients.patientId, patientId))
+        .limit(1);
+      if (pt) {
+        patientName = `${pt.surname} ${pt.firstName}`.trim();
+        hospitalNumber = pt.hospitalNumber;
+      }
+    }
+
+    const invoiceTotal = await computeInvoiceTotal(inv.id, inv);
+    const [paidRow] = await db
+      .select({ paid: sql`COALESCE(SUM(amount), 0)` })
+      .from(billingPayments)
+      .where(eq(billingPayments.invoiceId, inv.id));
+
+    const totalPaid = parseFloat(paidRow?.paid || 0);
+
+    return {
+      ...inv,
+      patientId,
+      patientName,
+      hospitalNumber,
+      total: invoiceTotal,
+      totalPaid,
+      balance: invoiceTotal - totalPaid,
+      type,
+      typeLabel,
+      linkId,
+    };
+  }));
+
+  // Apply search filter post-enrichment (patient name, hospital number, invoice number)
+  const filtered = searchVal
+    ? enriched.filter((inv) =>
+        inv.patientName.toLowerCase().includes(searchVal.toLowerCase()) ||
+        String(inv.hospitalNumber ?? "").includes(searchVal) ||
+        inv.invoiceNumber.toLowerCase().includes(searchVal.toLowerCase())
+      )
+    : enriched;
+
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / pageSizeNum);
+  const offset = (pageNum - 1) * pageSizeNum;
+  const pageData = filtered.slice(offset, offset + pageSizeNum);
+
+  return {
+    data: pageData,
+    totalItems,
+    totalPages,
+    currentPage: pageNum,
+    pageSize: pageSizeNum,
   };
 }

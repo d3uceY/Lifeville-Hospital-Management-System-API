@@ -178,3 +178,15 @@ export const getPatientBillingContext = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// ─── GET /invoices (paginated global list) ────────────────────────────────────────
+export const getAllInvoices = async (req, res) => {
+  try {
+    const { page, pageSize, search, status } = req.query;
+    const result = await billingService.getPaginatedInvoices({ page, pageSize, search, status });
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("getAllInvoices:", err);
+    res.status(500).json({ error: err.message });
+  }
+};

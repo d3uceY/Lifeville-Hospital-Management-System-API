@@ -27,4 +27,7 @@ router.post("/patients/:patientId/invoices", authenticate, billingController.cre
 // Active billing context (single optimized call)
 router.get("/patients/:patientId/billing-context", authenticate, billingController.getPatientBillingContext);
 
+// Global paginated invoices list
+router.get("/invoices", authenticate, billingController.getAllInvoices);
+
 export default router;
