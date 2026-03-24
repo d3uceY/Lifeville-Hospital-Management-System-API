@@ -43,6 +43,13 @@
       "when": 1774298740241,
       "tag": "0005_wakeful_garia",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774386419485,
+      "tag": "0006_handy_mongu",
+      "breakpoints": true
     }
   ]
 }
