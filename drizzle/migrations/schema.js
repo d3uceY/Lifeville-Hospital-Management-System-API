@@ -233,6 +233,7 @@ export const users = pgTable("users", {
 	name: varchar({ length: 255 }).default('Super Admin').notNull(),
 	isActive: boolean("is_active").default(true).notNull(),
 	roleId: integer("role_id"),
+	isDeleted: boolean("is_deleted").default(false).notNull(),
 }, (table) => [
 	index("idx_users_name").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("idx_users_name_trgm").using("gin", table.name.asc().nullsLast().op("gin_trgm_ops")),

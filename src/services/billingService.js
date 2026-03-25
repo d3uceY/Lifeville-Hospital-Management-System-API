@@ -13,7 +13,7 @@
  */
 
 import { db } from "../../drizzle-db.js";
-import { SERVICE_CATEGORIES } from "../constants/domain.js";
+import { SERVICE_CATEGORIES, INVOICE_STATUSES } from "../constants/domain.js";
 import {
   billItems,
   invoices,
@@ -23,7 +23,7 @@ import {
   patientVisits,
   patients,
 } from "../../drizzle/migrations/schema.js";
-import { eq, and, or, sum, sql, isNull } from "drizzle-orm";
+import { eq, and, or, sum, sql, isNull, ilike, desc, count } from "drizzle-orm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -299,6 +299,42 @@ export async function getBillForVisit(visitId) {
 // ─── Record a payment ─────────────────────────────────────────────────────────
 
 /**
+ * Computes the full total for an invoice, including virtual daily charges for admissions.
+ * @param {number} invoiceId
+ * @param {object|null} invoiceRow  pre-fetched invoice row (optional, avoids extra query)
+ * @returns {Promise<number>}
+ */
+async function computeInvoiceTotal(invoiceId, invoiceRow = null) {
+  const inv = invoiceRow ?? (await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1))[0];
+  if (!inv) return 0;
+
+  // Stored items total
+  const [totRow] = await db
+    .select({ total: sql`COALESCE(SUM(line_total),0)` })
+    .from(billItems)
+    .where(eq(billItems.invoiceId, invoiceId));
+  const storedTotal = parseFloat(totRow?.total || 0);
+
+  // Add virtual daily charges for admission invoices
+  if (inv.admissionId) {
+    const [admission] = await db
+      .select()
+      .from(inpatientAdmissions)
+      .where(eq(inpatientAdmissions.id, inv.admissionId));
+    if (admission) {
+      const admissionDate = new Date(admission.admissionDate);
+      const endDate = admission.endDate ? new Date(admission.endDate) : new Date();
+      const days = Math.max(1, Math.ceil((endDate - admissionDate) / (1000 * 60 * 60 * 24)));
+      const dailyServices = await getServicesByCategory(SERVICE_CATEGORIES.DAILY_CHARGE);
+      const dailyTotal = dailyServices.reduce((acc, svc) => acc + parseFloat(svc.price) * days, 0);
+      return storedTotal + dailyTotal;
+    }
+  }
+
+  return storedTotal;
+}
+
+/**
  * Records a payment against an invoice and auto-closes it when fully settled.
  * @param {{ invoiceId: number, amount: number, paymentMethod?: string, notes?: string|null, createdBy?: number|null }} opts
  * @returns {Promise<object>} The inserted payment row
@@ -309,24 +345,31 @@ export async function recordPayment({ invoiceId, amount, paymentMethod = "cash",
     .values({ invoiceId, amount: String(amount), paymentMethod, notes, createdBy })
     .returning();
 
-  // Auto-close invoice if fully paid
-  const [totRow] = await db
-    .select({ total: sql`COALESCE(SUM(line_total),0)` })
-    .from(billItems)
-    .where(eq(billItems.invoiceId, invoiceId));
+  // Auto-close invoice if fully paid — include virtual daily charges for admissions
+  const total = await computeInvoiceTotal(invoiceId);
 
-  const paid = await db
+  const [paidRow] = await db
     .select({ paid: sql`COALESCE(SUM(amount),0)` })
     .from(billingPayments)
     .where(eq(billingPayments.invoiceId, invoiceId));
+  const totalPaidSoFar = parseFloat(paidRow?.paid || 0);
 
-  const total = parseFloat(totRow?.total || 0);
-  const totalPaidSoFar = parseFloat(paid[0]?.paid || 0);
-
-  if (totalPaidSoFar >= total && total > 0) {
+  if (total > 0 && totalPaidSoFar >= total) {
     await db
       .update(invoices)
-      .set({ status: "paid" })
+      .set({ status: INVOICE_STATUSES.PAID })
+      .where(eq(invoices.id, invoiceId));
+  } else if (total > 0 && totalPaidSoFar > 0) {
+    // Partial payment — some paid, balance still remaining
+    await db
+      .update(invoices)
+      .set({ status: INVOICE_STATUSES.PARTIAL })
+      .where(eq(invoices.id, invoiceId));
+  } else if (total > 0) {
+    // No payment at all, revert to open
+    await db
+      .update(invoices)
+      .set({ status: INVOICE_STATUSES.OPEN })
       .where(eq(invoices.id, invoiceId));
   }
 
@@ -441,21 +484,17 @@ export async function getPatientInvoices(patientId) {
     .where(or(...conditions))
     .orderBy(sql`${invoices.createdAt} DESC`);
 
-  // For each invoice, compute totals
+  // For each invoice, compute totals (including virtual daily charges for admissions)
   const enriched = await Promise.all(allInvoices.map(async (inv) => {
-    const [totRow] = await db
-      .select({ total: sql`COALESCE(SUM(line_total), 0)` })
-      .from(billItems)
-      .where(eq(billItems.invoiceId, inv.id));
+    const total = await computeInvoiceTotal(inv.id, inv);
 
     const [paidRow] = await db
       .select({ paid: sql`COALESCE(SUM(amount), 0)` })
       .from(billingPayments)
       .where(eq(billingPayments.invoiceId, inv.id));
 
-    const total = parseFloat(totRow?.total || 0);
     const totalPaid = parseFloat(paidRow?.paid || 0);
-    const balance = Math.max(0, total - totalPaid);
+    const balance = total - totalPaid;
 
     // Determine invoice type
     let type = "manual";
@@ -530,5 +569,118 @@ export async function getPatientBillingContext(patientId) {
       : visit
       ? `Visit #${visit.id}`
       : null,
+  };
+}
+
+// ─── Paginated all-invoices list ──────────────────────────────────────────────
+
+/**
+ * Returns a paginated, searchable list of all invoices across all patients.
+ * Includes computed totals (stored items + virtual daily charges for admissions).
+ * @param {{ page?: number, pageSize?: number, search?: string, status?: string }} opts
+ */
+export async function getPaginatedInvoices({ page = 1, pageSize = 10, search = "", status = "" } = {}) {
+  const pageNum = Math.max(1, Number(page));
+  const pageSizeNum = Math.max(1, Number(pageSize));
+
+  const normalize = (v) => (typeof v === "string" && v.trim() !== "" && v !== "undefined" ? v.trim() : null);
+  const searchVal = normalize(search);
+  const statusVal = normalize(status);
+
+  // DB-level filter: only status (search is applied post-enrichment because it needs patient name)
+  const whereClause = statusVal ? ilike(invoices.status, `%${statusVal}%`) : undefined;
+
+  // Fetch all matching rows ordered newest-first (pagination applied after search filter)
+  const rows = await db
+    .select()
+    .from(invoices)
+    .where(whereClause)
+    .orderBy(desc(invoices.createdAt));
+
+  // Enrich each invoice with patient info + computed totals
+  const enriched = await Promise.all(rows.map(async (inv) => {
+    let type = "manual";
+    let typeLabel = "Manual Bill";
+    let linkId = null;
+    let patientName = "—";
+    let hospitalNumber = null;
+    let patientId = inv.patientId;
+
+    if (inv.admissionId) {
+      type = "admission";
+      typeLabel = "Inpatient Admission";
+      linkId = inv.admissionId;
+      const [adm] = await db
+        .select({ patientId: inpatientAdmissions.patientId })
+        .from(inpatientAdmissions)
+        .where(eq(inpatientAdmissions.id, inv.admissionId))
+        .limit(1);
+      if (adm) patientId = adm.patientId;
+    } else if (inv.visitId) {
+      type = "visit";
+      typeLabel = "Outpatient Visit";
+      linkId = inv.visitId;
+      const [vis] = await db
+        .select({ patientId: patientVisits.patientId })
+        .from(patientVisits)
+        .where(eq(patientVisits.id, inv.visitId))
+        .limit(1);
+      if (vis) patientId = vis.patientId;
+    }
+
+    if (patientId) {
+      const [pt] = await db
+        .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
+        .from(patients)
+        .where(eq(patients.patientId, patientId))
+        .limit(1);
+      if (pt) {
+        patientName = `${pt.surname} ${pt.firstName}`.trim();
+        hospitalNumber = pt.hospitalNumber;
+      }
+    }
+
+    const invoiceTotal = await computeInvoiceTotal(inv.id, inv);
+    const [paidRow] = await db
+      .select({ paid: sql`COALESCE(SUM(amount), 0)` })
+      .from(billingPayments)
+      .where(eq(billingPayments.invoiceId, inv.id));
+
+    const totalPaid = parseFloat(paidRow?.paid || 0);
+
+    return {
+      ...inv,
+      patientId,
+      patientName,
+      hospitalNumber,
+      total: invoiceTotal,
+      totalPaid,
+      balance: invoiceTotal - totalPaid,
+      type,
+      typeLabel,
+      linkId,
+    };
+  }));
+
+  // Apply search filter post-enrichment (patient name, hospital number, invoice number)
+  const filtered = searchVal
+    ? enriched.filter((inv) =>
+        inv.patientName.toLowerCase().includes(searchVal.toLowerCase()) ||
+        String(inv.hospitalNumber ?? "").includes(searchVal) ||
+        inv.invoiceNumber.toLowerCase().includes(searchVal.toLowerCase())
+      )
+    : enriched;
+
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / pageSizeNum);
+  const offset = (pageNum - 1) * pageSizeNum;
+  const pageData = filtered.slice(offset, offset + pageSizeNum);
+
+  return {
+    data: pageData,
+    totalItems,
+    totalPages,
+    currentPage: pageNum,
+    pageSize: pageSizeNum,
   };
 }

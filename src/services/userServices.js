@@ -9,7 +9,7 @@ const SALT_ROUNDS = Number(config.auth.saltRounds) || 12;
 
 /** Returns true if a superadmin row already exists, false otherwise. */
 export async function seedSuperAdmin() {
-    const { rows } = await query("SELECT id FROM users WHERE role = 'superadmin' LIMIT 1");
+    const { rows } = await query("SELECT id FROM users WHERE role = 'superadmin' AND is_deleted = false LIMIT 1");
     return rows.length > 0;
 }
 
@@ -55,7 +55,7 @@ function signRefresh(userId, jti) {
  * @throws {Error} 401 if credentials are invalid or account is inactive
  */
 export async function login({ email, password }) {
-    const { rows } = await query(`SELECT name, id, password_hash, created_at, is_active, role FROM users WHERE email = $1`, [email.toLowerCase()]);
+    const { rows } = await query(`SELECT name, id, password_hash, created_at, is_active, role FROM users WHERE email = $1 AND is_deleted = false`, [email.toLowerCase()]);
     const u = rows[0];
     // check if user is enabled
     if (!u || !u.is_active) {
@@ -99,7 +99,7 @@ export async function refreshAccess(oldRefresh) {
         throw err;
     }
 
-    const { rows } = await query(`SELECT refresh_token, created_at, is_active, role, email, name FROM users WHERE id = $1`, [payload.sub]);
+    const { rows } = await query(`SELECT refresh_token, created_at, is_active, role, email, name FROM users WHERE id = $1 AND is_deleted = false`, [payload.sub]);
     const u = rows[0];
 
 
@@ -178,6 +178,7 @@ export async function listUsers() {
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN users cb ON u.created_by = cb.id
+      WHERE u.is_deleted = false
       ORDER BY u.id DESC;
     `);
     return rows;
@@ -198,12 +199,16 @@ export async function updateUser(userData, userId) {
 }
 
 
-/** Deletes a user by ID and returns the deleted row.
+/** Soft-deletes a user by setting is_deleted = true and clearing the refresh token.
+ * The row is never physically removed to preserve foreign key references (e.g. patient_visits.doctor_id).
  * @param {number} userId
- * @returns {Promise<object>}
+ * @returns {Promise<object>} The updated user row
  */
 export async function deleteUser(userId) {
-    const { rows } = await query(`DELETE FROM users WHERE id = $1 RETURNING *`, [userId]);
+    const { rows } = await query(
+        `UPDATE users SET is_deleted = true, refresh_token = NULL WHERE id = $1 RETURNING *`,
+        [userId]
+    );
     return rows[0];
 }
 
