@@ -30,6 +30,9 @@ const config = {
     frontend: process.env.FRONTEND || "http://localhost:5173",
     production: process.env.PRODUCTION === "true",
   },
+  ai: {
+    groqApiKey: process.env.GROQ_API_KEY,
+  }
 };
 
 export default config;
