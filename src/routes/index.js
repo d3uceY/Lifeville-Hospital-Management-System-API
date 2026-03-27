@@ -28,6 +28,7 @@ import notificationRoutes from './notificationRoutes.js';
 import billingRoutes from './billingRoutes.js';
 import rolesRoutes from './rolesRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
+import aiRoutes from './aiRoutes.js';
 const router = express.Router();
 
 router.use("/api", patientRoutes);
@@ -57,5 +58,6 @@ router.use("/api", notificationRoutes);
 router.use("/api", billingRoutes);
 router.use("/api", rolesRoutes);
 router.use("/api", settingsRoutes);
+router.use("/api", aiRoutes);
 
 export default router;

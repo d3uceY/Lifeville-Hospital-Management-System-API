@@ -17,21 +17,16 @@ const getModel = (task) => {
     }
 };
 
-/**
- * Polishes raw EMR text for a given feature type.
- * @param {'complaint' | 'doctorNote' | 'nurseNote'} type
- * @param {string} rawText
- * @returns {Promise<string>} polished text
- */
-export const polishText = async (type, rawText) => {
+const polish = async (type, rawText) => {
     const config = polishConfig[type];
-    if (!config) throw new Error(`Unknown polish type: "${type}"`);
-
     const { text } = await generateText({
         model: groq(getModel('polish')),
         system: config.system,
         prompt: config.prompt(rawText),
     });
-
     return text;
 };
+
+export const polishComplaint = (rawText) => polish('complaint', rawText);
+export const polishDoctorNote = (rawText) => polish('doctorNote', rawText);
+export const polishNurseNote = (rawText) => polish('nurseNote', rawText);
