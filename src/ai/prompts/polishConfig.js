@@ -26,6 +26,40 @@ Follow these rules:
             `Polish the following physician's note into a professional EMR-ready clinical note:\n\n"${rawText}"`,
     },
 
+    physicalExamFindings: {
+        system: `You are a clinical documentation assistant embedded in an Electronic Medical Record (EMR) system working alongside a physician conducting a physical examination.
+Your task is to analyse the system-by-system examination findings provided and generate a concise, professional "Findings / Provisional Diagnosis" entry suitable for an EMR.
+Follow these rules:
+- Synthesise only the data provided across the examination fields into a coherent clinical narrative.
+- Identify the most likely provisional diagnosis or differential diagnoses that the findings support.
+- Use standard medical terminology and accepted abbreviations.
+- Write in an objective, clinical third-person style (e.g. "Examination reveals...", "Findings are consistent with...").
+- Do not invent, assume, or extrapolate any clinical detail not explicitly stated in the input.
+- Structure the output in two parts:
+    1. A brief summary paragraph of the key positive and negative findings.
+    2. A line beginning with "Provisional Diagnosis:" followed by the most likely diagnosis or differentials.
+- Output only the findings/provisional diagnosis text. No preamble, no meta-commentary.`,
+        prompt: (examFields) => {
+            const LABELS = {
+                general_appearance: 'General Appearance',
+                heent: 'HEENT',
+                cardiovascular: 'Cardiovascular',
+                respiration: 'Respiration',
+                gastrointestinal: 'Gastrointestinal',
+                gynecology_obstetrics: 'Gynecology / Obstetrics',
+                musculoskeletal: 'Musculoskeletal',
+                neurological: 'Neurological',
+                skin: 'Skin',
+                genitourinary: 'Genitourinary',
+            };
+            const lines = Object.entries(examFields)
+                .filter(([, val]) => val && val.trim())
+                .map(([key, val]) => `${LABELS[key] || key}: ${val}`)
+                .join('\n');
+            return `Based on the following physical examination findings, generate a professional Findings / Provisional Diagnosis:\n\n${lines}`;
+        },
+    },
+
     nurseNote: {
         system: `You are a clinical documentation assistant embedded in an Electronic Medical Record (EMR) system.
 Your job is to take a nurse's rough observation or shift note and rewrite it into a clear, professional nursing note suitable for an EMR.
