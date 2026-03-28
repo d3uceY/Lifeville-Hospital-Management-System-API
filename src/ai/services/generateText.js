@@ -30,5 +30,7 @@ const polish = async (type, rawText) => {
 export const polishComplaint = (rawText) => polish('complaint', rawText);
 export const polishDoctorNote = (rawText) => polish('doctorNote', rawText);
 export const polishNurseNote = (rawText) => polish('nurseNote', rawText);
+export const polishLabTestResult = (rawText) => polish('labTestResult', rawText);
 export const generatePhysicalExamFindings = (examFields) => polish('physicalExamFindings', examFields);
 export const generatePatientSummary = (formattedData) => polish('patientSummary', formattedData);
+export const generateLabTestComment = (data) => polish('labTestComment', data);

@@ -156,7 +156,7 @@ export const getPatientSummaryData = async (patientId) => {
 
         // Admissions with their discharge summaries
         query(`
-            SELECT ia.admission_id, ia.admission_date, ia.discharge_condition, ia.symptom_types,
+            SELECT ia.admission_date, ia.discharge_condition, ia.symptom_types,
                    ia.symptom_description, ia.note, ia.end_date, ia.bed_group,
                    u.name AS doctor_name,
                    ds.discharge_date_time, ds.final_diagnosis, ds.treatment_given,
@@ -164,7 +164,7 @@ export const getPatientSummaryData = async (patientId) => {
                    ds.follow_up, ds.recorded_by AS discharge_recorded_by
             FROM inpatient_admissions ia
             LEFT JOIN users u ON ia.consultant_doctor_id = u.id
-            LEFT JOIN discharge_summary ds ON ds.admission_id = ia.admission_id
+            LEFT JOIN discharge_summary ds ON ds.admission_id = ia.id
             WHERE ia.patient_id = $1
             ORDER BY ia.created_at DESC
             LIMIT 6
