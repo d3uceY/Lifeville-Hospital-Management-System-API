@@ -241,8 +241,8 @@ export const getPatientSummaryData = async (patientId) => {
                                'dosage', pi.dosage,
                                'frequency', pi.frequency,
                                'duration', pi.duration
-                           ) ORDER BY pi.id
-                       ) FILTER (WHERE pi.id IS NOT NULL),
+                           ) ORDER BY pi.prescription_item_id
+                       ) FILTER (WHERE pi.prescription_item_id IS NOT NULL),
                        '[]'
                    ) AS items
             FROM prescriptions p
