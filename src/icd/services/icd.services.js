@@ -1,9 +1,16 @@
 import fs from "fs";
 import path from "path";
-import config from "../../constants/config";
+import { fileURLToPath } from "url";
+import config from "../../constants/config.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let icdList = [];
+let icdMap = {};
 
 export function loadICD() {
-  const filePath = path.join(__dirname, `../../${config.icd.icdTextName}`);
+  const filePath = path.join(__dirname, `../data/${config.icd.icdTextName}`);
 
   const raw = fs.readFileSync(filePath, "utf-8");
 

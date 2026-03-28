@@ -1,4 +1,4 @@
-import { searchICD, lookupByCode } from '../services/icd.services';
+import { searchICD, lookupByCode } from '../services/icd.services.js';
 
 /**
  * GET /api/icd?q=<query>

@@ -15,7 +15,6 @@ import billRoutes from './billRoutes.js'
 import labTestRoutes from './labTestRoutes.js'
 import complaintsRoutes from './complaintsRouter.js'
 import physicalExaminationsRoutes from './physicalExaminationsRoutes.js'
-import conditionRoutes from './conditionRoutes.js'
 import diagnosesRoutes from './diagnosesRoutes.js'
 import prescriptionRoutes from './prescriptionRoutes.js'
 import procedureRoutes from './procedureRoutes.js'
@@ -29,6 +28,7 @@ import billingRoutes from './billingRoutes.js';
 import rolesRoutes from './rolesRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
 import aiRoutes from './aiRoutes.js';
+import icdRoutes from './icdRoutes.js';
 const router = express.Router();
 
 router.use("/api", patientRoutes);
@@ -45,7 +45,6 @@ router.use("/api", billRoutes);
 router.use("/api", labTestRoutes);
 router.use("/api", complaintsRoutes);
 router.use("/api", physicalExaminationsRoutes);
-router.use("/api", conditionRoutes);
 router.use("/api", diagnosesRoutes);
 router.use("/api", prescriptionRoutes);
 router.use("/api", procedureRoutes);
@@ -59,5 +58,6 @@ router.use("/api", billingRoutes);
 router.use("/api", rolesRoutes);
 router.use("/api", settingsRoutes);
 router.use("/api", aiRoutes);
+router.use("/api", icdRoutes);
 
 export default router;
