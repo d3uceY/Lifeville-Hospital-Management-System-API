@@ -54,6 +54,26 @@ export const generatePhysicalExamFindingsText = async (req, res) => {
     }
 };
 
+export const getCachedPatientSummary = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const cached = summaryCache.get(String(patientId));
+        if (cached && (Date.now() - cached.generatedAt) < CACHE_TTL_MS) {
+            return res.json({
+                success: true,
+                summary: cached.summary,
+                cached: true,
+                generatedAt: new Date(cached.generatedAt).toISOString(),
+                expiresIn: Math.floor((CACHE_TTL_MS - (Date.now() - cached.generatedAt)) / 1000),
+            });
+        }
+        return res.json({ success: true, summary: null });
+    } catch (error) {
+        console.error('Error checking AI patient summary cache:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 export const getAIPatientSummary = async (req, res) => {
     try {
         const { patientId } = req.params;
