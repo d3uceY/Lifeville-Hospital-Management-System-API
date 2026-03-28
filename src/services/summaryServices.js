@@ -145,19 +145,143 @@ export const getPatientSummaryData = async (patientId) => {
         dischargeSummariesResult,
         visitsResult,
     ] = await Promise.all([
-        query(`SELECT first_name, surname, date_of_birth, sex, allergies, past_medical_history, drug_history, family_history, social_history FROM patients WHERE patient_id = $1`, [id]),
-        query(`SELECT ia.admission_date, ia.discharge_condition, ia.symptom_types, ia.symptom_description, ia.note, ia.end_date, ia.bed_group, u.name AS doctor_name FROM inpatient_admissions ia LEFT JOIN users u ON ia.consultant_doctor_id = u.id WHERE ia.patient_id = $1 ORDER BY ia.created_at DESC LIMIT 3`, [id]),
-        query(`SELECT recorded_at, temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, spo2, weight, height, recorded_by FROM vital_signs WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 6`, [id]),
-        query(`SELECT created_at, complaint, recorded_by FROM complaints WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 5`, [id]),
-        query(`SELECT created_at, note, recorded_by FROM doctors_notes WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 3`, [id]),
-        query(`SELECT created_at, note, recorded_by FROM nurses_notes WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 3`, [id]),
-        query(`SELECT created_at, recorded_by, general_appearance, heent, cardiovascular, respiration, gastrointestinal, gynecology_obstetrics, musculoskeletal, neurological, skin, genitourinary, findings FROM physical_examinations WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 2`, [id]),
-        query(`SELECT created_at, test_type, status, results, comments, prescribed_by FROM lab_tests WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 5`, [id]),
-        query(`SELECT diagnosis_date, condition, notes, recorded_by FROM diagnoses WHERE patient_id = $1 ORDER BY diagnosis_date DESC LIMIT 5`, [id]),
-        query(`SELECT p.prescription_date, p.prescribed_by, p.status, p.notes, COALESCE(json_agg(json_build_object('drug', pi.drug_name, 'dosage', pi.dosage, 'frequency', pi.frequency, 'duration', pi.duration) ORDER BY pi.id) FILTER (WHERE pi.id IS NOT NULL), '[]') AS items FROM prescriptions p LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id WHERE p.patient_id = $1 GROUP BY p.prescription_id ORDER BY p.prescription_date DESC LIMIT 4`, [id]),
-        query(`SELECT performed_at, procedure_name, comments, recorded_by FROM procedures WHERE patient_id = $1 ORDER BY performed_at DESC LIMIT 3`, [id]),
-        query(`SELECT discharge_date_time, final_diagnosis, treatment_given, outcome, condition, follow_up, recorded_by FROM discharge_summary WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 2`, [id]),
-        query(`SELECT pv.check_in_time, pv.check_out_time, pv.visit_type, pv.purpose, u.name AS doctor_name FROM patient_visits pv LEFT JOIN users u ON pv.doctor_id = u.id WHERE pv.patient_id = $1 ORDER BY pv.check_in_time DESC LIMIT 3`, [id]),
+        // Patient profile
+        query(`
+            SELECT first_name, surname, date_of_birth, sex,
+                   allergies, past_medical_history, drug_history, family_history, social_history
+            FROM patients
+            WHERE patient_id = $1
+        `, [id]),
+
+        // Admissions
+        query(`
+            SELECT ia.admission_date, ia.discharge_condition, ia.symptom_types,
+                   ia.symptom_description, ia.note, ia.end_date, ia.bed_group,
+                   u.name AS doctor_name
+            FROM inpatient_admissions ia
+            LEFT JOIN users u ON ia.consultant_doctor_id = u.id
+            WHERE ia.patient_id = $1
+            ORDER BY ia.created_at DESC
+            LIMIT 3
+        `, [id]),
+
+        // Vital signs
+        query(`
+            SELECT recorded_at, temperature, blood_pressure_systolic, blood_pressure_diastolic,
+                   pulse_rate, spo2, weight, height, recorded_by
+            FROM vital_signs
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 6
+        `, [id]),
+
+        // Complaints
+        query(`
+            SELECT created_at, complaint, recorded_by
+            FROM complaints
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 5
+        `, [id]),
+
+        // Doctor's notes
+        query(`
+            SELECT created_at, note, recorded_by
+            FROM doctors_notes
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 3
+        `, [id]),
+
+        // Nurse's notes
+        query(`
+            SELECT created_at, note, recorded_by
+            FROM nurses_notes
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 3
+        `, [id]),
+
+        // Physical examinations
+        query(`
+            SELECT created_at, recorded_by, general_appearance, heent, cardiovascular,
+                   respiration, gastrointestinal, gynecology_obstetrics, musculoskeletal,
+                   neurological, skin, genitourinary, findings
+            FROM physical_examinations
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 2
+        `, [id]),
+
+        // Lab tests
+        query(`
+            SELECT created_at, test_type, status, results, comments, prescribed_by
+            FROM lab_tests
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 5
+        `, [id]),
+
+        // Diagnoses
+        query(`
+            SELECT diagnosis_date, condition, notes, recorded_by
+            FROM diagnoses
+            WHERE patient_id = $1
+            ORDER BY diagnosis_date DESC
+            LIMIT 5
+        `, [id]),
+
+        // Prescriptions with items
+        query(`
+            SELECT p.prescription_date, p.prescribed_by, p.status, p.notes,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'drug', pi.drug_name,
+                               'dosage', pi.dosage,
+                               'frequency', pi.frequency,
+                               'duration', pi.duration
+                           ) ORDER BY pi.id
+                       ) FILTER (WHERE pi.id IS NOT NULL),
+                       '[]'
+                   ) AS items
+            FROM prescriptions p
+            LEFT JOIN prescription_items pi ON p.prescription_id = pi.prescription_id
+            WHERE p.patient_id = $1
+            GROUP BY p.prescription_id
+            ORDER BY p.prescription_date DESC
+            LIMIT 4
+        `, [id]),
+
+        // Procedures
+        query(`
+            SELECT performed_at, procedure_name, comments, recorded_by
+            FROM procedures
+            WHERE patient_id = $1
+            ORDER BY performed_at DESC
+            LIMIT 3
+        `, [id]),
+
+        // Discharge summaries
+        query(`
+            SELECT discharge_date_time, final_diagnosis, treatment_given,
+                   outcome, condition, follow_up, recorded_by
+            FROM discharge_summary
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+            LIMIT 2
+        `, [id]),
+
+        // Patient visits
+        query(`
+            SELECT pv.check_in_time, pv.check_out_time, pv.visit_type, pv.purpose,
+                   u.name AS doctor_name
+            FROM patient_visits pv
+            LEFT JOIN users u ON pv.doctor_id = u.id
+            WHERE pv.patient_id = $1
+            ORDER BY pv.check_in_time DESC
+            LIMIT 3
+        `, [id]),
     ]);
 
     return {
