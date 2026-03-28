@@ -32,6 +32,9 @@ const config = {
   },
   ai: {
     groqApiKey: process.env.GROQ_API_KEY,
+  },
+  icd: {
+    icdTextName: process.env.ICD_TEXT_NAME || "icd10cm_codes.txt",
   }
 };
 
