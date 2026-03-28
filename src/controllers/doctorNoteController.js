@@ -2,7 +2,6 @@ import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as doctorNoteServices from "../services/doctorNoteServices.js";
 import { addNotification } from "../services/notificationServices.js";
-import { formatDate } from "../utils/formatDate.js";
 
 // Get doctor's notes by patient ID
 export const getDoctorNotesByPatientId = async (req, res) => {

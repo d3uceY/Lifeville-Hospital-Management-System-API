@@ -1,7 +1,7 @@
 import { query } from "../../drizzle-db.js";
 import { eq, desc, and } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
-import { prescriptionItems, prescriptions } from "../../drizzle/migrations/schema.js";
+import { prescriptions } from "../../drizzle/migrations/schema.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
@@ -35,7 +35,7 @@ export const createPrescription = async (prescriptionData) => {
     );
 
     const prescription = rows[0];
-    
+
     for (const item of items) {
         await query(
             `INSERT INTO prescription_items (
@@ -100,7 +100,7 @@ export const createPrescription = async (prescriptionData) => {
  */
 export const getPrescriptions = async (patient_id) => {
     const { rows } = await query(
-      `SELECT 
+        `SELECT 
           p.prescription_id,
           p.patient_id,
           p.prescribed_by,
@@ -136,13 +136,13 @@ export const getPrescriptions = async (patient_id) => {
           p.updated_at,
           p.prescription_date
       ORDER BY p.prescription_date DESC`,
-      [patient_id]
+        [patient_id]
     );
-  
+
     return rows;
-  };
-  
-  
+};
+
+
 /** Deletes a prescription and all its line items by ID.
  * @param {number} prescriptionId
  * @returns {Promise<object>}

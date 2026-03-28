@@ -30,6 +30,12 @@ const config = {
     frontend: process.env.FRONTEND || "http://localhost:5173",
     production: process.env.PRODUCTION === "true",
   },
+  ai: {
+    groqApiKey: process.env.GROQ_API_KEY,
+  },
+  icd: {
+    icdTextName: process.env.ICD_TEXT_NAME || "icd10cm_codes.txt",
+  }
 };
 
 export default config;

@@ -32,7 +32,7 @@ export const createVitalSign = async (vitalSignData) => {
       systolicBloodPressure,
       diastolicBloodPressure,
       weight,
-      height,
+      height ? Math.round(height * 100) : null,
       heartRate,
       spo2,
       recordedBy
@@ -100,7 +100,7 @@ export const updateVitalSign = async (vitalSignData, vitalSignId) => {
      RETURNING *;`,
     [
       patientId, date, temperature, systolicBloodPressure, diastolicBloodPressure,
-      weight, height, heartRate, spo2, recordedBy, updatedBy, vitalSignId
+      weight, height ? Math.round(height * 100) : null, heartRate, spo2, recordedBy, updatedBy, vitalSignId
     ]
   );
 
