@@ -3,7 +3,7 @@ import path from "path";
 import config from "../../constants/config";
 
 export function loadICD() {
-  const filePath = path.join(__dirname, `../../${config.icdTextName}`);
+  const filePath = path.join(__dirname, `../../${config.icd.icdTextName}`);
 
   const raw = fs.readFileSync(filePath, "utf-8");
 
