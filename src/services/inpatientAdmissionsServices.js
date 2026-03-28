@@ -3,6 +3,7 @@ import { db } from "../../drizzle-db.js";
 import { inpatientAdmissions, patients, users, dischargeSummary, patientVisits } from "../../drizzle/migrations/schema.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
+import { lookupByCode } from "../icd/services/icd.services.js";
 
 const INPATIENT_SELECT_FIELDS = {
   id: inpatientAdmissions.id,
@@ -479,19 +480,32 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
  * @returns {Promise<object[]>}
  */
 export const getDischargeSummaryByAdmissionId = async (admissionId) => {
-  const result = await db.select(
-    {
-      ...dischargeSummary,
-      doctor_name: users.name
-    }
-  )
+  const result = await db.select({
+    id: dischargeSummary.id,
+    final_diagnosis: dischargeSummary.finalDiagnosis,
+    diagnosis_details: dischargeSummary.diagnosisDetails,
+    treatment_given: dischargeSummary.treatmentGiven,
+    outcome: dischargeSummary.outcome,
+    condition: dischargeSummary.condition,
+    discharge_date_time: dischargeSummary.dischargeDateTime,
+    follow_up: dischargeSummary.followUp,
+    patient_id: dischargeSummary.patientId,
+    admission_id: dischargeSummary.admissionId,
+    recorded_by: dischargeSummary.recordedBy,
+    created_at: dischargeSummary.createdAt,
+    doctor_name: users.name,
+  })
     .from(dischargeSummary)
     .innerJoin(users, eq(dischargeSummary.doctorId, users.id))
     .where(eq(dischargeSummary.admissionId, admissionId));
 
-  if (result.length > 0) {
-    return result;
-  } else {
-    return [];
-  }
+  return result.map(row => {
+    const icdEntry = row.final_diagnosis ? lookupByCode(row.final_diagnosis) : null;
+    return {
+      ...row,
+      final_diagnosis: icdEntry
+        ? `${icdEntry.code} — ${icdEntry.description}`
+        : row.final_diagnosis,
+    };
+  });
 }
