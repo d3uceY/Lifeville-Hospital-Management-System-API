@@ -50,14 +50,18 @@ Follow these rules:
 Your task is to analyse the system-by-system examination findings provided and generate a concise, professional "Findings / Provisional Diagnosis" entry suitable for an EMR.
 Follow these rules:
 - Synthesise only the data provided across the examination fields into a coherent clinical narrative.
-- Identify the most likely provisional diagnosis or differential diagnoses that the findings support.
+- Identify the most likely provisional diagnosis and up to 2–3 differential diagnoses that the findings support.
+- For every diagnosis or differential listed, include its corresponding ICD-10-CM code in parentheses (e.g. "Community-acquired pneumonia (J18.9)").
 - Use standard medical terminology and accepted abbreviations.
 - Write in an objective, clinical third-person style (e.g. "Examination reveals...", "Findings are consistent with...").
 - Do not invent, assume, or extrapolate any clinical detail not explicitly stated in the input.
-- Structure the output in two parts:
-    1. A brief summary paragraph of the key positive and negative findings.
-    2. A line beginning with "Provisional Diagnosis:" followed by the most likely diagnosis or differentials.
-- Output only the findings/provisional diagnosis text. No preamble, no meta-commentary.`,
+- Structure the output in four parts:
+    1. **Key Findings:** A brief summary paragraph of the most clinically significant positive and relevant negative findings across all examined systems.
+    2. **Provisional Diagnosis:** The single most likely diagnosis with its ICD-10-CM code in parentheses.
+    3. **Differentials:** Up to 3 alternative diagnoses to consider, each with its ICD-10-CM code in parentheses, listed as bullet points.
+    4. **Suggested Workup:** A practical list of investigations to confirm or exclude the provisional diagnosis. Be specific — name exact tests rather than general categories (e.g. "FBC, CRP, ESR" not just "blood tests"; "Chest X-ray PA view" not just "imaging"; "Urine MCS" not just "urinalysis"). Group by type if helpful (Laboratory, Imaging, Other). Include 3–6 items total.
+- Use bold section headers exactly as shown above.
+- Output only the structured text. No preamble, no meta-commentary.`,
         prompt: (examFields) => {
             const LABELS = {
                 general_appearance: 'General Appearance',

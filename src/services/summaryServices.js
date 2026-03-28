@@ -2,6 +2,7 @@ import { db } from "../../drizzle-db.js";
 import { query } from "../../drizzle-db.js";
 import { diagnoses, labTests, vitalSigns, inpatientAdmissions, users, patientVisits, patients } from "../../drizzle/migrations/schema.js";
 import { eq, desc, isNull } from "drizzle-orm";
+import { lookupByCode } from "../icd/services/icd.services.js";
 
 
 /**
@@ -153,16 +154,20 @@ export const getPatientSummaryData = async (patientId) => {
             WHERE patient_id = $1
         `, [id]),
 
-        // Admissions
+        // Admissions with their discharge summaries
         query(`
-            SELECT ia.admission_date, ia.discharge_condition, ia.symptom_types,
+            SELECT ia.admission_id, ia.admission_date, ia.discharge_condition, ia.symptom_types,
                    ia.symptom_description, ia.note, ia.end_date, ia.bed_group,
-                   u.name AS doctor_name
+                   u.name AS doctor_name,
+                   ds.discharge_date_time, ds.final_diagnosis, ds.treatment_given,
+                   ds.outcome, ds.condition AS discharge_condition_detail,
+                   ds.follow_up, ds.recorded_by AS discharge_recorded_by
             FROM inpatient_admissions ia
             LEFT JOIN users u ON ia.consultant_doctor_id = u.id
+            LEFT JOIN discharge_summary ds ON ds.admission_id = ia.admission_id
             WHERE ia.patient_id = $1
             ORDER BY ia.created_at DESC
-            LIMIT 3
+            LIMIT 6
         `, [id]),
 
         // Vital signs
@@ -172,7 +177,7 @@ export const getPatientSummaryData = async (patientId) => {
             FROM vital_signs
             WHERE patient_id = $1
             ORDER BY created_at DESC
-            LIMIT 6
+            LIMIT 10
         `, [id]),
 
         // Complaints
@@ -181,7 +186,7 @@ export const getPatientSummaryData = async (patientId) => {
             FROM complaints
             WHERE patient_id = $1
             ORDER BY created_at DESC
-            LIMIT 5
+            LIMIT 8
         `, [id]),
 
         // Doctor's notes
@@ -190,7 +195,7 @@ export const getPatientSummaryData = async (patientId) => {
             FROM doctors_notes
             WHERE patient_id = $1
             ORDER BY created_at DESC
-            LIMIT 3
+            LIMIT 6
         `, [id]),
 
         // Nurse's notes
@@ -199,7 +204,7 @@ export const getPatientSummaryData = async (patientId) => {
             FROM nurses_notes
             WHERE patient_id = $1
             ORDER BY created_at DESC
-            LIMIT 3
+            LIMIT 6
         `, [id]),
 
         // Physical examinations
@@ -210,7 +215,7 @@ export const getPatientSummaryData = async (patientId) => {
             FROM physical_examinations
             WHERE patient_id = $1
             ORDER BY created_at DESC
-            LIMIT 2
+            LIMIT 4
         `, [id]),
 
         // Lab tests
@@ -219,16 +224,16 @@ export const getPatientSummaryData = async (patientId) => {
             FROM lab_tests
             WHERE patient_id = $1
             ORDER BY created_at DESC
-            LIMIT 5
+            LIMIT 10
         `, [id]),
 
-        // Diagnoses
+        // Diagnoses (condition column stores ICD-10-CM codes)
         query(`
             SELECT diagnosis_date, condition, notes, recorded_by
             FROM diagnoses
             WHERE patient_id = $1
             ORDER BY diagnosis_date DESC
-            LIMIT 5
+            LIMIT 10
         `, [id]),
 
         // Prescriptions with items
@@ -250,7 +255,7 @@ export const getPatientSummaryData = async (patientId) => {
             WHERE p.patient_id = $1
             GROUP BY p.prescription_id
             ORDER BY p.prescription_date DESC
-            LIMIT 4
+            LIMIT 6
         `, [id]),
 
         // Procedures
@@ -259,18 +264,11 @@ export const getPatientSummaryData = async (patientId) => {
             FROM procedures
             WHERE patient_id = $1
             ORDER BY performed_at DESC
-            LIMIT 3
+            LIMIT 6
         `, [id]),
 
-        // Discharge summaries
-        query(`
-            SELECT discharge_date_time, final_diagnosis, treatment_given,
-                   outcome, condition, follow_up, recorded_by
-            FROM discharge_summary
-            WHERE patient_id = $1
-            ORDER BY created_at DESC
-            LIMIT 2
-        `, [id]),
+        // Discharge summaries (now embedded in admissions query above)
+        Promise.resolve({ rows: [] }),
 
         // Patient visits
         query(`
@@ -280,7 +278,7 @@ export const getPatientSummaryData = async (patientId) => {
             LEFT JOIN users u ON pv.doctor_id = u.id
             WHERE pv.patient_id = $1
             ORDER BY pv.check_in_time DESC
-            LIMIT 3
+            LIMIT 6
         `, [id]),
     ]);
 
@@ -348,8 +346,12 @@ export const formatPatientSummaryData = (data) => {
     if (diagnoses.length) {
         lines.push('\n=== RECENT DIAGNOSES (most recent first) ===');
         diagnoses.forEach(d => {
+            const icdEntry = d.condition ? lookupByCode(d.condition) : null;
+            const conditionLabel = icdEntry
+                ? `${icdEntry.code} — ${icdEntry.description}`
+                : (d.condition || 'N/A');
             const note = val(d.notes) ? ` — Notes: ${d.notes}` : '';
-            lines.push(`[${fmt(d.diagnosis_date)}] ${d.condition}${note} — By: ${d.recorded_by}`);
+            lines.push(`[${fmt(d.diagnosis_date)}] ${conditionLabel}${note} — By: ${d.recorded_by}`);
         });
     }
 
@@ -425,15 +427,19 @@ export const formatPatientSummaryData = (data) => {
             if (val(a.symptom_description)) lines.push(`  Description: ${a.symptom_description}`);
             if (val(a.note)) lines.push(`  Note: ${a.note}`);
             lines.push(`  Discharge Date: ${a.end_date ? fmt(a.end_date) : 'Still admitted'}`);
-        });
-    }
-
-    if (dischargeSummaries.length) {
-        lines.push('\n=== RECENT DISCHARGE SUMMARIES (most recent first) ===');
-        dischargeSummaries.forEach(d => {
-            lines.push(`[${fmt(d.discharge_date_time)}] Final Diagnosis: ${d.final_diagnosis} | Outcome: ${d.outcome || 'N/A'} | Condition: ${d.condition || 'N/A'}`);
-            if (val(d.treatment_given)) lines.push(`  Treatment Given: ${d.treatment_given}`);
-            if (val(d.follow_up)) lines.push(`  Follow-up: ${d.follow_up}`);
+            if (val(a.discharge_date_time)) {
+                const icdEntry = a.final_diagnosis ? lookupByCode(a.final_diagnosis) : null;
+                const diagnosisLabel = icdEntry
+                    ? `${icdEntry.code} — ${icdEntry.description}`
+                    : (a.final_diagnosis || 'N/A');
+                lines.push(`  Discharge Summary:`);
+                lines.push(`    Final Diagnosis: ${diagnosisLabel}`);
+                if (val(a.outcome)) lines.push(`    Outcome: ${a.outcome}`);
+                if (val(a.discharge_condition_detail)) lines.push(`    Condition at Discharge: ${a.discharge_condition_detail}`);
+                if (val(a.treatment_given)) lines.push(`    Treatment Given: ${a.treatment_given}`);
+                if (val(a.follow_up)) lines.push(`    Follow-up Instructions: ${a.follow_up}`);
+                if (val(a.discharge_recorded_by)) lines.push(`    Recorded By: ${a.discharge_recorded_by}`);
+            }
         });
     }
 
