@@ -69,9 +69,13 @@ export const generatePhysicalExamFindingsText = async (req, res) => {
 
 export const generateLabTestCommentText = async (req, res) => {
     try {
-        const { patientId, testType } = req.body;
-        if (!patientId || !testType) {
-            return res.status(400).json({ success: false, message: 'patientId and testType are required' });
+        const { patientId, testType, testTypes } = req.body;
+        // Accept testTypes (array) or legacy testType (string)
+        const testsArray = testTypes
+            ? (Array.isArray(testTypes) ? testTypes : [testTypes])
+            : (testType ? (Array.isArray(testType) ? testType : [testType]) : null);
+        if (!patientId || !testsArray || testsArray.length === 0) {
+            return res.status(400).json({ success: false, message: 'patientId and testTypes are required' });
         }
 
         const examResult = await query(`
@@ -117,7 +121,7 @@ export const generateLabTestCommentText = async (req, res) => {
         }
 
         const comment = await generateLabTestComment({
-            testType,
+            testTypes: testsArray,
             examDate: examDateFormatted,
             daysSinceExam,
             examFindings,

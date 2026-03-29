@@ -346,10 +346,15 @@ export const formatPatientSummaryData = (data) => {
     if (diagnoses.length) {
         lines.push('\n=== RECENT DIAGNOSES (most recent first) ===');
         diagnoses.forEach(d => {
-            const icdEntry = d.condition ? lookupByCode(d.condition) : null;
-            const conditionLabel = icdEntry
-                ? `${icdEntry.code} — ${icdEntry.description}`
-                : (d.condition || 'N/A');
+            let conditionLabel = 'N/A';
+            if (d.condition && typeof d.condition === 'object') {
+                conditionLabel = Object.entries(d.condition)
+                    .map(([code, desc]) => desc ? `${code} — ${desc}` : code)
+                    .join('; ');
+            } else if (d.condition) {
+                const icdEntry = lookupByCode(d.condition);
+                conditionLabel = icdEntry ? `${icdEntry.code} — ${icdEntry.description}` : d.condition;
+            }
             const note = val(d.notes) ? ` — Notes: ${d.notes}` : '';
             lines.push(`[${fmt(d.diagnosis_date)}] ${conditionLabel}${note} — By: ${d.recorded_by}`);
         });
@@ -428,10 +433,15 @@ export const formatPatientSummaryData = (data) => {
             if (val(a.note)) lines.push(`  Note: ${a.note}`);
             lines.push(`  Discharge Date: ${a.end_date ? fmt(a.end_date) : 'Still admitted'}`);
             if (val(a.discharge_date_time)) {
-                const icdEntry = a.final_diagnosis ? lookupByCode(a.final_diagnosis) : null;
-                const diagnosisLabel = icdEntry
-                    ? `${icdEntry.code} — ${icdEntry.description}`
-                    : (a.final_diagnosis || 'N/A');
+                let diagnosisLabel = 'N/A';
+                if (a.final_diagnosis && typeof a.final_diagnosis === 'object') {
+                    diagnosisLabel = Object.entries(a.final_diagnosis)
+                        .map(([code, desc]) => desc ? `${code} — ${desc}` : code)
+                        .join('; ');
+                } else if (a.final_diagnosis) {
+                    const icdEntry = lookupByCode(a.final_diagnosis);
+                    diagnosisLabel = icdEntry ? `${icdEntry.code} — ${icdEntry.description}` : a.final_diagnosis;
+                }
                 lines.push(`  Discharge Summary:`);
                 lines.push(`    Final Diagnosis: ${diagnosisLabel}`);
                 if (val(a.outcome)) lines.push(`    Outcome: ${a.outcome}`);

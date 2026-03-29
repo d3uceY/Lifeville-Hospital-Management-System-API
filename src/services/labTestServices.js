@@ -49,9 +49,14 @@ export const getLabTestById = async (id) => {
  * @returns {Promise<object>} The new lab test enriched with patient name
  */
 export const createLabTest = async (labTest) => {
+  // Accept testType as either a string (legacy) or array
+  const testTypeArray = Array.isArray(labTest.testType)
+    ? labTest.testType
+    : [labTest.testType];
+
   const [newTest] = await db.insert(labTests).values({
     patientId: labTest.patientId,
-    testType: labTest.testType,
+    testType: testTypeArray,
     comments: labTest.comments,
     prescribedBy: labTest.prescribedBy,
     status: 'to do',
@@ -63,6 +68,8 @@ export const createLabTest = async (labTest) => {
     surname: patients.surname,
   }).from(patients).where(eq(patients.patientId, labTest.patientId));
 
+  const testTypeLabel = testTypeArray.join(', ');
+
   // ── Auto-billing: add a bill item for this lab test ──────────────────────
   if (labTest.admissionId || labTest.visitId) {
     try {
@@ -70,9 +77,9 @@ export const createLabTest = async (labTest) => {
       await billingService.addItem({
         admissionId: labTest.admissionId ? Number(labTest.admissionId) : null,
         visitId: labTest.visitId ? Number(labTest.visitId) : null,
-        description: `Lab Test: ${labTest.testType}`,
+        description: `Lab Test: ${testTypeLabel}`,
         category: SERVICE_CATEGORIES.LAB,
-        quantity: 1,
+        quantity: testTypeArray.length,
         unitPrice: labTest.unitPrice ? Number(labTest.unitPrice) : labPrice,
         billingType: "credit",
         createdBy: labTest.createdBy || null,
@@ -87,6 +94,7 @@ export const createLabTest = async (labTest) => {
     ...newTest,
     first_name: patient[0].first_name,
     surname: patient[0].surname,
+    test_type_label: testTypeLabel,
   };
 };
 

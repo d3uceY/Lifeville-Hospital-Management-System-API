@@ -347,7 +347,7 @@ export const history = pgTable("history", {
 
 export const dischargeSummary = pgTable("discharge_summary", {
 	id: serial().primaryKey().notNull(),
-	finalDiagnosis: text("final_diagnosis").notNull(),
+	finalDiagnosis: jsonb("final_diagnosis").notNull(),
 	diagnosisDetails: text("diagnosis_details"),
 	treatmentGiven: text("treatment_given"),
 	outcome: text(),
@@ -432,7 +432,7 @@ export const labTests = pgTable("lab_tests", {
 	id: serial().primaryKey().notNull(),
 	patientId: integer("patient_id").notNull(),
 	prescribedBy: text("prescribed_by"),
-	testType: text("test_type").notNull(),
+	testType: text("test_type").array().notNull(),
 	status: text().default('to_do').notNull(),
 	comments: text(),
 	results: text(),
@@ -531,16 +531,22 @@ export const diagnoses = pgTable("diagnoses", {
 	patientId: integer("patient_id").notNull(),
 	recordedBy: text("recorded_by").notNull(),
 	diagnosisDate: timestamp("diagnosis_date", { mode: 'string' }).defaultNow(),
-	condition: text().notNull(),
+	condition: jsonb().notNull(),
 	notes: text(),
 	updatedBy: text("updated_by"),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "diagnoses_patient_id_fkey"
 		}),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "diagnoses_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const prescriptions = pgTable("prescriptions", {
