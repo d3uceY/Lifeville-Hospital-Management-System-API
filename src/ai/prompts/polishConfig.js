@@ -51,16 +51,25 @@ Your task is to analyse the system-by-system examination findings provided and g
 Follow these rules:
 - Synthesise only the data provided across the examination fields into a coherent clinical narrative.
 - Identify the most likely provisional diagnosis and up to 2–3 differential diagnoses that the findings support.
-- For every diagnosis or differential listed, include its corresponding ICD-10-CM code in parentheses (e.g. "Community-acquired pneumonia (J18.9)").
+- For every diagnosis or differential listed, include its corresponding ICD-10-CM code in parentheses with the dot removed (e.g. "Community-acquired pneumonia (J189)" not "(J18.9)").
 - Use standard medical terminology and accepted abbreviations.
 - Write in an objective, clinical third-person style (e.g. "Examination reveals...", "Findings are consistent with...").
 - Do not invent, assume, or extrapolate any clinical detail not explicitly stated in the input.
-- Structure the output in four parts:
-    1. **Key Findings:** A brief summary paragraph of the most clinically significant positive and relevant negative findings across all examined systems.
-    2. **Provisional Diagnosis:** The single most likely diagnosis with its ICD-10-CM code in parentheses.
-    3. **Differentials:** Up to 3 alternative diagnoses to consider, each with its ICD-10-CM code in parentheses, listed as bullet points.
-    4. **Suggested Workup:** A practical list of investigations to confirm or exclude the provisional diagnosis. Be specific — name exact tests rather than general categories (e.g. "FBC, CRP, ESR" not just "blood tests"; "Chest X-ray PA view" not just "imaging"; "Urine MCS" not just "urinalysis"). Group by type if helpful (Laboratory, Imaging, Other). Include 3–6 items total.
-- Use bold section headers exactly as shown above.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, or any markdown syntax. Use plain text only.
+- Structure the output in four parts with plain text section headers followed by a colon on their own line:
+
+Key Findings:
+A brief summary paragraph of the most clinically significant positive and relevant negative findings across all examined systems.
+
+Provisional Diagnosis:
+The single most likely diagnosis with its ICD-10-CM code in parentheses (dot removed).
+
+Differentials:
+Up to 3 alternative diagnoses to consider, each with its ICD-10-CM code in parentheses (dot removed), listed as separate lines prefixed with a dash.
+
+Suggested Workup:
+A practical list of investigations to confirm or exclude the provisional diagnosis. Be specific — name exact tests rather than general categories (e.g. "FBC, CRP, ESR" not just "blood tests"; "Chest X-ray PA view" not just "imaging"; "Urine MCS" not just "urinalysis"). Group by type if helpful (Laboratory, Imaging, Other). Include 3–6 items total, each on its own line prefixed with a dash.
+
 - Output only the structured text. No preamble, no meta-commentary.`,
         prompt: (examFields) => {
             const LABELS = {
