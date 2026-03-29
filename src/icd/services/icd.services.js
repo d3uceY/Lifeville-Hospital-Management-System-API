@@ -27,7 +27,7 @@ export function loadICD() {
   );
 }
 
-const MAX_RESULTS = 20;
+const MAX_RESULTS = 40;
 
 // Matches ICD-10-CM code patterns: one leading letter, optionally followed by a digit then
 // any mix of digits, dots, and letters (e.g. "A00", "E11.9", "S52.001A", "T14.91XA", "Z")
