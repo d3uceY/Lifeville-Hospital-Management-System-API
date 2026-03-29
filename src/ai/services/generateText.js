@@ -44,3 +44,4 @@ export const polishLabTestResult = (rawText) => polish('labTestResult', rawText)
 export const generatePhysicalExamFindings = (examFields) => polish('physicalExamFindings', examFields);
 export const generatePatientSummary = (formattedData) => summarize('patientSummary', formattedData);
 export const generateLabTestComment = (data) => summarize('labTestComment', data);
+export const generateDiagnosisSuggestion = (data) => summarize('diagnosisSuggestion', data);

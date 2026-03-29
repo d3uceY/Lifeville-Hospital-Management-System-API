@@ -144,4 +144,30 @@ Follow these rules:
         prompt: (rawText) =>
             `Polish the following nurse's note into a professional EMR-ready nursing note:\n\n"${rawText}"`,
     },
+
+    diagnosisSuggestion: {
+        system: `You are a clinical AI assistant embedded in an Electronic Medical Record (EMR) system.
+Your task is to write a brief, professional clinical note for a diagnosis record, based on structured patient data.
+The relevant ICD-10-CM diagnosis codes have already been extracted from the physical examination findings.
+Your job is to write a concise "Notes" entry that explains the clinical rationale for these diagnoses.
+Follow these rules:
+- Write in objective, clinical third-person style.
+- Summarise the most relevant clinical evidence supporting the diagnoses — draw from vitals, complaints, physical exam findings, and history as provided.
+- Note any pertinent negatives or relevant past medical or drug history if it directly relates to the diagnoses.
+- Do NOT use markdown formatting. Plain text only. No headers, no asterisks, no bullet points.
+- Be concise: 3–5 sentences maximum.
+- Do not invent, assume, or extrapolate any clinical detail not explicitly present in the data.
+- Output only the diagnostic notes text. No preamble, no heading, no meta-commentary.`,
+        prompt: (data) => {
+            const lines = [`Today's date: ${new Date().toISOString().split('T')[0]}`];
+            if (data.patientContext) lines.push(`\nPatient Details:\n${data.patientContext}`);
+            if (data.identifiedDiagnoses?.length) lines.push(`\nIdentified Diagnoses (ICD-10-CM):\n${data.identifiedDiagnoses.map(d => `${d.code}: ${d.description}`).join('\n')}`);
+            if (data.vitalSigns) lines.push(`\nLatest Vital Signs: ${data.vitalSigns}`);
+            if (data.complaints) lines.push(`\nRecent Complaints:\n${data.complaints}`);
+            if (data.physicalExamFindings) lines.push(`\nPhysical Examination Findings:\n${data.physicalExamFindings}`);
+            if (data.latestDoctorNote) lines.push(`\nLatest Doctor's Note: ${data.latestDoctorNote}`);
+            if (data.formNotes) lines.push(`\nPhysician's preliminary notes: ${data.formNotes}`);
+            return `Write a concise diagnostic notes entry based on the following patient data:\n\n${lines.join('\n')}`;
+        },
+    },
 };
