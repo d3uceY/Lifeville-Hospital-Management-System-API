@@ -1,5 +1,5 @@
 import { db } from "../../drizzle-db.js";
-import { patientVisits, patients, users } from "../../drizzle/migrations/schema.js";
+import { patientVisits, patients, users, vitalSigns, diagnoses, prescriptions, labTests, complaints, nursesNotes, doctorsNotes, physicalExaminations, procedures } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
@@ -219,6 +219,114 @@ export const getPatientVisitsByPatientId = async (patientId) => {
  * @param {number} visitId
  * @returns {Promise<object>}
  */
+/**
+ * Returns a summary of all clinical activity recorded against a specific visit.
+ * Each key contains a lightweight array of records tied to that visit_id.
+ * @param {number} visitId
+ * @returns {Promise<object>}
+ */
+export async function getVisitSummary(visitId) {
+  const id = Number(visitId);
+
+  const [
+    vitalsList,
+    diagnosesList,
+    prescriptionsList,
+    labTestsList,
+    complaintsList,
+    nurseNotesList,
+    doctorNotesList,
+    physicalExamsList,
+    proceduresList,
+  ] = await Promise.all([
+    db.select({
+      id: vitalSigns.id,
+      temperature: vitalSigns.temperature,
+      bloodPressureSystolic: vitalSigns.bloodPressureSystolic,
+      bloodPressureDiastolic: vitalSigns.bloodPressureDiastolic,
+      pulseRate: vitalSigns.pulseRate,
+      spo2: vitalSigns.spo2,
+      weight: vitalSigns.weight,
+      height: vitalSigns.height,
+      recordedBy: vitalSigns.recordedBy,
+      createdAt: vitalSigns.createdAt,
+    }).from(vitalSigns).where(eq(vitalSigns.visitId, id)).orderBy(asc(vitalSigns.createdAt)),
+
+    db.select({
+      diagnosisId: diagnoses.diagnosisId,
+      condition: diagnoses.condition,
+      notes: diagnoses.notes,
+      diagnosisDate: diagnoses.diagnosisDate,
+      recordedBy: diagnoses.recordedBy,
+    }).from(diagnoses).where(eq(diagnoses.visitId, id)).orderBy(asc(diagnoses.diagnosisDate)),
+
+    db.select({
+      prescriptionId: prescriptions.prescriptionId,
+      prescribedBy: prescriptions.prescribedBy,
+      prescriptionDate: prescriptions.prescriptionDate,
+      status: prescriptions.status,
+      notes: prescriptions.notes,
+    }).from(prescriptions).where(eq(prescriptions.visitId, id)).orderBy(asc(prescriptions.prescriptionDate)),
+
+    db.select({
+      id: labTests.id,
+      testType: labTests.testType,
+      status: labTests.status,
+      prescribedBy: labTests.prescribedBy,
+      createdAt: labTests.createdAt,
+    }).from(labTests).where(eq(labTests.visitId, id)).orderBy(asc(labTests.createdAt)),
+
+    db.select({
+      id: complaints.id,
+      complaint: complaints.complaint,
+      createdAt: complaints.createdAt,
+      recordedBy: complaints.recordedBy,
+    }).from(complaints).where(eq(complaints.visitId, id)).orderBy(asc(complaints.createdAt)),
+
+    db.select({
+      id: nursesNotes.id,
+      note: nursesNotes.note,
+      createdAt: nursesNotes.createdAt,
+      recordedBy: nursesNotes.recordedBy,
+    }).from(nursesNotes).where(eq(nursesNotes.visitId, id)).orderBy(asc(nursesNotes.createdAt)),
+
+    db.select({
+      id: doctorsNotes.id,
+      note: doctorsNotes.note,
+      createdAt: doctorsNotes.createdAt,
+      recordedBy: doctorsNotes.recordedBy,
+    }).from(doctorsNotes).where(eq(doctorsNotes.visitId, id)).orderBy(asc(doctorsNotes.createdAt)),
+
+    db.select({
+      id: physicalExaminations.id,
+      findings: physicalExaminations.findings,
+      recordedBy: physicalExaminations.recordedBy,
+      createdAt: physicalExaminations.createdAt,
+    }).from(physicalExaminations).where(eq(physicalExaminations.visitId, id)).orderBy(asc(physicalExaminations.createdAt)),
+
+    db.select({
+      id: procedures.id,
+      procedureName: procedures.procedureName,
+      performedAt: procedures.performedAt,
+      comments: procedures.comments,
+      recordedBy: procedures.recordedBy,
+      createdAt: procedures.createdAt,
+    }).from(procedures).where(eq(procedures.visitId, id)).orderBy(asc(procedures.createdAt)),
+  ]);
+
+  return {
+    vitals: vitalsList,
+    diagnoses: diagnosesList,
+    prescriptions: prescriptionsList,
+    labTests: labTestsList,
+    complaints: complaintsList,
+    nurseNotes: nurseNotesList,
+    doctorNotes: doctorNotesList,
+    physicalExaminations: physicalExamsList,
+    procedures: proceduresList,
+  };
+}
+
 export const checkOutPatientVisit = async (visitId) => {
     const [visit] = await db
         .select()
