@@ -1,14 +1,50 @@
 import { db } from "../../drizzle-db.js";
-import { diagnoses, patients } from "../../drizzle/migrations/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { diagnoses, patients, patientVisits } from "../../drizzle/migrations/schema.js";
+import { eq, desc, isNull, and } from "drizzle-orm";
+
+/** Shared explicit snake_case select fields for diagnoses queries */
+const DIAGNOSES_SELECT = {
+  diagnosis_id: diagnoses.diagnosisId,
+  patient_id: diagnoses.patientId,
+  recorded_by: diagnoses.recordedBy,
+  condition: diagnoses.condition,
+  notes: diagnoses.notes,
+  diagnosis_date: diagnoses.diagnosisDate,
+  updated_by: diagnoses.updatedBy,
+  updated_at: diagnoses.updatedAt,
+  visit_id: diagnoses.visitId,
+  first_name: patients.firstName,
+  surname: patients.surname,
+  hospital_number: patients.hospitalNumber,
+};
 
 // CREATE diagnosis
-/** Creates a diagnosis record and returns it enriched with patient details.
+/** Creates a diagnosis record, enforcing that an ongoing visit exists for the patient.
+ * Condition must be a jsonb object of { icdCode: description } pairs.
  * @param {object} diagnosisData
  * @returns {Promise<object>}
  */
 export async function createDiagnosis(diagnosisData) {
   const { patient_id, recorded_by, condition, notes } = diagnosisData;
+
+  // Require an ongoing (not yet checked-out) visit
+  const [ongoingVisit] = await db
+    .select({ id: patientVisits.id })
+    .from(patientVisits)
+    .where(
+      and(
+        eq(patientVisits.patientId, patient_id),
+        isNull(patientVisits.checkOutTime)
+      )
+    )
+    .orderBy(desc(patientVisits.checkInTime))
+    .limit(1);
+
+  if (!ongoingVisit) {
+    const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording a diagnosis.");
+    err.status = 400;
+    throw err;
+  }
 
   const [newDiagnosis] = await db
     .insert(diagnoses)
@@ -17,19 +53,26 @@ export async function createDiagnosis(diagnosisData) {
       recordedBy: recorded_by,
       condition,
       notes,
+      visitId: ongoingVisit.id,
     })
     .returning();
 
   // Get patient details for notification
-  const patient = await db.select({
+  const [patient] = await db.select({
     first_name: patients.firstName,
     surname: patients.surname,
   }).from(patients).where(eq(patients.patientId, patient_id));
 
   return {
-    ...newDiagnosis,
-    first_name: patient[0].first_name,
-    surname: patient[0].surname,
+    diagnosis_id: newDiagnosis.diagnosisId,
+    patient_id: newDiagnosis.patientId,
+    recorded_by: newDiagnosis.recordedBy,
+    condition: newDiagnosis.condition,
+    notes: newDiagnosis.notes,
+    diagnosis_date: newDiagnosis.diagnosisDate,
+    visit_id: newDiagnosis.visitId,
+    first_name: patient.first_name,
+    surname: patient.surname,
   };
 }
 
@@ -40,19 +83,7 @@ export async function createDiagnosis(diagnosisData) {
  */
 export async function getDiagnosesByPatientId(patientId) {
   return await db
-    .select({
-      diagnosisId: diagnoses.diagnosisId,
-      patientId: diagnoses.patientId,
-      recordedBy: diagnoses.recordedBy,
-      condition: diagnoses.condition,
-      notes: diagnoses.notes,
-      diagnosisDate: diagnoses.diagnosisDate,
-      updatedBy: diagnoses.updatedBy,
-      updatedAt: diagnoses.updatedAt,
-      first_name: patients.firstName,
-      surname: patients.surname,
-      hospitalNumber: patients.hospitalNumber,
-    })
+    .select(DIAGNOSES_SELECT)
     .from(diagnoses)
     .innerJoin(patients, eq(diagnoses.patientId, patients.patientId))
     .where(eq(diagnoses.patientId, patientId))
@@ -66,19 +97,7 @@ export async function getDiagnosesByPatientId(patientId) {
  */
 export async function getDiagnosisById(diagnosisId) {
   const [result] = await db
-    .select({
-      diagnosisId: diagnoses.diagnosisId,
-      patientId: diagnoses.patientId,
-      recordedBy: diagnoses.recordedBy,
-      condition: diagnoses.condition,
-      notes: diagnoses.notes,
-      diagnosisDate: diagnoses.diagnosisDate,
-      updatedBy: diagnoses.updatedBy,
-      updatedAt: diagnoses.updatedAt,
-      first_name: patients.firstName,
-      surname: patients.surname,
-      hospitalNumber: patients.hospitalNumber,
-    })
+    .select(DIAGNOSES_SELECT)
     .from(diagnoses)
     .innerJoin(patients, eq(diagnoses.patientId, patients.patientId))
     .where(eq(diagnoses.diagnosisId, diagnosisId));
@@ -87,9 +106,9 @@ export async function getDiagnosisById(diagnosisId) {
 }
 
 // UPDATE diagnosis
-/** Updates condition, notes, and `updatedBy`/`updatedAt` on a diagnosis.
+/** Updates condition (jsonb), notes, and updatedBy/updatedAt on a diagnosis.
  * @param {number} diagnosisId
- * @param {{ condition?: string, notes?: string, updatedBy?: number }} updateData
+ * @param {{ condition?: object, notes?: string, updated_by?: string }} updateData
  * @returns {Promise<object>}
  */
 export async function updateDiagnosis(diagnosisId, updateData) {
@@ -106,7 +125,17 @@ export async function updateDiagnosis(diagnosisId, updateData) {
     .where(eq(diagnoses.diagnosisId, diagnosisId))
     .returning();
 
-  return updated;
+  return {
+    diagnosis_id: updated.diagnosisId,
+    patient_id: updated.patientId,
+    recorded_by: updated.recordedBy,
+    condition: updated.condition,
+    notes: updated.notes,
+    diagnosis_date: updated.diagnosisDate,
+    updated_by: updated.updatedBy,
+    updated_at: updated.updatedAt,
+    visit_id: updated.visitId,
+  };
 }
 
 // DELETE diagnosis
@@ -120,5 +149,9 @@ export async function deleteDiagnosis(diagnosisId) {
     .where(eq(diagnoses.diagnosisId, diagnosisId))
     .returning();
 
-  return deleted;
+  return {
+    diagnosis_id: deleted.diagnosisId,
+    patient_id: deleted.patientId,
+    condition: deleted.condition,
+  };
 }

@@ -166,6 +166,10 @@ export const diagnosesRelations = relations(diagnoses, ({one}) => ({
 		fields: [diagnoses.patientId],
 		references: [patients.patientId]
 	}),
+	visit: one(patientVisits, {
+		fields: [diagnoses.visitId],
+		references: [patientVisits.id]
+	}),
 }));
 
 export const prescriptionsRelations = relations(prescriptions, ({one, many}) => ({

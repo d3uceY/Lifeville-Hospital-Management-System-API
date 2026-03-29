@@ -7,14 +7,19 @@ import { formatDate } from "../utils/formatDate.js";
 export const createDiagnosis = async (req, res) => {
     try {
         const diagnosis = await diagnosesServices.createDiagnosis(req.body);
-        
+
+        // Serialize jsonb condition to a readable label for notifications
+        const conditionLabel = diagnosis.condition && typeof diagnosis.condition === 'object'
+            ? Object.entries(diagnosis.condition).map(([code, desc]) => desc ? `${code} — ${desc}` : code).join('; ')
+            : String(diagnosis.condition ?? '');
+
         // Send notification
         try {
             const data = {
                 first_name: diagnosis.first_name,
                 surname: diagnosis.surname,
                 patient_id: diagnosis.patient_id,
-                condition: diagnosis.condition,
+                condition: conditionLabel,
                 recorded_by: diagnosis.recorded_by,
                 priority: priorityLevels.normal,
             }
@@ -22,7 +27,7 @@ export const createDiagnosis = async (req, res) => {
                 recipientRoles: NOTIFICATION_ROLES.CLINICAL,
                 type: NOTIFICATION_TYPES.DIAGNOSIS,
                 title: "New Diagnosis Recorded",
-                message: `Diagnosis recorded for ${diagnosis.first_name} ${diagnosis.surname}: ${diagnosis.condition}`,
+                message: `Diagnosis recorded for ${diagnosis.first_name} ${diagnosis.surname}: ${conditionLabel}`,
                 data,
             });
 
@@ -34,13 +39,14 @@ export const createDiagnosis = async (req, res) => {
         const io = req.app.get("socketio");
         io.emit("notification", {
             recipientRoles: NOTIFICATION_ROLES.CLINICAL,
-            message: `New diagnosis: ${diagnosis.condition} by ${diagnosis.recordedBy}`,
+            message: `New diagnosis: ${conditionLabel} by ${diagnosis.recorded_by}`,
             description: `Patient: ${diagnosis.first_name} ${diagnosis.surname}`
         });
 
         res.status(201).json(diagnosis);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.status || 500;
+        res.status(statusCode).json({ error: error.message });
     }
 };
 
