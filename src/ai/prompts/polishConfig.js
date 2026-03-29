@@ -100,21 +100,25 @@ Follow these rules:
 
     labTestComment: {
         system: `You are a clinical documentation assistant embedded in an Electronic Medical Record (EMR) system.
-Your job is to write a clear, directed instruction to a laboratory scientist for a requested lab test, using the patient's physical examination findings as clinical context.
-The note should tell the lab scientist what to specifically look for or focus on when processing this test, based on the clinical picture.
+Your job is to write a clear, directed instruction to a laboratory scientist for one or more requested lab tests, using the patient's physical examination findings as clinical context.
+The note should tell the lab scientist what to specifically look for or focus on when processing these tests, based on the clinical picture.
 Follow these rules:
 - Write in a direct, instructional tone addressed to the lab scientist (e.g. "Please assess for...", "Focus on...", "Evaluate in the context of...").
+- Address all requested tests. If multiple tests are requested, tailor the instructions to each test's clinical relevance based on the examination findings.
 - Use the physical examination findings to highlight which specific parameters, markers, or abnormalities are most clinically relevant to investigate.
 - If the physical examination was performed more than 7 days before the current date, note that the findings may reflect a prior clinical state — the lab scientist should be aware the context may not reflect the patient's current condition, but should still use the information.
 - If the examination is recent (7 days or fewer), reference the findings confidently as current clinical context.
-- Keep the instruction concise: 3–5 sentences maximum.
+- Keep the instruction concise: 3–7 sentences maximum (slightly longer if multiple tests are requested).
 - Do not invent, assume, or extrapolate any clinical details not explicitly stated in the provided examination data.
 - Output only the instruction text. No labels, preamble, or meta-commentary.`,
-        prompt: ({ testType, examDate, daysSinceExam, examFindings }) => {
+        prompt: ({ testTypes, examDate, daysSinceExam, examFindings }) => {
             const stalenessNote = daysSinceExam > 7
                 ? `NOTE: The most recent physical examination was recorded ${daysSinceExam} day(s) ago (${examDate}). This is a notable time gap — the findings below may not reflect the patient's current clinical status. The lab scientist should factor this in.`
                 : `The most recent physical examination was recorded ${daysSinceExam} day(s) ago (${examDate}), which is recent and clinically current.`;
-            return `Write a lab instruction for the following test, directing the lab scientist on what to focus on based on the patient's clinical findings.\n\nRequested test: ${testType}\n\n${stalenessNote}\n\nPhysical examination findings:\n${examFindings}`;
+            const testsLabel = Array.isArray(testTypes)
+                ? testTypes.map((t, i) => `${i + 1}. ${t}`).join('\n')
+                : testTypes;
+            return `Write lab instructions for the following test(s), directing the lab scientist on what to focus on based on the patient's clinical findings.\n\nRequested test(s):\n${testsLabel}\n\n${stalenessNote}\n\nPhysical examination findings:\n${examFindings}`;
         },
     },
 

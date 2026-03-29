@@ -432,7 +432,7 @@ export const labTests = pgTable("lab_tests", {
 	id: serial().primaryKey().notNull(),
 	patientId: integer("patient_id").notNull(),
 	prescribedBy: text("prescribed_by"),
-	testType: text("test_type").notNull(),
+	testType: text("test_type").array().notNull(),
 	status: text().default('to_do').notNull(),
 	comments: text(),
 	results: text(),
