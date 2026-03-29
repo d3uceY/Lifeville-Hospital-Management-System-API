@@ -1,4 +1,7 @@
 import { query } from "../../drizzle-db.js";
+import { db } from "../../drizzle-db.js";
+import { patientVisits } from "../../drizzle/migrations/schema.js";
+import { eq, desc, isNull, and } from "drizzle-orm";
 
 /** Inserts a vital sign record and returns it enriched with patient details.
  * @param {object} vitalSignData
@@ -18,12 +21,31 @@ export const createVitalSign = async (vitalSignData) => {
     recordedBy,
   } = vitalSignData;
 
+  // Require an ongoing (not yet checked-out) visit
+  const [ongoingVisit] = await db
+    .select({ id: patientVisits.id })
+    .from(patientVisits)
+    .where(
+      and(
+        eq(patientVisits.patientId, patientId),
+        isNull(patientVisits.checkOutTime)
+      )
+    )
+    .orderBy(desc(patientVisits.checkInTime))
+    .limit(1);
+
+  if (!ongoingVisit) {
+    const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording vital signs.");
+    err.status = 400;
+    throw err;
+  }
+
   const result = await query(
     `INSERT INTO vital_signs (
        patient_id, recorded_at, temperature, 
        blood_pressure_systolic, blood_pressure_diastolic, 
-       weight, height, pulse_rate, spo2, recorded_by, created_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) 
+       weight, height, pulse_rate, spo2, recorded_by, created_at, visit_id
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11) 
      RETURNING *;`,
     [
       patientId,
@@ -35,7 +57,8 @@ export const createVitalSign = async (vitalSignData) => {
       height ? Math.round(height * 100) : null,
       heartRate,
       spo2,
-      recordedBy
+      recordedBy,
+      ongoingVisit.id,
     ]
   );
 

@@ -1,7 +1,7 @@
 import { query } from "../../drizzle-db.js";
 import { db } from "../../drizzle-db.js";
-import { physicalExaminations, patients, users } from "../../drizzle/migrations/schema.js";
-import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
+import { physicalExaminations, patients, users, patientVisits } from "../../drizzle/migrations/schema.js";
+import { eq, ilike, desc, asc, count, or, sql, isNull, and } from "drizzle-orm";
 
 /** Inserts a full physical examination record and returns it enriched with patient details.
  * @param {object} examData
@@ -24,6 +24,25 @@ export const createPhysicalExamination = async (examData) => {
         genitourinary
     } = examData;
 
+    // Require an ongoing (not yet checked-out) visit
+    const [ongoingVisit] = await db
+        .select({ id: patientVisits.id })
+        .from(patientVisits)
+        .where(
+            and(
+                eq(patientVisits.patientId, patient_id),
+                isNull(patientVisits.checkOutTime)
+            )
+        )
+        .orderBy(desc(patientVisits.checkInTime))
+        .limit(1);
+
+    if (!ongoingVisit) {
+        const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording a physical examination.");
+        err.status = 400;
+        throw err;
+    }
+
     const { rows } = await query(
         `INSERT INTO physical_examinations (
             patient_id,
@@ -39,9 +58,10 @@ export const createPhysicalExamination = async (examData) => {
             neurological,
             skin,
             findings,
-            genitourinary
+            genitourinary,
+            visit_id
         ) VALUES (
-            $1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+            $1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
         ) RETURNING *`,
         [
             patient_id,
@@ -56,7 +76,8 @@ export const createPhysicalExamination = async (examData) => {
             neurological,
             skin,
             findings,
-            genitourinary
+            genitourinary,
+            ongoingVisit.id,
         ]
     );
 
