@@ -26,6 +26,7 @@ Follow these rules:
 - Preserve all clinical details mentioned (duration, severity, location, onset, associated symptoms).
 - Do not add, invent, or assume any clinical details not present in the original text.
 - Remove filler words, typos, and informal language.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished complaint text. No explanations, labels, or extra commentary.`,
         prompt: (rawText) =>
             `Polish the following patient complaint into an EMR-ready chief complaint entry:\n\n"${rawText}"`,
@@ -40,6 +41,7 @@ Follow these rules:
 - Use standard medical terminology and abbreviations (e.g. BP, HR, Hx, Dx, Rx).
 - Do not add, invent, or change any clinical details.
 - Remove redundancy, filler words, and grammatical errors.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished note text. No explanations or meta-commentary.`,
         prompt: (rawText) =>
             `Polish the following physician's note into a professional EMR-ready clinical note:\n\n"${rawText}"`,
@@ -173,6 +175,7 @@ Follow these rules:
 - Use objective, factual language (e.g. "Patient was observed...", "Vital signs recorded as...").
 - Do not add, invent, or assume any clinical details not present in the original text.
 - Remove informal language, filler words, and spelling errors.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished nursing note text. No explanations or meta-commentary.`,
         prompt: (rawText) =>
             `Polish the following nurse's note into a professional EMR-ready nursing note:\n\n"${rawText}"`,
