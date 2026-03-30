@@ -77,6 +77,33 @@ export const checkOutPatientVisit = async (req, res) => {
     try {
         const visitId = Number(req.params.visitId);
         const updated = await patientVisitsServices.checkOutPatientVisit(visitId);
+
+        // notification
+        try {
+            const data = {
+                first_name: updated.first_name,
+                surname: updated.surname,
+                patient_id: updated.patientId,
+                priority: priorityLevels.normal,
+            };
+            await addNotification({
+                recipientRoles: NOTIFICATION_ROLES.VISIT,
+                type: NOTIFICATION_TYPES.PATIENT_VISIT_CHECKOUT,
+                title: "Patient Checked Out",
+                message: `${updated.first_name} ${updated.surname} has been checked out`,
+                data,
+            });
+        } catch (error) {
+            console.error(error);
+        }
+
+        const io = req.app.get("socketio");
+        io.emit("notification", {
+            recipientRoles: NOTIFICATION_ROLES.VISIT,
+            message: `Patient Checked Out`,
+            description: `Patient: ${updated.first_name} ${updated.surname}`,
+        });
+
         res.status(200).json({ visit: updated, message: "Patient checked out successfully" });
     } catch (error) {
         if (error.code === "VISIT_NOT_FOUND") {
