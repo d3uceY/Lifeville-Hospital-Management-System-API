@@ -10,7 +10,7 @@ const getModel = (task) => {
         return 'llama-4-scout-17b';
     }
     if (task === "polish") {
-        return 'qwen/qwen3-32b';
+        return 'meta-llama/llama-4-scout-17b-16e-instruct';
     }
 };
 
@@ -21,7 +21,7 @@ const polish = async (type, rawText) => {
         system: config.system,
         prompt: config.prompt(rawText),
     });
-    return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    return text;
 };
 
 const summarize = async (type, rawText) => {
