@@ -124,8 +124,17 @@ export const createRateLimiter = (options) => {
 export const strictRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // 50 requests per window
-  message: 'Too many requests from this IP'
+  message: 'Too many requests'
 });
+
+// more aggressive limiter for those ai endpoints,
+// i dey avoid ai bills 😭
+export const veryStrictRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 6, // 6 requests per window
+  message: 'Too many requests'
+});
+
 
 export const standardRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes

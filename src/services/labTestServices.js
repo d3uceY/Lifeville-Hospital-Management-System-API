@@ -1,6 +1,6 @@
 import { db } from "../../drizzle-db.js";
-import { labTests, labTestTypes, patients } from "../../drizzle/migrations/schema.js";
-import { eq, ilike, desc, asc, count, or, sql, and, between } from "drizzle-orm";
+import { labTests, labTestTypes, patients, patientVisits } from "../../drizzle/migrations/schema.js";
+import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
 import { uploadToCloudinary } from "../utils/uploadImage.js";
 import deleteImage from "../utils/deleteImage.js";
 import * as billingService from "./billingService.js";
@@ -54,12 +54,32 @@ export const createLabTest = async (labTest) => {
     ? labTest.testType
     : [labTest.testType];
 
+  // Require an ongoing (not yet checked-out) visit
+  const [ongoingVisit] = await db
+    .select({ id: patientVisits.id })
+    .from(patientVisits)
+    .where(
+      and(
+        eq(patientVisits.patientId, labTest.patientId),
+        isNull(patientVisits.checkOutTime)
+      )
+    )
+    .orderBy(desc(patientVisits.checkInTime))
+    .limit(1);
+
+  if (!ongoingVisit) {
+    const err = new Error("No ongoing visit found for this patient. Please check in the patient before ordering a lab test.");
+    err.status = 400;
+    throw err;
+  }
+
   const [newTest] = await db.insert(labTests).values({
     patientId: labTest.patientId,
     testType: testTypeArray,
     comments: labTest.comments,
     prescribedBy: labTest.prescribedBy,
     status: 'to do',
+    visitId: ongoingVisit.id,
   }).returning();
 
   // get patient details for notification

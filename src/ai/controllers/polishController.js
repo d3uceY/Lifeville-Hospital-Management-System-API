@@ -1,6 +1,7 @@
-import { polishComplaint, polishDoctorNote, polishNurseNote, polishLabTestResult, generatePhysicalExamFindings, generatePatientSummary, generateLabTestComment } from '../services/generateText.js';
+import { polishComplaint, polishDoctorNote, polishNurseNote, polishLabTestResult, generatePhysicalExamFindings, generatePatientSummary, generateLabTestComment, generateDiagnosisSuggestion } from '../services/generateText.js';
 import { getPatientSummaryData, formatPatientSummaryData } from '../../services/summaryServices.js';
 import { query } from '../../../drizzle-db.js';
+import { lookupByCode } from '../../icd/services/icd.services.js';
 
 const summaryCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -55,11 +56,70 @@ export const polishLabTestResultText = async (req, res) => {
 
 export const generatePhysicalExamFindingsText = async (req, res) => {
     try {
-        const { examData } = req.body;
+        const { examData, patientId } = req.body;
         if (!examData || typeof examData !== 'object' || Array.isArray(examData)) {
             return res.status(400).json({ success: false, message: 'examData object is required' });
         }
-        const polished = await generatePhysicalExamFindings(examData);
+
+        let context = null;
+
+        if (patientId) {
+            const [doctorNoteResult, complaintsResult, vitalsResult] = await Promise.all([
+                query(
+                    `SELECT note, created_at FROM doctors_notes WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                    [Number(patientId)]
+                ),
+                query(
+                    `SELECT complaint, created_at FROM complaints WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 3`,
+                    [Number(patientId)]
+                ),
+                query(
+                    `SELECT temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, spo2, created_at FROM vital_signs WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                    [Number(patientId)]
+                ),
+            ]);
+
+            context = {};
+
+            if (vitalsResult.rows.length) {
+                const vs = vitalsResult.rows[0];
+                const vsDate = new Date(vs.created_at);
+                const daysSince = Math.floor((Date.now() - vsDate.getTime()) / (1000 * 60 * 60 * 24));
+                context.vitalSigns = {
+                    data: `Temp: ${vs.temperature ?? '—'}°C, BP: ${vs.blood_pressure_systolic ?? '—'}/${vs.blood_pressure_diastolic ?? '—'} mmHg, Pulse: ${vs.pulse_rate ?? '—'} bpm, SpO2: ${vs.spo2 ?? '—'}%`,
+                    date: vsDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    daysSince,
+                };
+            }
+
+            if (complaintsResult.rows.length) {
+                const mostRecent = complaintsResult.rows[0];
+                const cDate = new Date(mostRecent.created_at);
+                const daysSince = Math.floor((Date.now() - cDate.getTime()) / (1000 * 60 * 60 * 24));
+                context.complaints = {
+                    data: complaintsResult.rows.map(c => `- ${c.complaint}`).join('\n'),
+                    date: cDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    daysSince,
+                };
+            }
+
+            if (doctorNoteResult.rows.length) {
+                const dn = doctorNoteResult.rows[0];
+                const dnDate = new Date(dn.created_at);
+                const daysSince = Math.floor((Date.now() - dnDate.getTime()) / (1000 * 60 * 60 * 24));
+                context.doctorNote = {
+                    note: dn.note,
+                    date: dnDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    daysSince,
+                };
+            }
+
+            if (!context.vitalSigns && !context.complaints && !context.doctorNote) {
+                context = null;
+            }
+        }
+
+        const polished = await generatePhysicalExamFindings({ examFields: examData, context });
         res.json({ success: true, polished });
     } catch (error) {
         console.error('Error generating physical exam findings:', error);
@@ -186,6 +246,138 @@ export const getAIPatientSummary = async (req, res) => {
         });
     } catch (error) {
         console.error('Error generating AI patient summary:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function buildPatientContext(patient) {
+    const parts = [];
+    if (patient.sex) parts.push(`Sex: ${patient.sex}`);
+    if (patient.date_of_birth) {
+        const age = Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        parts.push(`Age: ${age} years`);
+    }
+    if (patient.past_medical_history) parts.push(`Past Medical History: ${patient.past_medical_history}`);
+    if (patient.allergies) parts.push(`Allergies: ${patient.allergies}`);
+    if (patient.drug_history) parts.push(`Drug History: ${patient.drug_history}`);
+    if (patient.family_history) parts.push(`Family History: ${patient.family_history}`);
+    if (patient.social_history) parts.push(`Social History: ${patient.social_history}`);
+    return parts.join('\n') || null;
+}
+
+/** Converts a dot-free ICD code (e.g. J189) to dotted form (J18.9) for lookup fallback */
+function toDottedCode(code) {
+    const c = code.toUpperCase();
+    return c.length > 3 ? `${c.slice(0, 3)}.${c.slice(3)}` : c;
+}
+
+export const generateDiagnosisSuggestionText = async (req, res) => {
+    try {
+        const { patientId, formNotes } = req.body;
+        if (!patientId) return res.status(400).json({ success: false, message: 'patientId is required' });
+
+        // Fetch all clinical data in parallel
+        const [patientResult, examResult, doctorNoteResult, complaintsResult, vitalsResult] = await Promise.all([
+            query(
+                `SELECT sex, date_of_birth, past_medical_history, allergies, drug_history, family_history, social_history
+                 FROM patients WHERE patient_id = $1`,
+                [Number(patientId)]
+            ),
+            query(
+                `SELECT findings, general_appearance, heent, cardiovascular, respiration,
+                        gastrointestinal, neurological, musculoskeletal, skin, genitourinary
+                 FROM physical_examinations WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                [Number(patientId)]
+            ),
+            query(
+                `SELECT note FROM doctors_notes WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                [Number(patientId)]
+            ),
+            query(
+                `SELECT complaint FROM complaints WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 3`,
+                [Number(patientId)]
+            ),
+            query(
+                `SELECT temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, spo2, weight, height
+                 FROM vital_signs WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                [Number(patientId)]
+            ),
+        ]);
+
+        const patient = patientResult.rows[0] ?? null;
+        const exam = examResult.rows[0] ?? null;
+
+        // Extract ICD codes from physical exam findings.
+        // The AI may return dotted codes (J20.9) or dot-free (J189) — handle both.
+        const suggestedCondition = {};
+        if (exam?.findings) {
+            // Match codes in parentheses: letter + digit + any mix of digits, dots, letters
+            const codeMatches = [...exam.findings.matchAll(/\(([A-Za-z]\d[\d.a-zA-Z]*)\)/g)];
+            const uniqueCodes = [...new Set(codeMatches.map(m => m[1].toUpperCase()))];
+            for (const raw of uniqueCodes) {
+                const noDot = raw.replace('.', '');
+                // Try: dot-free first, then dotted (dot after pos 3), then original as-is
+                const entry = lookupByCode(noDot) ?? lookupByCode(toDottedCode(noDot)) ?? lookupByCode(raw);
+                if (entry) {
+                    suggestedCondition[entry.code] = entry.description;
+                }
+            }
+        }
+
+        // Build context strings
+        const patientContext = patient ? buildPatientContext(patient) : null;
+
+        const vs = vitalsResult.rows[0] ?? null;
+        const vitalSigns = vs
+            ? `Temp: ${vs.temperature ?? '—'}°C, BP: ${vs.blood_pressure_systolic ?? '—'}/${vs.blood_pressure_diastolic ?? '—'} mmHg, Pulse: ${vs.pulse_rate ?? '—'} bpm, SpO2: ${vs.spo2 ?? '—'}%`
+            : null;
+
+        const complaints = complaintsResult.rows.length
+            ? complaintsResult.rows.map(c => `- ${c.complaint}`).join('\n')
+            : null;
+
+        const EXAM_LABELS = {
+            general_appearance: 'General Appearance',
+            heent: 'HEENT',
+            cardiovascular: 'Cardiovascular',
+            respiration: 'Respiration',
+            gastrointestinal: 'Gastrointestinal',
+            neurological: 'Neurological',
+            musculoskeletal: 'Musculoskeletal',
+            skin: 'Skin',
+            genitourinary: 'Genitourinary',
+        };
+        const physicalExamFindings = exam
+            ? Object.entries(EXAM_LABELS)
+                .filter(([key]) => exam[key]?.trim())
+                .map(([key, label]) => `${label}: ${exam[key]}`)
+                .concat(exam.findings ? [`Findings: ${exam.findings}`] : [])
+                .join('\n') || null
+            : null;
+
+        const latestDoctorNote = doctorNoteResult.rows[0]?.note ?? null;
+        const identifiedDiagnoses = Object.entries(suggestedCondition).map(([code, description]) => ({ code, description }));
+
+        if (!identifiedDiagnoses.length && !physicalExamFindings && !complaints && !vitalSigns) {
+            return res.status(422).json({ success: false, message: 'Insufficient clinical data found for this patient' });
+        }
+
+        const suggestedNotes = await generateDiagnosisSuggestion({
+            patientContext,
+            identifiedDiagnoses,
+            vitalSigns,
+            complaints,
+            physicalExamFindings,
+            latestDoctorNote,
+            formNotes: formNotes || null,
+        });
+
+
+        res.json({ success: true, suggestedCondition, suggestedNotes });
+    } catch (error) {
+        console.error('Error generating diagnosis suggestion:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

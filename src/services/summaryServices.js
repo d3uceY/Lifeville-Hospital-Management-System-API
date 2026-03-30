@@ -304,7 +304,7 @@ export const formatPatientSummaryData = (data) => {
     const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
     const val = (v) => (v !== null && v !== undefined && v !== '') ? v : null;
 
-    const { patient, vitalSigns, complaints, doctorNotes, nurseNotes, physicalExams, labTests, diagnoses, prescriptions, procedures, dischargeSummaries, admissions, visits } = data;
+    const { patient, vitalSigns, complaints, doctorNotes, nurseNotes, physicalExams, labTests, diagnoses, prescriptions, procedures, admissions, visits } = data;
 
     if (patient) {
         lines.push('=== PATIENT PROFILE ===');

@@ -92,3 +92,14 @@ export const checkOutPatientVisit = async (req, res) => {
         res.status(500).json({ error: "Failed to check out patient visit" });
     }
 };
+
+export const getVisitSummary = async (req, res) => {
+    try {
+        const visitId = Number(req.params.visitId);
+        const summary = await patientVisitsServices.getVisitSummary(visitId);
+        res.status(200).json(summary);
+    } catch (error) {
+        console.error("Error fetching visit summary:", error);
+        res.status(500).json({ error: "Failed to fetch visit summary" });
+    }
+};

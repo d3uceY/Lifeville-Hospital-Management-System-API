@@ -308,6 +308,7 @@ export const procedures = pgTable("procedures", {
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	serviceId: integer("service_id"),
 	unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0"),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
@@ -319,6 +320,11 @@ export const procedures = pgTable("procedures", {
 			foreignColumns: [services.id],
 			name: "procedures_service_id_fkey"
 		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "procedures_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const doctorsNotes = pgTable("doctors_notes", {
@@ -329,12 +335,18 @@ export const doctorsNotes = pgTable("doctors_notes", {
 	updatedBy: text("updated_by"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "doctors_notes_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "doctors_notes_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const history = pgTable("history", {
@@ -378,7 +390,14 @@ export const vitalSigns = pgTable("vital_signs", {
 	height: integer().default(0).notNull(),
 	updatedBy: text("updated_by"),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
-});
+	visitId: integer("visit_id"),
+}, (table) => [
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "vital_signs_visit_id_fkey"
+		}).onDelete("set null"),
+]);
 
 export const nursesNotes = pgTable("nurses_notes", {
 	id: serial().primaryKey().notNull(),
@@ -388,12 +407,18 @@ export const nursesNotes = pgTable("nurses_notes", {
 	updatedBy: text("updated_by"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "nurses_notes_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "nurses_notes_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const notificationReads = pgTable("notification_reads", {
@@ -439,12 +464,18 @@ export const labTests = pgTable("lab_tests", {
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	images: text().array(),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "lab_tests_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "lab_tests_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const deathRecords = pgTable("death_records", {
@@ -494,12 +525,18 @@ export const complaints = pgTable("complaints", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	patientId: integer("patient_id").notNull(),
 	complaint: text(),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "complaints_patient_id_fkey"
 		}),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "complaints_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const physicalExaminations = pgTable("physical_examinations", {
@@ -518,12 +555,18 @@ export const physicalExaminations = pgTable("physical_examinations", {
 	skin: text(),
 	findings: text(),
 	genitourinary: text(),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "physical_examinations_patient_id_fkey"
 		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "physical_examinations_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const diagnoses = pgTable("diagnoses", {
@@ -558,12 +601,18 @@ export const prescriptions = pgTable("prescriptions", {
 	status: text(),
 	updatedBy: text("updated_by"),
 	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
 			name: "prescriptions_patient_id_fkey"
 		}),
+	foreignKey({
+			columns: [table.visitId],
+			foreignColumns: [patientVisits.id],
+			name: "prescriptions_visit_id_fkey"
+		}).onDelete("set null"),
 ]);
 
 export const inpatientJournal = pgTable("inpatient_journal", {

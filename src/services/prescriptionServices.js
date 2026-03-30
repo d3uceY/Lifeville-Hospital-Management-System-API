@@ -1,7 +1,7 @@
 import { query } from "../../drizzle-db.js";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
-import { prescriptions } from "../../drizzle/migrations/schema.js";
+import { prescriptions, patientVisits } from "../../drizzle/migrations/schema.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 
@@ -22,16 +22,36 @@ export const createPrescription = async (prescriptionData) => {
         visit_id,
     } = prescriptionData;
 
+    // Require an ongoing (not yet checked-out) visit
+    const [ongoingVisit] = await db
+        .select({ id: patientVisits.id })
+        .from(patientVisits)
+        .where(
+            and(
+                eq(patientVisits.patientId, patient_id),
+                isNull(patientVisits.checkOutTime)
+            )
+        )
+        .orderBy(desc(patientVisits.checkInTime))
+        .limit(1);
+
+    if (!ongoingVisit) {
+        const err = new Error("No ongoing visit found for this patient. Please check in the patient before creating a prescription.");
+        err.status = 400;
+        throw err;
+    }
+
     // Insert into prescriptions table
     const { rows } = await query(
         `INSERT INTO prescriptions (
             patient_id,
             prescribed_by,
             notes,
-            status
-        ) VALUES ($1, $2, $3, 'Active')
+            status,
+            visit_id
+        ) VALUES ($1, $2, $3, 'Active', $4)
         RETURNING *`,
-        [patient_id, prescribed_by, notes]
+        [patient_id, prescribed_by, notes, ongoingVisit.id]
     );
 
     const prescription = rows[0];

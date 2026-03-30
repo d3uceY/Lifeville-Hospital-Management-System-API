@@ -26,6 +26,7 @@ Follow these rules:
 - Preserve all clinical details mentioned (duration, severity, location, onset, associated symptoms).
 - Do not add, invent, or assume any clinical details not present in the original text.
 - Remove filler words, typos, and informal language.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished complaint text. No explanations, labels, or extra commentary.`,
         prompt: (rawText) =>
             `Polish the following patient complaint into an EMR-ready chief complaint entry:\n\n"${rawText}"`,
@@ -40,6 +41,7 @@ Follow these rules:
 - Use standard medical terminology and abbreviations (e.g. BP, HR, Hx, Dx, Rx).
 - Do not add, invent, or change any clinical details.
 - Remove redundancy, filler words, and grammatical errors.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished note text. No explanations or meta-commentary.`,
         prompt: (rawText) =>
             `Polish the following physician's note into a professional EMR-ready clinical note:\n\n"${rawText}"`,
@@ -51,18 +53,31 @@ Your task is to analyse the system-by-system examination findings provided and g
 Follow these rules:
 - Synthesise only the data provided across the examination fields into a coherent clinical narrative.
 - Identify the most likely provisional diagnosis and up to 2–3 differential diagnoses that the findings support.
-- For every diagnosis or differential listed, include its corresponding ICD-10-CM code in parentheses (e.g. "Community-acquired pneumonia (J18.9)").
+- For every diagnosis or differential listed, include its corresponding ICD-10-CM code in parentheses with the dot removed (e.g. "Community-acquired pneumonia (J189)" not "(J18.9)").
 - Use standard medical terminology and accepted abbreviations.
 - Write in an objective, clinical third-person style (e.g. "Examination reveals...", "Findings are consistent with...").
 - Do not invent, assume, or extrapolate any clinical detail not explicitly stated in the input.
-- Structure the output in four parts:
-    1. **Key Findings:** A brief summary paragraph of the most clinically significant positive and relevant negative findings across all examined systems.
-    2. **Provisional Diagnosis:** The single most likely diagnosis with its ICD-10-CM code in parentheses.
-    3. **Differentials:** Up to 3 alternative diagnoses to consider, each with its ICD-10-CM code in parentheses, listed as bullet points.
-    4. **Suggested Workup:** A practical list of investigations to confirm or exclude the provisional diagnosis. Be specific — name exact tests rather than general categories (e.g. "FBC, CRP, ESR" not just "blood tests"; "Chest X-ray PA view" not just "imaging"; "Urine MCS" not just "urinalysis"). Group by type if helpful (Laboratory, Imaging, Other). Include 3–6 items total.
-- Use bold section headers exactly as shown above.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, or any markdown syntax. Use plain text only.
+- Structure the output in four parts with plain text section headers followed by a colon on their own line:
+
+Key Findings:
+A brief summary paragraph of the most clinically significant positive and relevant negative findings across all examined systems.
+
+Provisional Diagnosis:
+The single most likely diagnosis with its ICD-10-CM code in parentheses (dot removed).
+
+Differentials:
+Up to 3 alternative diagnoses to consider, each with its ICD-10-CM code in parentheses (dot removed), listed as separate lines prefixed with a dash.
+
+Suggested Workup:
+A practical list of investigations to confirm or exclude the provisional diagnosis. Be specific — name exact tests rather than general categories (e.g. "FBC, CRP, ESR" not just "blood tests"; "Chest X-ray PA view" not just "imaging"; "Urine MCS" not just "urinalysis"). Group by type if helpful (Laboratory, Imaging, Other). Include 3–6 items total, each on its own line prefixed with a dash.
+
+- Supplementary clinical context (vital signs, recent complaints, doctor's notes) may be appended below the examination fields. Use it as supporting background only — the physical examination findings remain the primary basis for your assessment. If a supplementary data point is marked as recorded more than 7 days ago, treat it with caution: acknowledge it may not reflect the patient's current condition, but still incorporate it where clinically relevant.
 - Output only the structured text. No preamble, no meta-commentary.`,
-        prompt: (examFields) => {
+        prompt: (data) => {
+            // Support both legacy call (examFields object directly) and enriched format ({ examFields, context })
+            const examFields = data.examFields ?? data;
+            const context = data.context ?? null;
             const LABELS = {
                 general_appearance: 'General Appearance',
                 heent: 'HEENT',
@@ -79,7 +94,36 @@ Follow these rules:
                 .filter(([, val]) => val && val.trim())
                 .map(([key, val]) => `${LABELS[key] || key}: ${val}`)
                 .join('\n');
-            return `Based on the following physical examination findings, generate a professional Findings / Provisional Diagnosis:\n\n${lines}`;
+            let prompt = `Based on the following physical examination findings, generate a professional Findings / Provisional Diagnosis:\n\n${lines}`;
+            if (context) {
+                const STALE_DAYS = 7;
+                const sections = [];
+                if (context.vitalSigns) {
+                    const { data: vs, date, daysSince } = context.vitalSigns;
+                    const tag = daysSince > STALE_DAYS
+                        ? ` [recorded ${daysSince} days ago on ${date} — may not reflect current status]`
+                        : ` [recorded ${daysSince} day(s) ago on ${date}]`;
+                    sections.push(`Vital Signs${tag}:\n${vs}`);
+                }
+                if (context.complaints) {
+                    const { data: complaints, date, daysSince } = context.complaints;
+                    const tag = daysSince > STALE_DAYS
+                        ? ` [most recent recorded ${daysSince} days ago on ${date} — may not reflect current status]`
+                        : ` [most recent recorded ${daysSince} day(s) ago on ${date}]`;
+                    sections.push(`Recent Complaints${tag}:\n${complaints}`);
+                }
+                if (context.doctorNote) {
+                    const { note, date, daysSince } = context.doctorNote;
+                    const tag = daysSince > STALE_DAYS
+                        ? ` [recorded ${daysSince} days ago on ${date} — may not reflect current status]`
+                        : ` [recorded ${daysSince} day(s) ago on ${date}]`;
+                    sections.push(`Latest Doctor's Note${tag}:\n${note}`);
+                }
+                if (sections.length) {
+                    prompt += `\n\nSupplementary Clinical Context (background only — use to support, not replace, the examination findings):\n\n${sections.join('\n\n')}`;
+                }
+            }
+            return prompt;
         },
     },
 
@@ -131,8 +175,35 @@ Follow these rules:
 - Use objective, factual language (e.g. "Patient was observed...", "Vital signs recorded as...").
 - Do not add, invent, or assume any clinical details not present in the original text.
 - Remove informal language, filler words, and spelling errors.
+- Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished nursing note text. No explanations or meta-commentary.`,
         prompt: (rawText) =>
             `Polish the following nurse's note into a professional EMR-ready nursing note:\n\n"${rawText}"`,
+    },
+
+    diagnosisSuggestion: {
+        system: `You are a clinical AI assistant embedded in an Electronic Medical Record (EMR) system.
+Your task is to write a brief, professional clinical note for a diagnosis record, based on structured patient data.
+The relevant ICD-10-CM diagnosis codes have already been extracted from the physical examination findings.
+Your job is to write a concise "Notes" entry that explains the clinical rationale for these diagnoses.
+Follow these rules:
+- Write in objective, clinical third-person style.
+- Summarise the most relevant clinical evidence supporting the diagnoses — draw from vitals, complaints, physical exam findings, and history as provided.
+- Note any pertinent negatives or relevant past medical or drug history if it directly relates to the diagnoses.
+- Do NOT use markdown formatting. Plain text only. No headers, no asterisks, no bullet points.
+- Be concise: 3–5 sentences maximum.
+- Do not invent, assume, or extrapolate any clinical detail not explicitly present in the data.
+- Output only the diagnostic notes text. No preamble, no heading, no meta-commentary.`,
+        prompt: (data) => {
+            const lines = [`Today's date: ${new Date().toISOString().split('T')[0]}`];
+            if (data.patientContext) lines.push(`\nPatient Details:\n${data.patientContext}`);
+            if (data.identifiedDiagnoses?.length) lines.push(`\nIdentified Diagnoses (ICD-10-CM):\n${data.identifiedDiagnoses.map(d => `${d.code}: ${d.description}`).join('\n')}`);
+            if (data.vitalSigns) lines.push(`\nLatest Vital Signs: ${data.vitalSigns}`);
+            if (data.complaints) lines.push(`\nRecent Complaints:\n${data.complaints}`);
+            if (data.physicalExamFindings) lines.push(`\nPhysical Examination Findings:\n${data.physicalExamFindings}`);
+            if (data.latestDoctorNote) lines.push(`\nLatest Doctor's Note: ${data.latestDoctorNote}`);
+            if (data.formNotes) lines.push(`\nPhysician's preliminary notes: ${data.formNotes}`);
+            return `Write a concise diagnostic notes entry based on the following patient data:\n\n${lines.join('\n')}`;
+        },
     },
 };
