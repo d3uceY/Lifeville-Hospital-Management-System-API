@@ -56,11 +56,70 @@ export const polishLabTestResultText = async (req, res) => {
 
 export const generatePhysicalExamFindingsText = async (req, res) => {
     try {
-        const { examData } = req.body;
+        const { examData, patientId } = req.body;
         if (!examData || typeof examData !== 'object' || Array.isArray(examData)) {
             return res.status(400).json({ success: false, message: 'examData object is required' });
         }
-        const polished = await generatePhysicalExamFindings(examData);
+
+        let context = null;
+
+        if (patientId) {
+            const [doctorNoteResult, complaintsResult, vitalsResult] = await Promise.all([
+                query(
+                    `SELECT note, created_at FROM doctors_notes WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                    [Number(patientId)]
+                ),
+                query(
+                    `SELECT complaint, created_at FROM complaints WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 3`,
+                    [Number(patientId)]
+                ),
+                query(
+                    `SELECT temperature, blood_pressure_systolic, blood_pressure_diastolic, pulse_rate, spo2, created_at FROM vital_signs WHERE patient_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                    [Number(patientId)]
+                ),
+            ]);
+
+            context = {};
+
+            if (vitalsResult.rows.length) {
+                const vs = vitalsResult.rows[0];
+                const vsDate = new Date(vs.created_at);
+                const daysSince = Math.floor((Date.now() - vsDate.getTime()) / (1000 * 60 * 60 * 24));
+                context.vitalSigns = {
+                    data: `Temp: ${vs.temperature ?? '—'}°C, BP: ${vs.blood_pressure_systolic ?? '—'}/${vs.blood_pressure_diastolic ?? '—'} mmHg, Pulse: ${vs.pulse_rate ?? '—'} bpm, SpO2: ${vs.spo2 ?? '—'}%`,
+                    date: vsDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    daysSince,
+                };
+            }
+
+            if (complaintsResult.rows.length) {
+                const mostRecent = complaintsResult.rows[0];
+                const cDate = new Date(mostRecent.created_at);
+                const daysSince = Math.floor((Date.now() - cDate.getTime()) / (1000 * 60 * 60 * 24));
+                context.complaints = {
+                    data: complaintsResult.rows.map(c => `- ${c.complaint}`).join('\n'),
+                    date: cDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    daysSince,
+                };
+            }
+
+            if (doctorNoteResult.rows.length) {
+                const dn = doctorNoteResult.rows[0];
+                const dnDate = new Date(dn.created_at);
+                const daysSince = Math.floor((Date.now() - dnDate.getTime()) / (1000 * 60 * 60 * 24));
+                context.doctorNote = {
+                    note: dn.note,
+                    date: dnDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    daysSince,
+                };
+            }
+
+            if (!context.vitalSigns && !context.complaints && !context.doctorNote) {
+                context = null;
+            }
+        }
+
+        const polished = await generatePhysicalExamFindings({ examFields: examData, context });
         res.json({ success: true, polished });
     } catch (error) {
         console.error('Error generating physical exam findings:', error);

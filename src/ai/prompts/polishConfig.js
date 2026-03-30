@@ -70,8 +70,12 @@ Up to 3 alternative diagnoses to consider, each with its ICD-10-CM code in paren
 Suggested Workup:
 A practical list of investigations to confirm or exclude the provisional diagnosis. Be specific — name exact tests rather than general categories (e.g. "FBC, CRP, ESR" not just "blood tests"; "Chest X-ray PA view" not just "imaging"; "Urine MCS" not just "urinalysis"). Group by type if helpful (Laboratory, Imaging, Other). Include 3–6 items total, each on its own line prefixed with a dash.
 
+- Supplementary clinical context (vital signs, recent complaints, doctor's notes) may be appended below the examination fields. Use it as supporting background only — the physical examination findings remain the primary basis for your assessment. If a supplementary data point is marked as recorded more than 7 days ago, treat it with caution: acknowledge it may not reflect the patient's current condition, but still incorporate it where clinically relevant.
 - Output only the structured text. No preamble, no meta-commentary.`,
-        prompt: (examFields) => {
+        prompt: (data) => {
+            // Support both legacy call (examFields object directly) and enriched format ({ examFields, context })
+            const examFields = data.examFields ?? data;
+            const context = data.context ?? null;
             const LABELS = {
                 general_appearance: 'General Appearance',
                 heent: 'HEENT',
@@ -88,7 +92,36 @@ A practical list of investigations to confirm or exclude the provisional diagnos
                 .filter(([, val]) => val && val.trim())
                 .map(([key, val]) => `${LABELS[key] || key}: ${val}`)
                 .join('\n');
-            return `Based on the following physical examination findings, generate a professional Findings / Provisional Diagnosis:\n\n${lines}`;
+            let prompt = `Based on the following physical examination findings, generate a professional Findings / Provisional Diagnosis:\n\n${lines}`;
+            if (context) {
+                const STALE_DAYS = 7;
+                const sections = [];
+                if (context.vitalSigns) {
+                    const { data: vs, date, daysSince } = context.vitalSigns;
+                    const tag = daysSince > STALE_DAYS
+                        ? ` [recorded ${daysSince} days ago on ${date} — may not reflect current status]`
+                        : ` [recorded ${daysSince} day(s) ago on ${date}]`;
+                    sections.push(`Vital Signs${tag}:\n${vs}`);
+                }
+                if (context.complaints) {
+                    const { data: complaints, date, daysSince } = context.complaints;
+                    const tag = daysSince > STALE_DAYS
+                        ? ` [most recent recorded ${daysSince} days ago on ${date} — may not reflect current status]`
+                        : ` [most recent recorded ${daysSince} day(s) ago on ${date}]`;
+                    sections.push(`Recent Complaints${tag}:\n${complaints}`);
+                }
+                if (context.doctorNote) {
+                    const { note, date, daysSince } = context.doctorNote;
+                    const tag = daysSince > STALE_DAYS
+                        ? ` [recorded ${daysSince} days ago on ${date} — may not reflect current status]`
+                        : ` [recorded ${daysSince} day(s) ago on ${date}]`;
+                    sections.push(`Latest Doctor's Note${tag}:\n${note}`);
+                }
+                if (sections.length) {
+                    prompt += `\n\nSupplementary Clinical Context (background only — use to support, not replace, the examination findings):\n\n${sections.join('\n\n')}`;
+                }
+            }
+            return prompt;
         },
     },
 
