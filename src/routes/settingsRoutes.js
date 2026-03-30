@@ -8,6 +8,7 @@ import {
 } from "../controllers/settingsController.js";
 import { ROLES } from "../constants/domain.js";
 
+
 const router = express.Router();
 
 // Currencies — no auth needed (static data)
