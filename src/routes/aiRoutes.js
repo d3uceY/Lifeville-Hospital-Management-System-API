@@ -2,7 +2,7 @@ import express from 'express';
 import { polishComplaintText, polishDoctorNoteText, polishNurseNoteText, polishLabTestResultText, generatePhysicalExamFindingsText, getAIPatientSummary, getCachedPatientSummary, generateLabTestCommentText, generateDiagnosisSuggestionText } from '../ai/controllers/polishController.js';
 import { strictRateLimiter, veryStrictRateLimiter } from '../middleware/rateLimiter.js';
 import {authorize} from '../middleware/authorize.js';
-import { ROLES } from '../../../LHMS/src/constants/config.js';
+import { ROLES } from '../constants/domain.js';
 
 const doctor = ROLES.DOCTOR;
 const nurse = ROLES.NURSE;
