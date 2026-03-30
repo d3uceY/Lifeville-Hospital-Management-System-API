@@ -357,5 +357,14 @@ export const checkOutPatientVisit = async (visitId) => {
         .where(eq(patientVisits.id, visitId))
         .returning();
 
-    return updated;
+    const [patientData] = await db
+        .select({ first_name: patients.firstName, surname: patients.surname })
+        .from(patients)
+        .where(eq(patients.patientId, updated.patientId));
+
+    return {
+        ...updated,
+        first_name: patientData?.first_name,
+        surname: patientData?.surname,
+    };
 };

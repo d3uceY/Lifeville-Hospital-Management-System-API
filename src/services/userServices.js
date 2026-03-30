@@ -32,6 +32,12 @@ export const insertSeedSuperAdmin = async (email, hash) => {
 }
 
 
+
+/**
+ * Signs a short-lived access token containing the user's id, role, and account creation date.
+ * @param {{ id: number, role: string, createdAt: string }} user
+ * @returns {string} Signed JWT access token
+ */
 function signAccess(user) {
     return jwt.sign(
         { sub: user.id, role: user.role, createdAt: user.createdAt },
@@ -40,6 +46,13 @@ function signAccess(user) {
     );
 }
 
+/**
+ * Signs a long-lived refresh token containing the user's id and a unique token identifier (JTI).
+ * The JTI is stored as a SHA-256 hash in the database to detect token replay attacks.
+ * @param {number} userId
+ * @param {string} jti - A unique identifier (UUID) for this specific refresh token issuance
+ * @returns {string} Signed JWT refresh token
+ */
 function signRefresh(userId, jti) {
     return jwt.sign(
         { sub: userId, jti },
@@ -56,29 +69,29 @@ function signRefresh(userId, jti) {
  */
 export async function login({ email, password }) {
     const { rows } = await query(`SELECT name, id, password_hash, created_at, is_active, role FROM users WHERE email = $1 AND is_deleted = false`, [email.toLowerCase()]);
-    const u = rows[0];
+    const user = rows[0];
     // check if user is enabled
-    if (!u || !u.is_active) {
+    if (!user || !user.is_active) {
         const err = new Error("Invalid credentials");
         err.status = 401;
         throw err;
     }
     // check if password is correct
-    if (!u || !(await bcrypt.compare(password, u.password_hash))) {
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
         const err = new Error("Invalid credentials");
         err.status = 401;
         throw err;
     }
 
     const jti = crypto.randomUUID();
-    const rtoken = signRefresh(u.id, jti);
-    const hashJti = crypto.createHash("sha256").update(jti).digest("hex");
-    await query(`UPDATE users SET refresh_token = $1 WHERE id = $2`, [hashJti, u.id]);
+    const refreshToken = signRefresh(user.id, jti);
+    const hashedJti = crypto.createHash("sha256").update(jti).digest("hex");
+    await query(`UPDATE users SET refresh_token = $1 WHERE id = $2`, [hashedJti, user.id]);
 
     return {
-        accessToken: signAccess({ id: u.id, role: u.role, createdAt: u.created_at }),
-        refreshToken: rtoken,
-        user: { id: u.id, name: u.name, email, role: u.role },
+        accessToken: signAccess({ id: user.id, role: user.role, createdAt: user.created_at }),
+        refreshToken,
+        user: { id: user.id, name: user.name, email, role: user.role },
     };
 }
 
@@ -100,37 +113,37 @@ export async function refreshAccess(oldRefresh) {
     }
 
     const { rows } = await query(`SELECT refresh_token, created_at, is_active, role, email, name FROM users WHERE id = $1 AND is_deleted = false`, [payload.sub]);
-    const u = rows[0];
+    const user = rows[0];
 
 
-    if (!u) {
+    if (!user) {
         const err = new Error('User not found');
         err.status = 404;
         throw err;
     }
 
     // check if user is enabled
-    if (!u || !u.is_active) {
+    if (!user || !user.is_active) {
         const err = new Error("Invalid credentials");
         err.status = 401;
         throw err;
     }
 
-    const hashJti = crypto.createHash("sha256").update(payload.jti).digest("hex");
-    if (!rows[0] || rows[0].refresh_token !== hashJti) {
+    const hashedJti = crypto.createHash("sha256").update(payload.jti).digest("hex");
+    if (!rows[0] || rows[0].refresh_token !== hashedJti) {
         const err = new Error("Refresh token replay detected");
         err.status = 403;
         throw err;
     }
 
     const newJti = crypto.randomUUID();
-    const newRefresh = signRefresh(payload.sub, newJti);
-    const newHash = crypto.createHash("sha256").update(newJti).digest("hex");
-    await query(`UPDATE users SET refresh_token = $1 WHERE id = $2`, [newHash, payload.sub]);
+    const newRefreshToken = signRefresh(payload.sub, newJti);
+    const newHashedJti = crypto.createHash("sha256").update(newJti).digest("hex");
+    await query(`UPDATE users SET refresh_token = $1 WHERE id = $2`, [newHashedJti, payload.sub]);
 
     return {
         accessToken: signAccess({ id: payload.sub, role: rows[0].role, createdAt: rows[0].created_at }),
-        refreshToken: newRefresh,
+        refreshToken: newRefreshToken,
         user: { id: payload.sub, name: rows[0].name, email: rows[0].email, role: rows[0].role },
     };
 }
