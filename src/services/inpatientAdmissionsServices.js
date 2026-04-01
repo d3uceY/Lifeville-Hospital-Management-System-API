@@ -1,6 +1,6 @@
 import { eq, desc, and, ilike, or, sql, count, isNull } from "drizzle-orm";
 import { db } from "../../drizzle-db.js";
-import { inpatientAdmissions, patients, users, dischargeSummary, patientVisits } from "../../drizzle/migrations/schema.js";
+import { inpatientAdmissions, patients, users, dischargeSummary, patientVisits, diagnoses } from "../../drizzle/migrations/schema.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
 import { lookupByCode } from "../icd/services/icd.services.js";
@@ -474,6 +474,46 @@ export const dischargeInpatientAdmission = async (dischargeData) => {
   }
 
 }
+
+/**
+ * Fetches the latest diagnosis condition for the visit linked to an admission.
+ * Throws a descriptive error if no linked visit or diagnosis exists.
+ * @param {number} admissionId
+ * @returns {Promise<{ condition: object }>}
+ */
+export const getLatestDiagnosisForAdmission = async (admissionId) => {
+  // 1. Find the latest visit linked to this admission
+  const [linkedVisit] = await db
+    .select({ id: patientVisits.id })
+    .from(patientVisits)
+    .where(eq(patientVisits.admissionId, admissionId))
+    .orderBy(desc(patientVisits.createdAt))
+    .limit(1);
+
+  if (!linkedVisit) {
+    const err = new Error("No visit found for this admission. Please ensure a visit has been recorded before auto-filling diagnosis.");
+    err.code = "NO_VISIT_FOUND";
+    err.status = 404;
+    throw err;
+  }
+
+  // 2. Find the latest diagnosis for that visit
+  const [latestDiagnosis] = await db
+    .select({ condition: diagnoses.condition })
+    .from(diagnoses)
+    .where(eq(diagnoses.visitId, linkedVisit.id))
+    .orderBy(desc(diagnoses.diagnosisDate))
+    .limit(1);
+
+  if (!latestDiagnosis) {
+    const err = new Error("No diagnosis has been recorded for this admission's visit. Please record a diagnosis before auto-filling.");
+    err.code = "NO_DIAGNOSIS_FOUND";
+    err.status = 404;
+    throw err;
+  }
+
+  return { condition: latestDiagnosis.condition };
+};
 
 /** Returns the discharge summary for an admission joined with the attending doctor's name.
  * @param {number} admissionId

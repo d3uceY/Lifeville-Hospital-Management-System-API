@@ -21,5 +21,6 @@ router.delete("/inpatients/:id", authenticate, inpatientControllers.deleteInpati
 router.get("/inpatients/:patientId/admissions", authenticate, inpatientControllers.getInpatientAdmissionsByPatientId);
 router.post("/inpatients/:id/discharge", authenticate, inpatientControllers.dischargeInpatientAdmission);
 router.get("/inpatients/:id/discharge-summary", authenticate, inpatientControllers.getDischargeSummaryByAdmissionId);
+router.get("/inpatients/:id/latest-diagnosis", authenticate, inpatientControllers.getLatestDiagnosisForAdmission);
 
 export default router;

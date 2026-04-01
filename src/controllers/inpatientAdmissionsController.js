@@ -207,3 +207,19 @@ export const getDischargeSummaryByAdmissionId = async (req, res) => {
     res.status(500).json({ message: "internal server error" });
   }
 };
+
+/**
+ * GET /inpatients/:id/latest-diagnosis
+ * Fetches the latest diagnosis condition for the visit linked to an admission.
+ */
+export const getLatestDiagnosisForAdmission = async (req, res) => {
+  try {
+    const admissionId = Number(req.params.id);
+    const result = await inpatientServices.getLatestDiagnosisForAdmission(admissionId);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("error fetching latest diagnosis for admission:", err);
+    const status = err.status || 500;
+    res.status(status).json({ message: err.message || "Internal server error" });
+  }
+};
