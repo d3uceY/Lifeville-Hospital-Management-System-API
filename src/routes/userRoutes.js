@@ -7,7 +7,7 @@ import { authRateLimiter } from "../middleware/rateLimiter.js";
 const router = express.Router();
 
 router.post("/auth/login", authRateLimiter, userControllers.loginController);
-router.post("/auth/refresh", userControllers.refreshController);
+router.post("/auth/refresh", authRateLimiter, userControllers.refreshController);
 router.post("/auth/logout", authenticate, userControllers.logoutController);
 
 // Super Admin only routes

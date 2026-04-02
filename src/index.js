@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
 import { runBillingMigration } from "../migrate.js";
 import { loadICD } from "./icd/services/icd.services.js";
@@ -18,6 +19,7 @@ const app = express();
 const port = config.app.port;
 
 app.use(cookieParser());
+app.use(helmet());
 
 const FRONTEND = config.app.frontend;
 const allowedOrigins = [

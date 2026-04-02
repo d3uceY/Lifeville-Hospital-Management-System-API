@@ -72,6 +72,7 @@ export async function login({ email, password }) {
     const user = rows[0];
     // check if user is enabled
     if (!user || !user.is_active) {
+        await bcrypt.compare(password, user.password_hash)
         const err = new Error("Invalid credentials");
         err.status = 401;
         throw err;
