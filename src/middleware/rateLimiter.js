@@ -153,4 +153,10 @@ export const apiRateLimiter = createRateLimiter({
   max: 30, // 30 requests per minute
 });
 
+export const speechToTextRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 11, // 11 requests per minute
+});
+
+
 export default createRateLimiter;
