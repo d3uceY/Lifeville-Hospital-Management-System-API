@@ -1,8 +1,10 @@
 import express from 'express';
 import { polishComplaintText, polishDoctorNoteText, polishNurseNoteText, polishLabTestResultText, generatePhysicalExamFindingsText, getAIPatientSummary, getCachedPatientSummary, generateLabTestCommentText, generateDiagnosisSuggestionText } from '../ai/controllers/polishController.js';
-import { strictRateLimiter, veryStrictRateLimiter } from '../middleware/rateLimiter.js';
+import { transcribeSpeechController } from '../ai/controllers/speechController.js';
+import { speechToTextRateLimiter, strictRateLimiter, veryStrictRateLimiter } from '../middleware/rateLimiter.js';
 import { authorize } from '../middleware/authorize.js';
 import { authenticate } from '../middleware/auth.js';
+import { uploadAudio } from '../middleware/upload.js';
 import { ROLES } from '../constants/domain.js';
 
 const doctor = ROLES.DOCTOR;
@@ -29,5 +31,7 @@ router.post('/ai/generate/diagnosis-suggestion', veryStrictRateLimiter, authenti
 router.get('/ai/patient-summary/:patientId/cached', authenticate, authorize([superadmin, doctor, nurse, lab]), getCachedPatientSummary);
 
 router.get('/ai/patient-summary/:patientId', strictRateLimiter, authenticate, authorize([superadmin, doctor, nurse, lab]), getAIPatientSummary);
+
+router.post('/ai/transcribe/speech', speechToTextRateLimiter, authenticate, authorize([superadmin, doctor, nurse]), uploadAudio.single('audio'), transcribeSpeechController);
 
 export default router; 

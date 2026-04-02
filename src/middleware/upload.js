@@ -49,6 +49,22 @@ export const upload = multer({
  */
 export const uploadNone = multer().none();
 
+const audioFileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('audio/')) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only audio files are allowed'), false);
+    }
+};
+
+export const uploadAudio = multer({
+    storage: storage,
+    limits: {
+        fileSize: 25 * 1024 * 1024, // 25MB limit for audio
+    },
+    fileFilter: audioFileFilter,
+});
+
 /**
  * Creates middleware for optional single file upload
  * Handles multipart/form-data with an optional file field

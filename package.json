@@ -19,11 +19,12 @@
     "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "crypto": "^1.0.1",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.44.4",
     "express": "^4.21.2",
+    "groq-sdk": "^1.1.2",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "pg": "^8.13.3",
@@ -31,7 +32,7 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "^0.18.1",
     "nodemon": "^3.1.14"
   }
 }
