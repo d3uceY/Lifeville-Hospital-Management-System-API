@@ -176,16 +176,12 @@ export const createAppointment = async (appointmentData) => {
  * @returns {Promise<object>}
  */
 export const updateAppointment = async (appointment_id, appointmentData) => {
-  const { patientId, doctorId, appointmentDate, notes, status } =
-    appointmentData;
+  const { appointmentDate, notes } = appointmentData;
 
   const rows = await db.update(appointments)
     .set({
-      patientId: patientId,
-      doctorId: doctorId,
       appointmentDate: appointmentDate,
       notes,
-      status,
       updatedAt: new Date(),
     })
     .where(eq(appointments.appointmentId, appointment_id))
