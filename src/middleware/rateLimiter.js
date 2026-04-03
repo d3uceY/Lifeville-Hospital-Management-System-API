@@ -143,7 +143,7 @@ export const standardRateLimiter = createRateLimiter({
 
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 login attempts per window
+  max: 9, // 9 login attempts per window
   message: 'Too many login attempts',
   skipSuccessfulRequests: true // Only count failed attempts
 });
