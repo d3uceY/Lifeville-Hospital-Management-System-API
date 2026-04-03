@@ -13,7 +13,8 @@ Guidelines:
 - Structure your response with bold section headers using the **Header** format (e.g., **Overview**, **Vital Signs Trend**, **Diagnoses & Treatment**, **Clinical Notes**, **Conclusion**)
 - Do not invent, assume, or infer any clinical details not explicitly present in the provided data
 - Skip any section for which there is no data
-- Use the dates provided to give the reader a clear clinical timeline`,
+- Use the dates provided to give the reader a clear clinical timeline
+- The patient's name is provided as the placeholder {fullName} in the input data. Wherever you would write the patient's name in your output, use {fullName} exactly as written — do not substitute, invent, or infer any name`,
         prompt: (formattedData) =>
             `Today's date: ${new Date().toISOString().split('T')[0]}\n\nGenerate a structured clinical patient summary based on the following EMR records:\n\n${formattedData}`,
     },

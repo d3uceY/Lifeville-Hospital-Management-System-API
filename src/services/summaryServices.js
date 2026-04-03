@@ -148,7 +148,7 @@ export const getPatientSummaryData = async (patientId) => {
     ] = await Promise.all([
         // Patient profile
         query(`
-            SELECT first_name, surname, date_of_birth, sex,
+            SELECT date_of_birth, sex,
                    allergies, past_medical_history, drug_history, family_history, social_history
             FROM patients
             WHERE patient_id = $1
@@ -308,7 +308,7 @@ export const formatPatientSummaryData = (data) => {
 
     if (patient) {
         lines.push('=== PATIENT PROFILE ===');
-        lines.push(`Name: ${patient.first_name} ${patient.surname}`);
+        lines.push(`Name: {fullName}`);
         lines.push(`DOB: ${fmt(patient.date_of_birth)} | Sex: ${patient.sex}`);
         if (val(patient.allergies)) lines.push(`Allergies: ${patient.allergies}`);
         if (val(patient.past_medical_history)) lines.push(`Past Medical History: ${patient.past_medical_history}`);
