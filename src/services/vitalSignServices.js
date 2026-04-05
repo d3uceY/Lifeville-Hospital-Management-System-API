@@ -21,6 +21,12 @@ export const createVitalSign = async (vitalSignData) => {
     recordedBy,
   } = vitalSignData;
 
+  if (!patientId) {
+    const err = new Error("patientId is required to record vital signs.");
+    err.status = 400;
+    throw err;
+  }
+
   // Require an ongoing (not yet checked-out) visit
   const [ongoingVisit] = await db
     .select({ id: patientVisits.id })
