@@ -54,7 +54,7 @@ export const createVitalSign = async (vitalSignData) => {
       systolicBloodPressure,
       diastolicBloodPressure,
       weight,
-      height ? Math.round(height * 100) : null,
+      height ? Math.round(height * 100) : 0, // this is to prevent the not null constraint error, but ideally we should handle this better
       heartRate,
       spo2,
       recordedBy,
