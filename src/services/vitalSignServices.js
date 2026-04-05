@@ -21,6 +21,12 @@ export const createVitalSign = async (vitalSignData) => {
     recordedBy,
   } = vitalSignData;
 
+  if (!patientId) {
+    const err = new Error("patientId is required to record vital signs.");
+    err.status = 400;
+    throw err;
+  }
+
   // Require an ongoing (not yet checked-out) visit
   const [ongoingVisit] = await db
     .select({ id: patientVisits.id })
@@ -54,7 +60,7 @@ export const createVitalSign = async (vitalSignData) => {
       systolicBloodPressure,
       diastolicBloodPressure,
       weight,
-      height ? Math.round(height * 100) : null,
+      height ? Math.round(height * 100) : 0, // this is to prevent the not null constraint error, but ideally we should handle this better
       heartRate,
       spo2,
       recordedBy,

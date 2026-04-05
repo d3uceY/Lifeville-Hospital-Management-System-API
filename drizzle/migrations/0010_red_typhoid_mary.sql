@@ -1,0 +1,1 @@
+CREATE INDEX "idx_appointments_date_status" ON "appointments" USING btree ("appointment_date" timestamp_ops,"status" text_ops);

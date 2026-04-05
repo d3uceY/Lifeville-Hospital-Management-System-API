@@ -14,7 +14,7 @@ import { formatDate } from "../utils/formatDate.js";
  * "* * * * *"  = every minute  (60 lightweight DB queries/hour — fine for HMS scale)
  * "5 * * * *"  = every 5 minutes  (if you want to reduce the frequency of checks)
  */
-const CRON_SCHEDULE = "* * * * *";
+const CRON_SCHEDULE = "5 * * * *";
 
 /** 
  * The look-ahead window in minutes.

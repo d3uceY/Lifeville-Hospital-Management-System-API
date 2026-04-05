@@ -199,6 +199,7 @@ export const appointments = pgTable("appointments", {
 	index("idx_appointments_doctor_id").using("btree", table.doctorId.asc().nullsLast().op("int4_ops")),
 	index("idx_appointments_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.asc().nullsLast().op("timestamp_ops")),
 	index("idx_appointments_patient_id").using("btree", table.patientId.asc().nullsLast().op("int4_ops")),
+	index("idx_appointments_date_status").using("btree", table.appointmentDate.asc().nullsLast().op("timestamp_ops"), table.status.asc().nullsLast().op("text_ops")),
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
@@ -296,6 +297,7 @@ export const notifications = pgTable("notifications", {
 	index("idx_notifications_recipient_id_created_at").using("btree", table.recipientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("int4_ops")),
 	index("idx_notifications_recipient_role").using("btree", table.recipientRole.asc().nullsLast().op("text_ops")),
 	index("idx_notifications_recipient_role_created_at").using("btree", table.recipientRole.asc().nullsLast().op("text_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_notifications_created_at").using("btree", table.createdAt.asc().nullsLast().op("timestamp_ops")),
 ]);
 
 export const procedures = pgTable("procedures", {
