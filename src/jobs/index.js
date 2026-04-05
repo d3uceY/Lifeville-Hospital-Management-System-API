@@ -1,4 +1,5 @@
 import { scheduleAppointmentReminders } from "./appointmentReminder.js";
+import { scheduleNotificationCleanup } from "./notificationCleanup.js";
 
 /**
  * Registers and starts all background cron jobs.
@@ -8,6 +9,7 @@ import { scheduleAppointmentReminders } from "./appointmentReminder.js";
  */
 export function startJobs(io) {
     scheduleAppointmentReminders(io);
+    scheduleNotificationCleanup();
 
     console.log("[Jobs] All background jobs started");
 }
