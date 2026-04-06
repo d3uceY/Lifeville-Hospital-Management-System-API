@@ -25,7 +25,7 @@ export const createPatientVisit = async (req, res) => {
                 recipientRoles: NOTIFICATION_ROLES.VISIT,
                 type: NOTIFICATION_TYPES.PATIENT_VISIT,
                 title: "Patient Visit Created",
-                message: `Patient visit on ${formatDate(patientVisit.checkInTime)} has been created`,
+                message: `Patient visit on ${formatDate(patientVisit.check_in_time)} has been created`,
                 data,
             });
 
@@ -36,7 +36,7 @@ export const createPatientVisit = async (req, res) => {
         const io = req.app.get("socketio");
         io.emit("notification", {
             recipientRoles: NOTIFICATION_ROLES.VISIT,
-            message: `( New Patient Visit on ${formatDate(patientVisit.checkInTime)} ) Doctor: ${patientVisit.doctor_name}`,
+            message: `( New Patient Visit on ${formatDate(patientVisit.check_in_time)} ) Doctor: ${patientVisit.doctor_name}`,
             description: `Patient: ${patientVisit.first_name} ${patientVisit.surname}`
         });
 
