@@ -104,14 +104,17 @@ export function isCacheInitialized() {
  * @param {object} rawAppt
  */
 export function upsertAppointmentCache(rawAppt) {
-    if (!rawAppt?.appointmentId) return;
+    // Support both camelCase (initializeCache explicit aliases) and
+    // snake_case (Drizzle .returning() with casing: "snake_case").
+    // Coerce to Number — req.params IDs arrive as strings but cache keys are numbers.
+    const appointmentId = Number(rawAppt?.appointmentId ?? rawAppt?.appointment_id);
+    if (!appointmentId) return;
 
-    // Normalise the two naming conventions used by different service methods.
     const normalised = {
-        appointmentId:   rawAppt.appointmentId,
-        appointmentDate: rawAppt.appointmentDate,
+        appointmentId,
+        appointmentDate: rawAppt.appointmentDate  ?? rawAppt.appointment_date,
         status:          rawAppt.status,
-        patientId:       rawAppt.patientId,
+        patientId:       rawAppt.patientId        ?? rawAppt.patient_id,
         patientFirstName: rawAppt.patientFirstName ?? rawAppt.first_name,
         patientSurname:   rawAppt.patientSurname   ?? rawAppt.surname,
         doctorName:       rawAppt.doctorName        ?? rawAppt.doctor_name,
@@ -141,10 +144,11 @@ export function upsertAppointmentCache(rawAppt) {
 
 /**
  * Removes an appointment from the cache (used after deletion).
- * @param {number} appointmentId
+ * Coerces to Number so string IDs from req.params also match numeric cache keys.
+ * @param {number|string} appointmentId
  */
 export function removeFromAppointmentCache(appointmentId) {
-    appointmentCache.delete(appointmentId);
+    appointmentCache.delete(Number(appointmentId));
 }
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
