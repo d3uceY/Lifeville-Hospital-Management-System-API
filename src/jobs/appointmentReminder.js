@@ -1,11 +1,14 @@
 import cron from "node-cron";
-import { db } from "../../drizzle-db.js";
-import { appointments, patients, users } from "../../drizzle/migrations/schema.js";
-import { eq, and, gte, lte, or } from "drizzle-orm";
 import { addNotification } from "../services/notificationServices.js";
 import { NOTIFICATION_TYPES, priorityLevels } from "../constants/notification.js";
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import { formatDate } from "../utils/formatDate.js";
+import {
+    initializeCache,
+    isCacheInitialized,
+    getAppointmentsInWindow,
+    pruneAppointmentCache,
+} from "../lib/appointmentCache.js";
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -14,7 +17,7 @@ import { formatDate } from "../utils/formatDate.js";
  * "* * * * *"  = every minute  (60 lightweight DB queries/hour — fine for HMS scale)
  * "5 * * * *"  = every 5 minutes  (if you want to reduce the frequency of checks)
  */
-const CRON_SCHEDULE = "5 * * * *";
+const CRON_SCHEDULE = "* * * * *";
 
 /** 
  * The look-ahead window in minutes.
@@ -29,39 +32,18 @@ const REMINDER_WINDOW_MINUTES = 30;
  */
 const notifiedIds = new Map();
 
-// ─── Query ─────────────────────────────────────────────────────────────────────
+// ─── Cache-backed query ────────────────────────────────────────────────────────
 
 /**
- * Fetches upcoming appointments that fall within the reminder window and
- * whose status is 'scheduled' or 'confirmed'.
+ * Returns upcoming appointments within the reminder window.
+ * On the very first call the cache is empty and is populated from the DB
+ * (one-time cost). Every subsequent call reads purely from memory.
  */
 async function getUpcomingAppointments() {
-    const now = new Date();
-    const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_MINUTES * 60_000);
-
-    return db
-        .select({
-            appointmentId: appointments.appointmentId,
-            appointmentDate: appointments.appointmentDate,
-            status: appointments.status,
-            patientId: patients.patientId,
-            patientFirstName: patients.firstName,
-            patientSurname: patients.surname,
-            doctorName: users.name,
-        })
-        .from(appointments)
-        .leftJoin(patients, eq(appointments.patientId, patients.patientId))
-        .leftJoin(users, eq(appointments.doctorId, users.id))
-        .where(
-            and(
-                gte(appointments.appointmentDate, now.toISOString()),
-                lte(appointments.appointmentDate, windowEnd.toISOString()),
-                or(
-                    eq(appointments.status, "scheduled"),
-                    eq(appointments.status, "confirmed")
-                )
-            )
-        );
+    if (!isCacheInitialized()) {
+        await initializeCache();
+    }
+    return getAppointmentsInWindow(REMINDER_WINDOW_MINUTES);
 }
 
 // ─── Notification sender ───────────────────────────────────────────────────────
@@ -112,11 +94,16 @@ function pruneNotifiedIds() {
 
 /**
  * Core tick function — called on every cron interval.
- * Skips appointments that have already been notified this session.
+ * 1. Prunes the shared appointment cache (evicts past entries).
+ * 2. Prunes the local notifiedIds map (evicts past entries).
+ * 3. Reads the reminder window from the cache (zero DB calls after first tick).
+ * 4. Sends notifications for any appointment not yet notified this session.
  * @param {import("socket.io").Server} io
  */
 async function runAppointmentReminderJob(io) {
+    pruneAppointmentCache();
     pruneNotifiedIds();
+
     const upcoming = await getUpcomingAppointments();
 
     for (const appt of upcoming) {

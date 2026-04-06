@@ -2,6 +2,10 @@
 import { db } from "../../drizzle-db.js";
 import { appointments, patients, users } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
+import {
+  upsertAppointmentCache,
+  removeFromAppointmentCache,
+} from "../lib/appointmentCache.js";
 
 
 /**
@@ -161,12 +165,15 @@ export const createAppointment = async (appointmentData) => {
     name: users.name,
   }).from(users).where(eq(users.id, rows[0].doctorId));
 
-  return {
+  const result = {
     ...rows[0],
     first_name: patient[0].first_name,
     surname: patient[0].surname,
     doctor_name: doctor[0].name,
   };
+
+  upsertAppointmentCache(result);
+  return result;
 };
 
 // Update an existing appointment
@@ -192,11 +199,14 @@ export const updateAppointment = async (appointment_id, appointmentData) => {
     surname: patients.surname,
   }).from(patients).where(eq(patients.patientId, rows[0].patientId));
 
-  return {
+  const result = {
     ...rows[0],
     first_name: patient[0].first_name,
     surname: patient[0].surname,
   };
+
+  upsertAppointmentCache(result);
+  return result;
 };
 
 /** Updates only the status field of an appointment and returns the updated row with patient name.
@@ -218,11 +228,14 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
     surname: patients.surname,
   }).from(patients).where(eq(patients.patientId, rows[0].patientId));
 
-  return {
+  const result = {
     ...rows[0],
     first_name: patient[0].first_name,
     surname: patient[0].surname,
   };
+
+  upsertAppointmentCache(result);
+  return result;
 };
 
 
@@ -236,5 +249,6 @@ export const deleteAppointment = async (appointmentId) => {
     .where(eq(appointments.appointmentId, appointmentId))
     .returning();
 
+  removeFromAppointmentCache(appointmentId);
   return rows[0];
 };
