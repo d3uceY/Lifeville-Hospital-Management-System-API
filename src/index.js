@@ -64,9 +64,9 @@ app.set("socketio", io); // lets any controller do req.app.get("socketio")
 app.use("/", apiRoutes);
 
 // seed superadmin then start listening on the HTTP server
-runBillingMigration().then(() => seedSuperAdmin()).then(() => {
+runBillingMigration().then(() => seedSuperAdmin()).then(async () => {
   loadICD();
-  startJobs(io);
+  await startJobs(io);
   httpServer.listen(port, '0.0.0.0', () =>
     console.log(`Server + Socket.IO running on port ${port}`)
   );

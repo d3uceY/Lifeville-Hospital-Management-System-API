@@ -1,5 +1,6 @@
 import { scheduleAppointmentReminders } from "./appointmentReminder.js";
 import { scheduleNotificationCleanup } from "./notificationCleanup.js";
+import { initializeCache } from "../lib/appointmentCache.js";
 
 /**
  * Registers and starts all background cron jobs.
@@ -7,7 +8,11 @@ import { scheduleNotificationCleanup } from "./notificationCleanup.js";
  *
  * @param {import("socket.io").Server} io - Socket.IO server instance (used for real-time pushes)
  */
-export function startJobs(io) {
+export async function startJobs(io) {
+    // Eagerly populate the appointment cache from the DB once at startup.
+    // The cron job then reads purely from memory on every tick.
+    await initializeCache();
+
     scheduleAppointmentReminders(io);
     scheduleNotificationCleanup();
 

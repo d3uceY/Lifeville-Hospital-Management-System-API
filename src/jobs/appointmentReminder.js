@@ -4,8 +4,6 @@ import { NOTIFICATION_TYPES, priorityLevels } from "../constants/notification.js
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import { formatDate } from "../utils/formatDate.js";
 import {
-    initializeCache,
-    isCacheInitialized,
     getAppointmentsInWindow,
     pruneAppointmentCache,
 } from "../lib/appointmentCache.js";
@@ -35,14 +33,11 @@ const notifiedIds = new Map();
 // ─── Cache-backed query ────────────────────────────────────────────────────────
 
 /**
- * Returns upcoming appointments within the reminder window.
- * On the very first call the cache is empty and is populated from the DB
- * (one-time cost). Every subsequent call reads purely from memory.
+ * Returns upcoming appointments within the reminder window, read purely
+ * from the in-process cache. The cache is always pre-populated at startup
+ * by startJobs(), so no DB call is ever needed here.
  */
-async function getUpcomingAppointments() {
-    if (!isCacheInitialized()) {
-        await initializeCache();
-    }
+function getUpcomingAppointments() {
     return getAppointmentsInWindow(REMINDER_WINDOW_MINUTES);
 }
 
