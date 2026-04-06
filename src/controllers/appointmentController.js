@@ -67,7 +67,7 @@ export const createAppointment = async (req, res) => {
     const io = req.app.get("socketio");
     io.emit("notification", {
       recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
-      message: `( New Appointment on ${formatDate(newAppointment.appointmentDate)} ) Doctor: ${newAppointment.doctor_name}`,
+      message: `( New Appointment on ${formatDate(newAppointment.appointment_date)} ) Doctor: ${newAppointment.doctor_name}`,
       description: `Patient: ${newAppointment.first_name} ${newAppointment.surname}`
     });
 
@@ -132,7 +132,7 @@ export const updateAppointment = async (req, res) => {
     const io = req.app.get("socketio");
     io.emit("notification", {
       recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
-      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointmentDate)} ) Status: ${updatedAppointment.status}`,
+      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointment_date)} ) Status: ${updatedAppointment.status}`,
       description: `Patient: ${updatedAppointment.first_name} ${updatedAppointment.surname}`
     });
 
@@ -186,7 +186,7 @@ export const updateAppointmentStatusController = async (req, res) => {
     const io = req.app.get("socketio");
     io.emit("notification", {
       recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
-      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointmentDate)} ) Status: ${updatedAppointment.status}`,
+      message: `(Updated Appointment on ${formatDate(updatedAppointment.appointment_date)} ) Status: ${updatedAppointment.status}`,
       description: `Patient: ${updatedAppointment.first_name} ${updatedAppointment.surname}`
     });
 
