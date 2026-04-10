@@ -35,7 +35,10 @@ const config = {
   },
   icd: {
     icdTextName: process.env.ICD_TEXT_NAME || "icd10cm_codes.txt",
-  }
+  },
+  seed: {
+    seedDrugServices: process.env.SEED_DRUG_SERVICES,
+  },
 };
 
 export default config;

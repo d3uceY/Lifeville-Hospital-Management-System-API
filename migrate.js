@@ -6,6 +6,8 @@
 
 import { query } from "./drizzle-db.js";
 import { SERVICE_CATEGORIES, ROLE_LABELS } from "./src/constants/domain.js";
+import { drugServices } from "./src/constants/drugs-constants.js";
+import config from "./src/constants/config.js";
 
 const migrations = [
   // 1. Add id PK to patient_visits (safely)
@@ -143,6 +145,41 @@ export async function runBillingMigration() {
     console.log("\n  Billing migration complete.");
   } catch (err) {
     console.error("\n  Billing migration failed:", err.message);
+    console.error(err);
+  }
+}
+
+export async function seedDrugServices() {
+  if (config.seed.seedDrugServices !== "true") {
+    console.log("  SEED_DRUG_SERVICES is not enabled. Skipping drug seeding.");
+    return;
+  }
+
+  try {
+    console.log("  Seeding drug services...");
+
+    const values = drugServices
+      .map(
+        (d) =>
+          `(${[
+            `'${d.name.replace(/'/g, "''")}'`,
+            `'${d.category}'`,
+            d.price,
+            d.isVariablePrice,
+            d.isSystem,
+          ].join(", ")})`
+      )
+      .join(",\n     ");
+
+    const sql = `INSERT INTO services (name, category, price, is_variable_price, is_system)
+     VALUES
+     ${values}
+     ON CONFLICT (name) DO NOTHING;`;
+
+    await query(sql);
+    console.log(`  Drug services seeded (${drugServices.length} entries, conflicts skipped).`);
+  } catch (err) {
+    console.error("  Drug service seeding failed:", err.message);
     console.error(err);
   }
 }
