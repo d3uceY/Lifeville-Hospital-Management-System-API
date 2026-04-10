@@ -75,7 +75,11 @@ export async function initializeCache() {
         }
 
         console.log(`[Appointment Cache] Initialized — ${appointmentCache.size} upcoming appointment(s) loaded`);
-    })();
+    })().catch((err) => {
+        // Allow retry on next call if initialization fails.
+        _initPromise = null;
+        throw err;
+    });
 
     return _initPromise;
 }

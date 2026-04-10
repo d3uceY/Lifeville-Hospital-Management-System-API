@@ -179,6 +179,18 @@ export const getPatientBillingContext = async (req, res) => {
   }
 };
 
+// ─── DELETE /billing/items/:id ───────────────────────────────────────────────
+export const deleteBillItem = async (req, res) => {
+  try {
+    const deleted = await billingService.deleteBillItem(Number(req.params.id));
+    if (!deleted) return res.status(404).json({ error: "Bill item not found" });
+    res.status(200).json({ message: "Bill item deleted", item: deleted });
+  } catch (err) {
+    console.error("deleteBillItem:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // ─── GET /invoices (paginated global list) ────────────────────────────────────────
 export const getAllInvoices = async (req, res) => {
   try {

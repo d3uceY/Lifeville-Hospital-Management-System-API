@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { seedSuperAdmin } from "./controllers/userControllers.js";
-import { runBillingMigration } from "../migrate.js";
+import { runBillingMigration, seedDrugServices } from "../migrate.js";
 import { loadICD } from "./icd/services/icd.services.js";
 import apiRoutes from "./routes/index.js";
 import { startJobs } from "./jobs/index.js";
@@ -64,7 +64,7 @@ app.set("socketio", io); // lets any controller do req.app.get("socketio")
 app.use("/", apiRoutes);
 
 // seed superadmin then start listening on the HTTP server
-runBillingMigration().then(() => seedSuperAdmin()).then(async () => {
+runBillingMigration().then(() => seedDrugServices()).then(() => seedSuperAdmin()).then(async () => {
   loadICD();
   await startJobs(io);
   httpServer.listen(port, '0.0.0.0', () =>
