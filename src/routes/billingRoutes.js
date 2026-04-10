@@ -12,6 +12,7 @@ router.get("/visits/:visitId/bill", authenticate, billingController.getVisitBill
 
 // Manual bill item (internal / admin use)
 router.post("/billing/add-item", authenticate, authorize([ROLES.SUPERADMIN]), billingController.addBillItem);
+router.delete("/billing/items/:id", authenticate, authorize([ROLES.SUPERADMIN]), billingController.deleteBillItem);
 
 // Payments
 router.post("/billing/payments", authenticate, authorize([ROLES.SUPERADMIN]), billingController.recordPayment);

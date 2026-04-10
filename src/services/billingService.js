@@ -128,6 +128,21 @@ export async function addItem({
   return item;
 }
 
+// ─── Delete bill item ─────────────────────────────────────────────────────────
+
+/**
+ * Hard-deletes a single bill item by id.
+ * Virtual (daily charge) items have no DB row — they cannot be deleted here.
+ * Returns the deleted row, or null if not found.
+ */
+export async function deleteBillItem(itemId) {
+  const [deleted] = await db
+    .delete(billItems)
+    .where(eq(billItems.id, itemId))
+    .returning();
+  return deleted ?? null;
+}
+
 // ─── Service price lookup ─────────────────────────────────────────────────────
 
 /** Returns the price for a named service, or 0 if not found. */
@@ -178,6 +193,21 @@ export async function getBillForAdmission(admissionId) {
     .from(inpatientAdmissions)
     .where(eq(inpatientAdmissions.id, admissionId));
   if (!admission) throw new Error("Admission not found");
+
+  // Fetch patient name + hospital number
+  let patientName = "—";
+  let hospitalNumber = null;
+  if (admission.patientId) {
+    const [pt] = await db
+      .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
+      .from(patients)
+      .where(eq(patients.patientId, admission.patientId))
+      .limit(1);
+    if (pt) {
+      patientName = `${pt.surname} ${pt.firstName}`.trim();
+      hospitalNumber = pt.hospitalNumber;
+    }
+  }
 
   // Ensure invoice exists
   const invoice = await getOrCreateInvoice({ admissionId });
@@ -248,6 +278,8 @@ export async function getBillForAdmission(admissionId) {
     balance: totalAmount - totalPaid,
     payments,
     days,
+    patientName,
+    hospitalNumber,
   };
 }
 
@@ -260,6 +292,28 @@ export async function getBillForAdmission(admissionId) {
  */
 export async function getBillForVisit(visitId) {
   const invoice = await getOrCreateInvoice({ visitId });
+
+  // Fetch patient name + hospital number via the visit's patientId
+  let patientName = "—";
+  let hospitalNumber = null;
+  if (invoice.visitId) {
+    const [visit] = await db
+      .select({ patientId: patientVisits.patientId })
+      .from(patientVisits)
+      .where(eq(patientVisits.id, invoice.visitId))
+      .limit(1);
+    if (visit?.patientId) {
+      const [pt] = await db
+        .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
+        .from(patients)
+        .where(eq(patients.patientId, visit.patientId))
+        .limit(1);
+      if (pt) {
+        patientName = `${pt.surname} ${pt.firstName}`.trim();
+        hospitalNumber = pt.hospitalNumber;
+      }
+    }
+  }
 
   const items = await db
     .select()
@@ -293,6 +347,8 @@ export async function getBillForVisit(visitId) {
     totalPaid,
     balance: totalAmount - totalPaid,
     payments,
+    patientName,
+    hospitalNumber,
   };
 }
 
@@ -458,6 +514,19 @@ export async function deleteService(id) {
  * Returns each invoice with computed totals and payment amounts.
  */
 export async function getPatientInvoices(patientId) {
+  // Fetch patient name + hospital number once
+  let patientName = "—";
+  let hospitalNumber = null;
+  const [pt] = await db
+    .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
+    .from(patients)
+    .where(eq(patients.patientId, patientId))
+    .limit(1);
+  if (pt) {
+    patientName = `${pt.surname} ${pt.firstName}`.trim();
+    hospitalNumber = pt.hospitalNumber;
+  }
+
   // Get all admissions for this patient
   const admissionRows = await db
     .select({ id: inpatientAdmissions.id, admissionDate: inpatientAdmissions.admissionDate })
@@ -510,7 +579,7 @@ export async function getPatientInvoices(patientId) {
       linkId = inv.visitId;
     }
 
-    return { ...inv, total, totalPaid, balance, type, typeLabel, linkId };
+    return { ...inv, total, totalPaid, balance, type, typeLabel, linkId, patientName, hospitalNumber };
   }));
 
   return enriched;
