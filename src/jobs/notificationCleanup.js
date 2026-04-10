@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { db } from "../../drizzle-db.js";
 import { notifications } from "../../drizzle/migrations/schema.js";
-import { lt } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
@@ -15,13 +15,16 @@ const RETENTION_WEEKS = 3;
 // ─── Job handler ───────────────────────────────────────────────────────────────
 
 async function runNotificationCleanupJob() {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - RETENTION_WEEKS * 7);
-
     // notificationReads rows are automatically cascade-deleted via FK
     const deleted = await db
         .delete(notifications)
-        .where(lt(notifications.createdAt, cutoff.toISOString()))
+
+        // (e.g. 2026-03-19T23:00:00.000Z). PostgreSQL strips the Z and compares it as-is against
+        //  TIMESTAMP WITHOUT TIME ZONE values that are stored in WAT. At midnight WAT, 
+        // this makes the effective cutoff 2026-03-19 23:00:00 — one hour short — so March 20 
+        // afternoon notifications survive and 0 rows are deleted.
+        
+        .where(sql`${notifications.createdAt} < NOW() - INTERVAL '${sql.raw(String(RETENTION_WEEKS * 7))} days'`)
         .returning({ id: notifications.id });
 
     console.log(
