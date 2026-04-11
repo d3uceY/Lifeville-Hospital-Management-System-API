@@ -34,4 +34,7 @@ router.get("/patients/:patientId/billing-context", authenticate, billingControll
 // Global paginated invoices list
 router.get("/invoices", authenticate, authorize([ROLES.SUPERADMIN]), billingController.getAllInvoices);
 
+// Billing analytics (superadmin only)
+router.get("/billing/stats", authenticate, authorize([ROLES.SUPERADMIN, ROLES.ACCOUNTANT]), billingController.getBillingStats);
+
 export default router;

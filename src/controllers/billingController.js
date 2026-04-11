@@ -4,6 +4,7 @@
  */
 
 import * as billingService from "../services/billingService.js";
+import * as billingStatsService from "../services/billingStatsService.js";
 
 // ─── GET /admissions/:admissionId/bill ────────────────────────────────────────
 export const getAdmissionBill = async (req, res) => {
@@ -23,6 +24,18 @@ export const getVisitBill = async (req, res) => {
     res.status(200).json(bill);
   } catch (err) {
     console.error("getVisitBill:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── GET /billing/stats ───────────────────────────────────────────────────────
+export const getBillingStats = async (req, res) => {
+  try {
+    const { from, to, groupBy } = req.query;
+    const stats = await billingStatsService.getBillingStats({ from, to, groupBy });
+    res.status(200).json(stats);
+  } catch (err) {
+    console.error("getBillingStats:", err);
     res.status(500).json({ error: err.message });
   }
 };
