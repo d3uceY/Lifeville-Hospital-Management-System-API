@@ -44,8 +44,10 @@ export function scheduleNotificationCleanup() {
 
     console.log(`[Jobs] Notification cleanup scheduled — runs: "${CRON_SCHEDULE}", retention: ${RETENTION_WEEKS} weeks`);
 
-    // Run immediately on startup
-    runNotificationCleanupJob().catch((err) =>
-        console.error("[Notification Cleanup Job] Startup run failed:", err)
-    );
+    // Run shortly after startup (delay lets the pg pool establish connections first)
+    setTimeout(() => {
+        runNotificationCleanupJob().catch((err) =>
+            console.error("[Notification Cleanup Job] Startup run failed:", err)
+        );
+    }, 10_000);
 }
