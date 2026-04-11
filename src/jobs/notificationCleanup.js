@@ -19,12 +19,7 @@ async function runNotificationCleanupJob() {
     const deleted = await db
         .delete(notifications)
 
-        // (e.g. 2026-03-19T23:00:00.000Z). PostgreSQL strips the Z and compares it as-is against
-        //  TIMESTAMP WITHOUT TIME ZONE values that are stored in WAT. At midnight WAT, 
-        // this makes the effective cutoff 2026-03-19 23:00:00 — one hour short — so March 20 
-        // afternoon notifications survive and 0 rows are deleted.
-        
-        .where(sql`${notifications.createdAt} < NOW() - INTERVAL '${sql.raw(String(RETENTION_WEEKS * 7))} days'`)
+        .where(sql`${notifications.createdAt} < (NOW() AT TIME ZONE 'Africa/Lagos') - INTERVAL '${sql.raw(String(RETENTION_WEEKS * 7))} days'`)
         .returning({ id: notifications.id });
 
     console.log(
@@ -48,4 +43,9 @@ export function scheduleNotificationCleanup() {
     });
 
     console.log(`[Jobs] Notification cleanup scheduled — runs: "${CRON_SCHEDULE}", retention: ${RETENTION_WEEKS} weeks`);
+
+    // Run immediately on startup
+    runNotificationCleanupJob().catch((err) =>
+        console.error("[Notification Cleanup Job] Startup run failed:", err)
+    );
 }
