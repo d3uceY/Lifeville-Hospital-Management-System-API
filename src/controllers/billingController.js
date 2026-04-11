@@ -27,6 +27,17 @@ export const getVisitBill = async (req, res) => {
   }
 };
 
+// ─── GET /billing/invoices/:invoiceId ────────────────────────────────────────
+export const getManualBill = async (req, res) => {
+  try {
+    const bill = await billingService.getBillForManualInvoice(Number(req.params.invoiceId));
+    res.status(200).json(bill);
+  } catch (err) {
+    console.error("getManualBill:", err);
+    res.status(err.message === "Invoice not found" ? 404 : 500).json({ error: err.message });
+  }
+};
+
 // ─── POST /billing/add-item ───────────────────────────────────────────────────
 export const addBillItem = async (req, res) => {
   try {
