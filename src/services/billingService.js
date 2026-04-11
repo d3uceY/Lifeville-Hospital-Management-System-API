@@ -586,6 +586,70 @@ export async function getPatientInvoices(patientId) {
 }
 
 /**
+ * getBillForManualInvoice
+ *
+ * Builds the bill for a standalone (manual) invoice: stored bill items,
+ * payment history, and running totals. No daily charges apply.
+ * @param {number} invoiceId
+ */
+export async function getBillForManualInvoice(invoiceId) {
+  const [invoice] = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, invoiceId))
+    .limit(1);
+  if (!invoice) throw new Error("Invoice not found");
+
+  // Resolve patient — manual invoices carry patientId directly
+  let patientName = "—";
+  let hospitalNumber = null;
+  if (invoice.patientId) {
+    const [pt] = await db
+      .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
+      .from(patients)
+      .where(eq(patients.patientId, invoice.patientId))
+      .limit(1);
+    if (pt) {
+      patientName = `${pt.surname} ${pt.firstName}`.trim();
+      hospitalNumber = pt.hospitalNumber;
+    }
+  }
+
+  const items = await db
+    .select()
+    .from(billItems)
+    .where(eq(billItems.invoiceId, invoiceId))
+    .orderBy(billItems.createdAt);
+
+  const payments = await db
+    .select()
+    .from(billingPayments)
+    .where(eq(billingPayments.invoiceId, invoiceId))
+    .orderBy(billingPayments.createdAt);
+
+  const totalAmount = items.reduce((acc, item) => acc + parseFloat(item.lineTotal || 0), 0);
+  const totalPaid = payments.reduce((acc, p) => acc + parseFloat(p.amount), 0);
+
+  let running = 0;
+  const itemsWithRunning = items.map((item) => {
+    const lineTotal = parseFloat(item.lineTotal || 0);
+    running += lineTotal;
+    return { ...item, lineTotal, runningTotal: running };
+  });
+
+  return {
+    invoice,
+    items: itemsWithRunning,
+    totalAmount,
+    totalPaid,
+    balance: totalAmount - totalPaid,
+    payments,
+    patientName,
+    hospitalNumber,
+  };
+}
+
+/**
  * Create a standalone manual invoice for a patient (not tied to admission/visit).
  */
 export async function createPatientInvoice(patientId) {

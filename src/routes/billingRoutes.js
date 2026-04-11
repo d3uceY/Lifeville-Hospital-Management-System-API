@@ -9,6 +9,7 @@ const router = express.Router();
 // Admission & visit bill views
 router.get("/admissions/:admissionId/bill", authenticate, billingController.getAdmissionBill);
 router.get("/visits/:visitId/bill", authenticate, billingController.getVisitBill);
+router.get("/billing/invoices/:invoiceId", authenticate, billingController.getManualBill);
 
 // Manual bill item (internal / admin use)
 router.post("/billing/add-item", authenticate, authorize([ROLES.SUPERADMIN]), billingController.addBillItem);
@@ -32,5 +33,8 @@ router.get("/patients/:patientId/billing-context", authenticate, billingControll
 
 // Global paginated invoices list
 router.get("/invoices", authenticate, authorize([ROLES.SUPERADMIN]), billingController.getAllInvoices);
+
+// Billing analytics (superadmin only)
+router.get("/billing/stats", authenticate, authorize([ROLES.SUPERADMIN, ROLES.ACCOUNTANT]), billingController.getBillingStats);
 
 export default router;
