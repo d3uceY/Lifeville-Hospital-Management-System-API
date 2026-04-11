@@ -43,4 +43,9 @@ export function scheduleNotificationCleanup() {
     });
 
     console.log(`[Jobs] Notification cleanup scheduled — runs: "${CRON_SCHEDULE}", retention: ${RETENTION_WEEKS} weeks`);
+
+    // Run immediately on startup
+    runNotificationCleanupJob().catch((err) =>
+        console.error("[Notification Cleanup Job] Startup run failed:", err)
+    );
 }
