@@ -84,7 +84,7 @@ export const addBillItem = async (req, res) => {
     res.status(201).json({ item, message: "Bill item added" });
   } catch (err) {
     console.error("addBillItem:", err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 
@@ -105,7 +105,7 @@ export const recordPayment = async (req, res) => {
     res.status(201).json({ payment, message: "Payment recorded" });
   } catch (err) {
     console.error("recordPayment:", err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 
@@ -211,7 +211,7 @@ export const deleteBillItem = async (req, res) => {
     res.status(200).json({ message: "Bill item deleted", item: deleted });
   } catch (err) {
     console.error("deleteBillItem:", err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 

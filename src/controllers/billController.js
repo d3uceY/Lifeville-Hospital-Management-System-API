@@ -61,9 +61,10 @@ export const updateBillPayment = async (req, res) => {
     try {
         const billId = req.params.id;
         const updatedBill = await billService.updateBillPayment(billId, req.body);
+        if (!updatedBill) return res.status(404).json({ error: "Bill not found" });
         res.status(200).json({ updatedBill, message: "Bill updated" });
     } catch (err) {
         console.error(err)
-        res.status(500).json({ error: err.message });
+        res.status(err.status || 500).json({ error: err.message });
     }
 }

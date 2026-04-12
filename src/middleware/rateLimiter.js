@@ -158,5 +158,12 @@ export const speechToTextRateLimiter = createRateLimiter({
   max: 11, // 11 requests per minute
 });
 
+// Strict limiter for password-reset requests — max 5 per IP per 15 minutes
+export const passwordResetRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: "Too many password reset requests",
+});
+
 
 export default createRateLimiter;

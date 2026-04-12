@@ -64,7 +64,9 @@ export const services = pgTable("services", {
 	isVariablePrice: boolean("is_variable_price").notNull().default(false),
 	isSystem: boolean("is_system").notNull().default(false),
 	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+	unique("services_name_key").on(table.name),
+]);
 
 // ── Invoices (one per visit or admission) ─────────────────────────────────────
 export const invoices = pgTable("invoices", {
@@ -228,6 +230,8 @@ export const users = pgTable("users", {
 	isActive: boolean("is_active").default(true).notNull(),
 	roleId: integer("role_id"),
 	isDeleted: boolean("is_deleted").default(false).notNull(),
+	resetToken: text("reset_token"),
+	resetTokenExpiry: timestamp("reset_token_expiry", { mode: 'string' }),
 }, (table) => [
 	index("idx_users_name").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("idx_users_name_trgm").using("gin", table.name.asc().nullsLast().op("gin_trgm_ops")),
@@ -298,6 +302,7 @@ export const notifications = pgTable("notifications", {
 	index("idx_notifications_recipient_role").using("btree", table.recipientRole.asc().nullsLast().op("text_ops")),
 	index("idx_notifications_recipient_role_created_at").using("btree", table.recipientRole.asc().nullsLast().op("text_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
 	index("idx_notifications_created_at").using("btree", table.createdAt.asc().nullsLast().op("timestamp_ops")),
+	index("idx_notifications_recipient_roles").using("gin", table.recipientRoles),
 ]);
 
 export const procedures = pgTable("procedures", {
