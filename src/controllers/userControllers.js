@@ -1,5 +1,5 @@
 import * as userService from "../services/userServices.js";
-
+import * as passwordResetService from "../services/passwordResetService.js";
 import bcrypt from "bcrypt";
 import config from "../constants/config.js";
 
@@ -120,5 +120,59 @@ export async function toggleUserController(req, res) {
     } catch (err) {
         console.error(err)
         res.status(500).json({ error: err.message });
+    }
+}
+
+// ─── Password Reset ───────────────────────────────────────────────────────────
+
+/**
+ * POST /auth/forgot-password
+ * Triggers a password-reset email.
+ * Always returns 200 regardless of whether the email exists
+ * to prevent user-enumeration attacks.
+ */
+export async function forgotPasswordController(req, res) {
+    const { email } = req.body;
+
+    if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "A valid email address is required." });
+    }
+
+    const frontendBaseUrl = config.app.frontend;
+
+    try {
+        // This never throws for "email not found" — it's intentional
+        await passwordResetService.initiatePasswordReset(email, frontendBaseUrl);
+    } catch (err) {
+        // Only log real unexpected errors; don't leak them to the client
+        console.error("Forgot password error:", err);
+    }
+
+    // Always return the same message so attackers can't tell if the address exists
+    return res.status(200).json({
+        message: "If that email is registered, you will receive a password reset link shortly.",
+    });
+}
+
+/**
+ * POST /auth/reset-password
+ * Validates the token and sets the new password.
+ */
+export async function resetPasswordController(req, res) {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: "Token and new password are required." });
+    }
+
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters." });
+    }
+
+    try {
+        await passwordResetService.resetPassword(token, newPassword);
+        return res.status(200).json({ message: "Password reset successfully. You can now log in." });
+    } catch (err) {
+        return res.status(err.status || 500).json({ error: err.message });
     }
 }

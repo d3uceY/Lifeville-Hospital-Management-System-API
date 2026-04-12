@@ -2,13 +2,17 @@ import express from "express";
 import * as userControllers from '../controllers/userControllers.js';
 import { authenticate } from "../middleware/auth.js";
 import { authorize } from "../middleware/authorize.js";
-import { authRateLimiter } from "../middleware/rateLimiter.js";
+import { authRateLimiter, passwordResetRateLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
 router.post("/auth/login", authRateLimiter, userControllers.loginController);
 router.post("/auth/refresh", authRateLimiter, userControllers.refreshController);
 router.post("/auth/logout", authenticate, userControllers.logoutController);
+
+// Password reset (public — no authentication required)
+router.post("/auth/forgot-password", passwordResetRateLimiter, userControllers.forgotPasswordController);
+router.post("/auth/reset-password", passwordResetRateLimiter, userControllers.resetPasswordController);
 
 // Super Admin only routes
 router.post("/users", authenticate, authorize(["superadmin"]), userControllers.createStaffController);

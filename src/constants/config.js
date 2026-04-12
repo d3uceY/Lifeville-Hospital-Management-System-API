@@ -30,6 +30,17 @@ const config = {
     frontend: process.env.FRONTEND || "http://localhost:5173",
     production: process.env.PRODUCTION === "true",
   },
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+  },
+  passwordReset: {
+    tokenExpiryMs: parseInt(process.env.PASSWORD_RESET_EXPIRY_MS) || 60 * 60 * 1000, // 1 hour default
+  },
   ai: {
     groqApiKey: process.env.GROQ_API_KEY,
   },
