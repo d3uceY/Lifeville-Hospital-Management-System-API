@@ -110,6 +110,20 @@ export async function addItem({
     invoiceId = invoice.id;
   }
 
+  // Block modifications once any payment has been made
+  const [inv] = await db.select({ status: invoices.status }).from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
+  if (!inv) {
+    const err = new Error("Invoice not found.");
+    err.status = 404;
+    throw err;
+  }
+  const LOCKED_STATUSES = [INVOICE_STATUSES.PAID, INVOICE_STATUSES.PARTIAL, INVOICE_STATUSES.CANCELLED];
+  if (LOCKED_STATUSES.includes(inv.status)) {
+    const err = new Error(`Cannot add items to a ${inv.status} invoice.`);
+    err.status = 409;
+    throw err;
+  }
+
   const [item] = await db
     .insert(billItems)
     .values({
@@ -136,6 +150,20 @@ export async function addItem({
  * Returns the deleted row, or null if not found.
  */
 export async function deleteBillItem(itemId) {
+  // Fetch the item first so we can check its invoice status
+  const [item] = await db.select({ invoiceId: billItems.invoiceId }).from(billItems).where(eq(billItems.id, itemId)).limit(1);
+  if (!item) return null;
+
+  if (item.invoiceId) {
+    const [inv] = await db.select({ status: invoices.status }).from(invoices).where(eq(invoices.id, item.invoiceId)).limit(1);
+    const LOCKED_STATUSES = [INVOICE_STATUSES.PAID, INVOICE_STATUSES.PARTIAL, INVOICE_STATUSES.CANCELLED];
+    if (inv && LOCKED_STATUSES.includes(inv.status)) {
+      const err = new Error(`Cannot remove items from a ${inv.status} invoice.`);
+      err.status = 409;
+      throw err;
+    }
+  }
+
   const [deleted] = await db
     .delete(billItems)
     .where(eq(billItems.id, itemId))
@@ -396,6 +424,24 @@ async function computeInvoiceTotal(invoiceId, invoiceRow = null) {
  * @returns {Promise<object>} The inserted payment row
  */
 export async function recordPayment({ invoiceId, amount, paymentMethod = "cash", notes = null, createdBy = null }) {
+  // Cancelled invoices cannot receive payments
+  const [inv] = await db.select({ status: invoices.status }).from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
+  if (!inv) {
+    const err = new Error("Invoice not found.");
+    err.status = 404;
+    throw err;
+  }
+  if (inv.status === INVOICE_STATUSES.CANCELLED) {
+    const err = new Error("Cannot record a payment against a cancelled invoice.");
+    err.status = 409;
+    throw err;
+  }
+  if (inv.status === INVOICE_STATUSES.PAID) {
+    const err = new Error("This invoice is already fully paid.");
+    err.status = 409;
+    throw err;
+  }
+
   const [payment] = await db
     .insert(billingPayments)
     .values({ invoiceId, amount: String(amount), paymentMethod, notes, createdBy })

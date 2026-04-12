@@ -333,6 +333,16 @@ export const updateBillPayment = async (billId, {
     updatedBy,
     notes
 }) => {
+    // Fetch current status first
+    const { rows: current } = await query(`SELECT status FROM bills WHERE id = $1`, [billId]);
+    if (current.length === 0) return null;
+
+    const currentStatus = current[0].status;
+    if (currentStatus === "paid" || currentStatus === "cancelled") {
+        const err = new Error(`Cannot modify a ${currentStatus} bill.`);
+        err.status = 409;
+        throw err;
+    }
 
     const { rows } = await query(
         `
@@ -351,9 +361,5 @@ export const updateBillPayment = async (billId, {
         [status, amountPaid, paymentMethod, paymentDate, updatedBy, notes, billId]
     );
 
-    if (rows.length === 0) {
-        return null; // No bill found with that ID
-    }
-
-    return rows[0];
+    return rows[0] ?? null;
 };
