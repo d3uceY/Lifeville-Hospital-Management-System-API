@@ -1,12 +1,21 @@
 
 import { v2 as cloudinary } from 'cloudinary';
-import config from '../constants/config.js';
+import { getStorageRaw } from '../services/settingsService.js';
 
-cloudinary.config({
-  cloud_name: config.cloudinary.cloudName,
-  api_key: config.cloudinary.apiKey,
-  api_secret: config.cloudinary.apiSecret,
-});
+export async function applyStorageConfig() {
+  try {
+    const row = await getStorageRaw();
+    if (row?.cloud_name && row?.api_key && row?.api_secret) {
+      cloudinary.config({
+        cloud_name: row.cloud_name,
+        api_key: row.api_key,
+        api_secret: row.api_secret,
+      });
+    }
+  } catch (e) {
+    console.error("Failed to load storage config from DB:", e.message);
+  }
+}
 
 export default cloudinary;
  

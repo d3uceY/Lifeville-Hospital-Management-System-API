@@ -1,4 +1,6 @@
 import * as settings from "../services/settingsService.js";
+import { invalidateEmailTransport } from "../lib/emailService.js";
+import { applyStorageConfig } from "../lib/cloudinary-config.js";
 
 const ok  = (res, data)    => res.status(200).json({ success: true, data });
 const err = (res, e, msg)  => {
@@ -21,6 +23,9 @@ export async function getAllSettingsController(_req, res) {
 export async function updateAllSettingsController(req, res) {
   try {
     const updated = await settings.updateAllSettings(req.body);
+    // Always refresh transports so any email/storage changes take effect immediately
+    invalidateEmailTransport();
+    await applyStorageConfig();
     return ok(res, updated);
   } catch (e) {
     if (e.message?.startsWith("Unknown currency")) {
@@ -121,5 +126,45 @@ export async function upsertDocumentsController(req, res) {
     return ok(res, await settings.upsertDocuments(req.body));
   } catch (e) {
     return err(res, e, "Failed to save document settings");
+  }
+}
+
+// ─── Email ────────────────────────────────────────────────────────────────────
+
+export async function getEmailController(_req, res) {
+  try {
+    return ok(res, await settings.getEmail());
+  } catch (e) {
+    return err(res, e, "Failed to fetch email settings");
+  }
+}
+
+export async function upsertEmailController(req, res) {
+  try {
+    const data = await settings.upsertEmail(req.body);
+    invalidateEmailTransport();
+    return ok(res, data);
+  } catch (e) {
+    return err(res, e, "Failed to save email settings");
+  }
+}
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+
+export async function getStorageController(_req, res) {
+  try {
+    return ok(res, await settings.getStorage());
+  } catch (e) {
+    return err(res, e, "Failed to fetch storage settings");
+  }
+}
+
+export async function upsertStorageController(req, res) {
+  try {
+    const data = await settings.upsertStorage(req.body);
+    await applyStorageConfig();
+    return ok(res, data);
+  } catch (e) {
+    return err(res, e, "Failed to save storage settings");
   }
 }

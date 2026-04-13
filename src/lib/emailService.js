@@ -6,21 +6,28 @@
  */
 
 import nodemailer from "nodemailer";
-import config from "../constants/config.js";
-import { getAllSettings } from "../services/settingsService.js";
+import { getAllSettings, getEmailRaw } from "../services/settingsService.js";
 
 // ─── Transport ────────────────────────────────────────────────────────────────
 
 let _transport = null;
 
-function getTransport() {
+/** Call after saving email settings to force a fresh transport on next use. */
+export function invalidateEmailTransport() { _transport = null; }
+
+async function getTransport() {
   if (_transport) return _transport;
 
-  const { host, port, secure, user, pass } = config.smtp;
+  const emailRow = await getEmailRaw();
+  const host   = emailRow?.smtp_host;
+  const port   = emailRow?.smtp_port;
+  const secure = emailRow?.smtp_secure;
+  const user   = emailRow?.smtp_user;
+  const pass   = emailRow?.smtp_pass;
 
   if (!host || !user || !pass) {
     throw new Error(
-      "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in your .env file."
+      "SMTP is not configured. Set SMTP settings in the admin panel (Settings → Email)"
     );
   }
 
@@ -137,9 +144,13 @@ export async function sendPasswordResetEmail({ toEmail, toName, resetUrl }) {
     expiryMinutes,
   });
 
-  const fromAddress = config.smtp.from || `"${hospitalName}" <${config.smtp.user}>`;
+  const emailRow = await getEmailRaw();
+  const fromAddress =
+    emailRow?.smtp_from ||
+    `"${hospitalName}" <${emailRow?.smtp_user}>`;
 
-  await getTransport().sendMail({
+  const transport = await getTransport();
+  await transport.sendMail({
     from: fromAddress,
     to: `"${toName}" <${toEmail}>`,
     subject: `Reset your ${hospitalName} password`,

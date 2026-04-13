@@ -787,5 +787,6 @@ export const settingsStorage = pgTable("settings_storage", {
 	cloudName: varchar("cloud_name", { length: 255 }),
 	apiKey: varchar("api_key", { length: 255 }),
 	apiSecret: text("api_secret"),
+	folderName: varchar("folder_name", { length: 255 }),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
