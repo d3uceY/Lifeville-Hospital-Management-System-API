@@ -32,7 +32,7 @@ export async function uploadToCloudinary(fileBuffer, folder, type = 'default') {
             break;
     }
 
-    const sharpPipeline = sharp(fileBuffer).jpeg({ quality: 70 });
+    const sharpPipeline = sharp(fileBuffer).jpeg({ quality: 80 });
     if (imageSpec) sharpPipeline.resize(imageSpec);
     const optimizedBuffer = await sharpPipeline.toBuffer();
 
