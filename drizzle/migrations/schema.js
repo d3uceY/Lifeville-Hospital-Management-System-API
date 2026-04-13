@@ -7,7 +7,19 @@ export const billingTypeEnum = pgEnum("billing_type_enum", ["credit", "pay_now"]
 
 export const genderEnum = pgEnum("gender_enum", ['Male', 'Female', 'Other'])
 export const patientTypeEnum = pgEnum("patient_type_enum", ['INPATIENT', 'OUTPATIENT', 'NULL'])
+export const mediaTypeEnum = pgEnum("media_type_enum", ['local', 'cloud'])
 
+
+// ── Media Content ─────────────────────────────────────────────────────────────
+export const mediaContent = pgTable("media_content", {
+	id: serial().primaryKey().notNull(),
+	key: varchar({ length: 500 }).notNull(),
+	url: text().notNull(),
+	metadata: jsonb(),
+	type: mediaTypeEnum().notNull().default('cloud'),
+	contentType: varchar("content_type", { length: 100 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+});
 
 export const roles = pgTable("roles", {
 	id: serial().primaryKey().notNull(),
@@ -48,7 +60,13 @@ export const patients = pgTable("patients", {
 	surname: varchar({ length: 255 }),
 	patientType: patientTypeEnum("patient_type"),
 	isInpatient: boolean("is_inpatient").default(false).notNull(),
+	mediaId: integer("media_id"),
 }, (table) => [
+	foreignKey({
+			columns: [table.mediaId],
+			foreignColumns: [mediaContent.id],
+			name: "patients_media_id_fkey"
+		}).onDelete("set null"),
 	index("idx_patients_hospital_number").using("btree", table.hospitalNumber.asc().nullsLast().op("int4_ops")),
 	index("idx_patients_name").using("btree", table.surname.asc().nullsLast().op("text_ops"), table.firstName.asc().nullsLast().op("text_ops")),
 	index("idx_patients_name_trgm").using("gin", table.surname.asc().nullsLast().op("gin_trgm_ops")),
@@ -232,6 +250,7 @@ export const users = pgTable("users", {
 	isDeleted: boolean("is_deleted").default(false).notNull(),
 	resetToken: text("reset_token"),
 	resetTokenExpiry: timestamp("reset_token_expiry", { mode: 'string' }),
+	mediaId: integer("media_id"),
 }, (table) => [
 	index("idx_users_name").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("idx_users_name_trgm").using("gin", table.name.asc().nullsLast().op("gin_trgm_ops")),
@@ -245,6 +264,11 @@ export const users = pgTable("users", {
 			columns: [table.roleId],
 			foreignColumns: [roles.id],
 			name: "users_role_id_fkey"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.mediaId],
+			foreignColumns: [mediaContent.id],
+			name: "users_media_id_fkey"
 		}).onDelete("set null"),
 	unique("users_email_key").on(table.email),
 ]);
