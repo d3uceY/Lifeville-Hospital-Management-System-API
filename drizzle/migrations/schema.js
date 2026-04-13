@@ -769,3 +769,23 @@ export const settingsDocuments = pgTable("settings_documents", {
 	showHospitalHeader: boolean("show_hospital_header").notNull().default(true),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
+
+export const settingsEmail = pgTable("settings_email", {
+	id: integer().primaryKey().default(1).notNull(),
+	smtpHost: varchar("smtp_host", { length: 255 }),
+	smtpPort: integer("smtp_port").default(587),
+	smtpSecure: boolean("smtp_secure").notNull().default(true),
+	smtpUser: varchar("smtp_user", { length: 255 }),
+	smtpPass: text("smtp_pass"),
+	smtpFrom: varchar("smtp_from", { length: 255 }),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
+
+export const settingsStorage = pgTable("settings_storage", {
+	id: integer().primaryKey().default(1).notNull(),
+	provider: varchar({ length: 50 }).notNull().default("cloudinary"),
+	cloudName: varchar("cloud_name", { length: 255 }),
+	apiKey: varchar("api_key", { length: 255 }),
+	apiSecret: text("api_secret"),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
+});
