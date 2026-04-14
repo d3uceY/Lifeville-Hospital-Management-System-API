@@ -27,7 +27,6 @@ const FRONTEND = config.app.frontend;
 const allowedOrigins = [
   FRONTEND,
   "http://localhost:5173",
-  "http://10.101.159.69:5173"
 ];
 
 app.use(
