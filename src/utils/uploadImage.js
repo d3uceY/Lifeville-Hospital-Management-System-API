@@ -16,6 +16,7 @@ import sharp from "sharp";
  */
 export async function uploadToCloudinary(fileBuffer, folder, type = 'default') {
     let imageSpec = {};
+    let quality = 80; // Default quality for JPEG compression
 
     switch (type) {
         case "lab-doc":
@@ -23,16 +24,18 @@ export async function uploadToCloudinary(fileBuffer, folder, type = 'default') {
             break;
         case "avatar":
             imageSpec = { width: 256, height: 256, fit: "cover" };
+            quality = 70; // Higher quality for avatars to preserve details
             break;
         case "patient-photo":
             imageSpec = { width: 400, height: 400, fit: "cover" };
+            quality = 70
             break;
         default:
             imageSpec = { width: 1200, height: 800, fit: "inside" };
             break;
     }
 
-    const sharpPipeline = sharp(fileBuffer).jpeg({ quality: 80 });
+    const sharpPipeline = sharp(fileBuffer).jpeg({ quality });
     if (imageSpec) sharpPipeline.resize(imageSpec);
     const optimizedBuffer = await sharpPipeline.toBuffer();
 

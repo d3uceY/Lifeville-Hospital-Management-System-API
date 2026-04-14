@@ -21,7 +21,7 @@ const deleteImage = async (image) => {
         return { success: true };
     } catch (error) {
         console.error('Error deleting image:', error);
-        throw error;
+        // throw error;
     }
 };
 
