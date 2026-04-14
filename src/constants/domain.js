@@ -60,3 +60,10 @@ export const INVOICE_STATUSES = {
   OVERDUE:   "overdue",   // past due, unpaid
   CANCELLED: "cancelled",
 };
+
+// ─── Cloudinary upload subfolders ────────────────────────────────────────────
+export const UPLOAD_SUBFOLDERS = {
+  LAB_DOCS:        "lab-test-docs",
+  PATIENT_PROFILE: "patient-profiles",
+  USER_PROFILE:    "user-profiles",
+};

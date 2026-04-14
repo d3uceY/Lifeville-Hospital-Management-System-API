@@ -4,7 +4,7 @@ import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "driz
 import { uploadToCloudinary } from "../utils/uploadImage.js";
 import deleteImage from "../utils/deleteImage.js";
 import * as billingService from "./billingService.js";
-import { SERVICE_CATEGORIES } from "../constants/domain.js";
+import { SERVICE_CATEGORIES, UPLOAD_SUBFOLDERS } from "../constants/domain.js";
 import { getAllSettings } from "./settingsService.js";
 
 /** Returns all lab tests from the database.
@@ -162,7 +162,7 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     imageUrls = [];
     const storageRow = (await getAllSettings()).storage;
     const baseFolder = storageRow?.folder_name;
-    const uploadFolder = baseFolder ? `${baseFolder}/lab-test-docs` : 'lab-test-docs';
+    const uploadFolder = baseFolder ? `${baseFolder}/${UPLOAD_SUBFOLDERS.LAB_DOCS}` : UPLOAD_SUBFOLDERS.LAB_DOCS;
     for (const file of files) {
       try {
         const uploadedUrl = await uploadToCloudinary(file.buffer, uploadFolder, 'lab-doc');
