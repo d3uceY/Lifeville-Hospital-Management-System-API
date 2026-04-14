@@ -144,6 +144,76 @@ export async function upsertDocuments({ labReportFooter, printFooterText, showHo
   return rows[0];
 }
 
+// ─── Email (SMTP) ─────────────────────────────────────────────────────────────
+
+/** Internal — returns the full row including smtp_pass (never expose to API). */
+export async function getEmailRaw() {
+  const { rows } = await query(`SELECT * FROM settings_email WHERE id = 1`);
+  return rows[0] ?? null;
+}
+
+/** Public — returns smtp settings with smtp_pass replaced by a boolean. */
+export async function getEmail() {
+  const row = await getEmailRaw();
+  if (!row) return null;
+  const { smtp_pass, ...rest } = row;
+  return { ...rest, has_smtp_pass: !!(smtp_pass) };
+}
+
+export async function upsertEmail({ smtpHost, smtpPort, smtpSecure, smtpUser, smtpPass, smtpFrom }) {
+  const { rows } = await query(
+    `INSERT INTO settings_email (id, smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, updated_at)
+     VALUES (1, $1, $2, $3, $4, $5, $6, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       smtp_host   = EXCLUDED.smtp_host,
+       smtp_port   = EXCLUDED.smtp_port,
+       smtp_secure = EXCLUDED.smtp_secure,
+       smtp_user   = EXCLUDED.smtp_user,
+       smtp_pass   = COALESCE(EXCLUDED.smtp_pass, settings_email.smtp_pass),
+       smtp_from   = EXCLUDED.smtp_from,
+       updated_at  = NOW()
+     RETURNING id, smtp_host, smtp_port, smtp_secure, smtp_user, smtp_from, updated_at,
+               (smtp_pass IS NOT NULL AND smtp_pass <> '') AS has_smtp_pass`,
+    [smtpHost ?? null, parseInt(smtpPort) || 587, smtpSecure ?? false, smtpUser ?? null, smtpPass ?? null, smtpFrom ?? null]
+  );
+  return rows[0];
+}
+
+// ─── Storage (Cloudinary) ─────────────────────────────────────────────────────
+
+/** Internal — returns the full row including api_key/api_secret (never expose to API). */
+export async function getStorageRaw() {
+  const { rows } = await query(`SELECT * FROM settings_storage WHERE id = 1`);
+  return rows[0] ?? null;
+}
+
+/** Public — returns storage settings with secrets replaced by booleans. */
+export async function getStorage() {
+  const row = await getStorageRaw();
+  if (!row) return null;
+  const { api_key, api_secret, ...rest } = row;
+  return { ...rest, has_api_key: !!(api_key), has_api_secret: !!(api_secret) };
+}
+
+export async function upsertStorage({ cloudName, apiKey, apiSecret, folderName }) {
+  const { rows } = await query(
+    `INSERT INTO settings_storage (id, provider, cloud_name, api_key, api_secret, folder_name, updated_at)
+     VALUES (1, 'cloudinary', $1, $2, $3, $4, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       provider    = 'cloudinary',
+       cloud_name  = EXCLUDED.cloud_name,
+       api_key     = COALESCE(EXCLUDED.api_key, settings_storage.api_key),
+       api_secret  = COALESCE(EXCLUDED.api_secret, settings_storage.api_secret),
+       folder_name = EXCLUDED.folder_name,
+       updated_at  = NOW()
+     RETURNING id, provider, cloud_name, folder_name, updated_at,
+               (api_key IS NOT NULL AND api_key <> '') AS has_api_key,
+               (api_secret IS NOT NULL AND api_secret <> '') AS has_api_secret`,
+    [cloudName ?? null, apiKey ?? null, apiSecret ?? null, folderName ?? null]
+  );
+  return rows[0];
+}
+
 // ─── All settings (combined GET) ─────────────────────────────────────────────
 
 let settingsCache = null;
@@ -153,14 +223,16 @@ export const invalidateSettingsCache = () => { settingsCache = null; };
 export async function getAllSettings() {
   if (settingsCache) return settingsCache;
 
-  const [hospitalInfo, contact, prefixes, billing, documents] = await Promise.all([
+  const [hospitalInfo, contact, prefixes, billing, documents, email, storage] = await Promise.all([
     getHospitalInfo(),
     getContact(),
     getPrefixes(),
     getBilling(),
     getDocuments(),
+    getEmail(),
+    getStorage(),
   ]);
-  settingsCache = { hospitalInfo, contact, prefixes, billing, documents };
+  settingsCache = { hospitalInfo, contact, prefixes, billing, documents, email, storage };
   return settingsCache;
 }
 
@@ -175,6 +247,8 @@ const PREFIXES_KEYS      = new Set([
 ]);
 const BILLING_KEYS       = new Set(["currencyCode", "currencySymbolPosition"]);
 const DOCUMENTS_KEYS     = new Set(["labReportFooter", "printFooterText", "showHospitalHeader"]);
+const EMAIL_KEYS         = new Set(["smtpHost", "smtpPort", "smtpSecure", "smtpUser", "smtpPass", "smtpFrom"]);
+const STORAGE_KEYS       = new Set(["cloudName", "apiKey", "apiSecret", "folderName"]);
 
 function pickKeys(payload, keySet) {
   const picked = {};
@@ -231,6 +305,24 @@ export async function updateAllSettings(payload) {
     tasks.push(
       upsertDocuments({ ...existing, ...documentsData })
         .then(r => { results.documents = r; })
+    );
+  }
+
+  const emailData = pickKeys(payload, EMAIL_KEYS);
+  if (emailData) {
+    const existing = await getEmail();
+    tasks.push(
+      upsertEmail({ ...existing, ...emailData })
+        .then(r => { results.email = r; })
+    );
+  }
+
+  const storageData = pickKeys(payload, STORAGE_KEYS);
+  if (storageData) {
+    const existing = await getStorage();
+    tasks.push(
+      upsertStorage({ ...existing, ...storageData })
+        .then(r => { results.storage = r; })
     );
   }
 

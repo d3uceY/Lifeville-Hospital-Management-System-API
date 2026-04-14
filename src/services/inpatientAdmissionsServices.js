@@ -540,12 +540,21 @@ export const getDischargeSummaryByAdmissionId = async (admissionId) => {
     .where(eq(dischargeSummary.admissionId, admissionId));
 
   return result.map(row => {
-    const icdEntry = row.final_diagnosis ? lookupByCode(row.final_diagnosis) : null;
-    return {
-      ...row,
-      final_diagnosis: icdEntry
-        ? `${icdEntry.code} — ${icdEntry.description}`
-        : row.final_diagnosis,
-    };
+    const diagObj = row.final_diagnosis;
+    let diagLabel = row.final_diagnosis;
+
+    if (diagObj && typeof diagObj === 'object' && !Array.isArray(diagObj)) {
+      diagLabel = Object.keys(diagObj)
+        .map(code => {
+          const entry = lookupByCode(code);
+          return entry ? `${entry.code} — ${entry.description}` : code;
+        })
+        .join(', ');
+    } else if (typeof diagObj === 'string') {
+      const entry = lookupByCode(diagObj);
+      if (entry) diagLabel = `${entry.code} — ${entry.description}`;
+    }
+
+    return { ...row, final_diagnosis: diagLabel };
   });
 }

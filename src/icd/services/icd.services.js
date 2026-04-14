@@ -63,5 +63,6 @@ export function searchICD(q) {
 }
 
 export function lookupByCode(code) {
+  if (typeof code !== 'string') return null;
   return icdMap[code.toUpperCase()] ?? null;
 }

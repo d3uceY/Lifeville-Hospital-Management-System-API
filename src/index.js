@@ -6,6 +6,7 @@ import { runBillingMigration, seedDrugServices } from "../migrate.js";
 import { loadICD } from "./icd/services/icd.services.js";
 import apiRoutes from "./routes/index.js";
 import { startJobs } from "./jobs/index.js";
+import { applyStorageConfig } from "./lib/cloudinary-config.js";
 
 import cookieParser from 'cookie-parser';
 
@@ -66,6 +67,7 @@ app.use("/", apiRoutes);
 // seed superadmin then start listening on the HTTP server
 runBillingMigration().then(() => seedDrugServices()).then(() => seedSuperAdmin()).then(async () => {
   loadICD();
+  await applyStorageConfig();
   await startJobs(io);
   httpServer.listen(port, '0.0.0.0', () =>
     console.log(`Server + Socket.IO running on port ${port}`)
