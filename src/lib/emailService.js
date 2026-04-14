@@ -6,6 +6,7 @@
  */
 
 import nodemailer from "nodemailer";
+import config from "../constants/config.js";
 import { getAllSettings, getEmailRaw } from "../services/settingsService.js";
 
 // ─── Transport ────────────────────────────────────────────────────────────────
