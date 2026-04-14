@@ -1,6 +1,6 @@
 // drizzlePatients.js
 import { db } from "../../drizzle-db.js";
-import { patients } from "../../drizzle/migrations/schema.js";
+import { patients, mediaContent } from "../../drizzle/migrations/schema.js";
 import { desc, eq } from "drizzle-orm";
 
 // ─── In-memory cache ───────────────────────────────────────────────────────
@@ -141,14 +141,47 @@ export const createPatient = async (patientData) => {
 };
 
 
-/** Fetches all columns for a single patient by ID.
+/** Fetches all columns for a single patient by ID, plus the profile image URL if one exists.
  * @param {number} patientId
  * @returns {Promise<object>}
  */
 export const viewPatient = async (patientId) => {
   const [patient] = await db
-    .select()
+    .select({
+      patientId: patients.patientId,
+      date: patients.date,
+      hospitalNumber: patients.hospitalNumber,
+      firstName: patients.firstName,
+      otherNames: patients.otherNames,
+      sex: patients.sex,
+      maritalStatus: patients.maritalStatus,
+      dateOfBirth: patients.dateOfBirth,
+      phoneNumber: patients.phoneNumber,
+      address: patients.address,
+      occupation: patients.occupation,
+      placeOfWorkAddress: patients.placeOfWorkAddress,
+      religion: patients.religion,
+      nationality: patients.nationality,
+      nextOfKin: patients.nextOfKin,
+      relationship: patients.relationship,
+      nextOfKinPhone: patients.nextOfKinPhone,
+      nextOfKinAddress: patients.nextOfKinAddress,
+      pastSurgicalHistory: patients.pastSurgicalHistory,
+      familyHistory: patients.familyHistory,
+      socialHistory: patients.socialHistory,
+      drugHistory: patients.drugHistory,
+      allergies: patients.allergies,
+      dietaryRestrictions: patients.dietaryRestrictions,
+      dietAllergiesToDrugs: patients.dietAllergiesToDrugs,
+      pastMedicalHistory: patients.pastMedicalHistory,
+      surname: patients.surname,
+      patientType: patients.patientType,
+      isInpatient: patients.isInpatient,
+      mediaId: patients.mediaId,
+      profileImageUrl: mediaContent.url,
+    })
     .from(patients)
+    .leftJoin(mediaContent, eq(patients.mediaId, mediaContent.id))
     .where(eq(patients.patientId, patientId));
 
   return patient;
