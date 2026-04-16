@@ -1,6 +1,7 @@
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as patientServices from "../services/patientServices.js";
+import * as patientImageService from "../services/patientImageService.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
 
@@ -167,5 +168,53 @@ export const deletePatient = async (req, res) => {
       message: "internal server error",
       err,
     });
+  }
+};
+
+export const uploadPatientProfileImage = async (req, res) => {
+  try {
+    const patientId = Number(req.params.id);
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    const mediaRecord = await patientImageService.upsertPatientProfileImage(
+      patientId,
+      req.file.buffer,
+      req.file.mimetype
+    );
+
+    res.status(200).json({ mediaRecord, message: "Profile image uploaded successfully" });
+  } catch (err) {
+    console.error("error uploading patient profile image:", err);
+
+    if (err.code === "PATIENT_NOT_FOUND") {
+      return res.status(404).json({ message: err.message });
+    }
+
+    res.status(500).json({ message: "internal server error" });
+  }
+};
+
+export const deletePatientProfileImage = async (req, res) => {
+  try {
+    const patientId = Number(req.params.id);
+
+    await patientImageService.deletePatientProfileImage(patientId);
+
+    res.status(200).json({ message: "Profile image deleted successfully" });
+  } catch (err) {
+    console.error("error deleting patient profile image:", err);
+
+    if (err.code === "PATIENT_NOT_FOUND") {
+      return res.status(404).json({ message: err.message });
+    }
+
+    if (err.code === "NO_PROFILE_IMAGE") {
+      return res.status(404).json({ message: err.message });
+    }
+
+    res.status(500).json({ message: "internal server error" });
   }
 };
