@@ -54,16 +54,16 @@ export const updateLabTest = async (req, res) => {
             const data = {
                 first_name: labTest.first_name,
                 surname: labTest.surname,
-                patient_id: labTest.patient_id,
+                patient_id: labTest.patientId,
                 status: labTest.status,
-                test_type: labTest.test_type,
+                test_type: Array.isArray(labTest.testType) ? labTest.testType.join(", ") : labTest.testType,
                 priority: priorityLevels.normal,
             }
             await addNotification({
                 recipientRoles: NOTIFICATION_ROLES.LAB,
                 type: NOTIFICATION_TYPES.LAB_TEST,
                 title: "Lab Test Updated",
-                message: `Lab test on ${formatDate(labTest.updated_at)} has been updated to ${labTest.status}`,
+                message: `Lab test on ${formatDate(labTest.updatedAt)} has been updated to ${labTest.status}`,
                 data,
             });
 
@@ -110,16 +110,16 @@ export async function createLabTest(req, res) {
             const data = {
                 first_name: labTest.first_name,
                 surname: labTest.surname,
-                patient_id: labTest.patient_id,
+                patient_id: labTest.patientId,
                 status: labTest.status,
-                test_type: labTest.test_type,
+                test_type: Array.isArray(labTest.testType) ? labTest.testType.join(", ") : labTest.testType,
                 priority: priorityLevels.normal,
             }
             await addNotification({
                 recipientRoles: NOTIFICATION_ROLES.LAB,
                 type: NOTIFICATION_TYPES.LAB_TEST,
                 title: "Lab Test Created",
-                message: `Lab test ${labTest.test_type} prescribed by ${labTest.prescribed_by} created on ${formatDate(labTest.created_at)}`,
+                message: `Lab test ${Array.isArray(labTest.testType) ? labTest.testType.join(", ") : labTest.testType} prescribed by ${labTest.prescribedBy} created on ${formatDate(labTest.createdAt)}`,
                 data,
             });
 

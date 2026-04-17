@@ -18,14 +18,14 @@ export const createPatientVisit = async (req, res) => {
             const data = {
                 first_name: patientVisit.first_name,
                 surname: patientVisit.surname,
-                patient_id: patientVisit.patient_id,
+                patient_id: patientVisit.patientId,
                 priority: priorityLevels.normal,
             }
             await addNotification({
                 recipientRoles: NOTIFICATION_ROLES.VISIT,
                 type: NOTIFICATION_TYPES.PATIENT_VISIT,
                 title: "Patient Visit Created",
-                message: `Patient visit on ${formatDate(patientVisit.check_in_time)} has been created`,
+                message: `Patient visit on ${formatDate(patientVisit.checkInTime)} has been created`,
                 data,
             });
 

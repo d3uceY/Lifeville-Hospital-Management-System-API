@@ -59,7 +59,7 @@ export const createInpatientAdmission = async (req, res) => {
       const data = {
         first_name: newAdmission.firstName,
         surname: newAdmission.surname,
-        patient_id: newAdmission.patient_id,
+        patient_id: newAdmission.patientId,
         priority: priorityLevels.normal,
       }
       await addNotification({
@@ -163,16 +163,16 @@ export const dischargeInpatientAdmission = async (req, res) => {
 
       // Jsonb data
       const data = {
-        first_name: discharged.first_name,
+        first_name: discharged.firstName,
         surname: discharged.surname,
-        patient_id: discharged.patient_id,
+        patient_id: discharged.patientId,
         priority: priorityLevels.normal,
       }
       await addNotification({
         recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
         type: NOTIFICATION_TYPES.INPATIENT_DISCHARGED,
         title: "Patient Discharged",
-        message: `Patient ${discharged.first_name} ${discharged.surname} has been discharged`,
+        message: `Patient ${discharged.firstName} ${discharged.surname} has been discharged`,
         data,
       });
 
