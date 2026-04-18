@@ -99,6 +99,13 @@
       "when": 1776118474538,
       "tag": "0013_solid_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776510541530,
+      "tag": "0014_hot_black_bird",
+      "breakpoints": true
     }
   ]
 }
