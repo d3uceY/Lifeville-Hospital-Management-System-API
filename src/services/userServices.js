@@ -70,9 +70,9 @@ function signRefresh(userId, jti) {
 export async function login({ email, password }) {
     const { rows } = await query(`SELECT name, id, password_hash, created_at, is_active, role FROM users WHERE email = $1 AND is_deleted = false`, [email.toLowerCase()]);
     const user = rows[0];
-    // check if user is enabled
+    // if user does not exist
     if (!user || !user.is_active) {
-        await bcrypt.compare(password, user.password_hash)
+        await bcrypt.compare(password, "$2a$12$invalidsaltinvalidsaltinv") // dummy compare to mitigate timing attacks
         const err = new Error("Invalid credentials");
         err.status = 401;
         throw err;
