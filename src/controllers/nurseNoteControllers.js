@@ -23,11 +23,12 @@ export const getNurseNotesByPatientId = async (req, res) => {
 // Create a new nurse's note
 export const createNurseNote = async (req, res) => {
   try {
-    const { patientId, note, recordedBy } = req.body;
+    const { patientId, note, recordedBy, visitInfo } = req.body;
     const newNote = await nurseNoteServices.createNurseNote({
       patientId,
       note,
       recordedBy,
+      visitInfo,
     });
 
     // Send notification
@@ -66,7 +67,7 @@ export const createNurseNote = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating nurse note:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(error.status || 500).json({ success: false, error: error.message, code: error.code });
   }
 };
 

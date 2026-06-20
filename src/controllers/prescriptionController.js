@@ -5,7 +5,7 @@ export const createPrescriptionController = async (req, res) => {
         const prescription = await prescriptionServices.createPrescription(req.body);
         res.status(201).json(prescription);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(error.status || 500).json({ error: error.message, code: error.code });
     }
 }
 

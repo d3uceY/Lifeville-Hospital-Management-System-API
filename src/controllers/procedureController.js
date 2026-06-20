@@ -5,7 +5,7 @@ export async function addProcedureController(req, res) {
         const procedure = await procedureServices.addProcedure(req.body);
         res.json(procedure);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(err.status || 500).json({ error: err.message, code: err.code });
     }
 }
 

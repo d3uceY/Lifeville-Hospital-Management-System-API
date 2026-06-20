@@ -1,7 +1,6 @@
 import { query } from "../../drizzle-db.js";
 import { db } from "../../drizzle-db.js";
-import { patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 
 /** Returns all doctor notes for a patient joined with patient name.
@@ -30,30 +29,13 @@ export const getDoctorNotesByPatientId = async (patientId) => {
 export const createDoctorNote = async (noteData) => {
     const { patientId, note, recordedBy } = noteData;
 
-    // Require an ongoing (not yet checked-out) visit
-    const [ongoingVisit] = await db
-        .select({ id: patientVisits.id })
-        .from(patientVisits)
-        .where(
-            and(
-                eq(patientVisits.patientId, patientId),
-                isNull(patientVisits.checkOutTime)
-            )
-        )
-        .orderBy(desc(patientVisits.checkInTime))
-        .limit(1);
-
-    if (!ongoingVisit) {
-        const err = new Error("No ongoing visit found for this patient. Please check in the patient before adding a doctor note.");
-        err.status = 400;
-        throw err;
-    }
+    const visit = await getOrCreateVisit(patientId, noteData.visitInfo ?? null);
 
     const result = await query(
         `INSERT INTO doctors_notes (patient_id, note, recorded_by, created_at, visit_id)
        VALUES ($1, $2, $3, NOW(), $4)
        RETURNING *;`,
-        [patientId, note, recordedBy, ongoingVisit.id]
+        [patientId, note, recordedBy, visit.id]
     );
 
     const doctorNote = result.rows[0];

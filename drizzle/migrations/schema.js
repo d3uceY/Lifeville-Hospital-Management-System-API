@@ -176,15 +176,6 @@ export const bills = pgTable("bills", {
 	unique("bills_bill_number_key").on(table.billNumber),
 ]);
 
-export const labTestTypes = pgTable("lab_test_types", {
-	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text(),
-	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
-}, (table) => [
-	unique("lab_test_types_name_key").on(table.name),
-]);
-
 export const symptomTypes = pgTable("symptom_types", {
 	symptomTypeId: serial("symptom_type_id").primaryKey().notNull(),
 	symptomText: text("symptom_text").notNull(),

@@ -1,7 +1,6 @@
 import { query } from "../../drizzle-db.js";
 import { db } from "../../drizzle-db.js";
-import { patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 /** Inserts a vital sign record and returns it enriched with patient details.
  * @param {object} vitalSignData
@@ -27,24 +26,7 @@ export const createVitalSign = async (vitalSignData) => {
     throw err;
   }
 
-  // Require an ongoing (not yet checked-out) visit
-  const [ongoingVisit] = await db
-    .select({ id: patientVisits.id })
-    .from(patientVisits)
-    .where(
-      and(
-        eq(patientVisits.patientId, patientId),
-        isNull(patientVisits.checkOutTime)
-      )
-    )
-    .orderBy(desc(patientVisits.checkInTime))
-    .limit(1);
-
-  if (!ongoingVisit) {
-    const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording vital signs.");
-    err.status = 400;
-    throw err;
-  }
+  const visit = await getOrCreateVisit(patientId, vitalSignData.visitInfo ?? null);
 
   const result = await query(
     `INSERT INTO vital_signs (
@@ -64,7 +46,7 @@ export const createVitalSign = async (vitalSignData) => {
       heartRate,
       spo2,
       recordedBy,
-      ongoingVisit.id,
+      visit.id,
     ]
   );
 

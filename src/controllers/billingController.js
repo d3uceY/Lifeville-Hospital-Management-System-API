@@ -109,10 +109,24 @@ export const recordPayment = async (req, res) => {
   }
 };
 
+// ─── GET /services/counts ─────────────────────────────────────────────────────
+export const getServiceCounts = async (req, res) => {
+  try {
+    const counts = await billingService.getServiceCounts();
+    res.status(200).json(counts);
+  } catch (err) {
+    console.error("getServiceCounts:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // ─── GET /services ────────────────────────────────────────────────────────────
+// Supports optional query params: page, pageSize, category, search
+// When pageSize is provided returns a pagination envelope; otherwise a flat array.
 export const getServices = async (req, res) => {
   try {
-    const list = await billingService.listServices();
+    const { page, pageSize, category, search } = req.query;
+    const list = await billingService.listServices({ page, pageSize, category, search });
     res.status(200).json(list);
   } catch (err) {
     console.error("getServices:", err);

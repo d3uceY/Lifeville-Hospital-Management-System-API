@@ -41,7 +41,7 @@ export const createPhysicalExamination = async (req, res) => {
     res.status(200).json({ physicalExamination, message: "Submitted Successfully" });
   } catch (err) {
     console.error("error creating physical examination:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
   }
 };
 

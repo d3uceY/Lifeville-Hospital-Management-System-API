@@ -61,6 +61,6 @@ export async function createComplaint(req, res) {
         res.json(complaint);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: `Failed to create complaint: ${error.message}` });
+        res.status(error.status || 500).json({ error: error.message, code: error.code });
     }
 }

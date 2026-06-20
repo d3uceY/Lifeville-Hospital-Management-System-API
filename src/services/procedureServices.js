@@ -1,29 +1,11 @@
 import { query } from "../../drizzle-db.js";
 import { db } from "../../drizzle-db.js";
-import { patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, desc, isNull, and } from "drizzle-orm";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
-export async function addProcedure({ patient_id, recorded_by, procedure_name, comments, performed_at, service_id = null, admission_id = null, visit_id = null }) {
-    // Require an ongoing (not yet checked-out) visit
-    const [ongoingVisit] = await db
-        .select({ id: patientVisits.id })
-        .from(patientVisits)
-        .where(
-            and(
-                eq(patientVisits.patientId, patient_id),
-                isNull(patientVisits.checkOutTime)
-            )
-        )
-        .orderBy(desc(patientVisits.checkInTime))
-        .limit(1);
-
-    if (!ongoingVisit) {
-        const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording a procedure.");
-        err.status = 400;
-        throw err;
-    }
+export async function addProcedure({ patient_id, recorded_by, procedure_name, comments, performed_at, service_id = null, admission_id = null, visit_id = null, visitInfo = null }) {
+    const visit = await getOrCreateVisit(patient_id, visitInfo);
 
     let unit_price = null;
     if (service_id) {
@@ -38,7 +20,7 @@ export async function addProcedure({ patient_id, recorded_by, procedure_name, co
         `INSERT INTO procedures (patient_id, recorded_by, procedure_name, comments, performed_at, service_id, unit_price, visit_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [patient_id, recorded_by, procedure_name, comments, performed_at, service_id, unit_price, ongoingVisit.id]
+        [patient_id, recorded_by, procedure_name, comments, performed_at, service_id, unit_price, visit.id]
     );
     const procedure = rows[0];
 

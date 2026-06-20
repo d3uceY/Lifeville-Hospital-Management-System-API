@@ -483,14 +483,67 @@ export async function recordPayment({ invoiceId, amount, paymentMethod = "cash",
 let servicesCache = null;
 const invalidateServicesCache = () => { servicesCache = null; };
 
-/** Returns all services ordered by category and name, using an in-memory cache.
- * @returns {Promise<object[]>}
+/**
+ * Lists services with optional category filter, ILIKE name search, and pagination.
+ *
+ * When `pageSize` is omitted the function returns a flat array of rows (backward
+ * compatible). When `pageSize` is provided it returns a pagination envelope:
+ *   { data, totalItems, totalPages, currentPage, pageSize }
+ *
+ * @param {{ page?: number, pageSize?: number, category?: string, search?: string }} opts
  */
-export async function listServices() {
-  if (servicesCache) return servicesCache;
-  const result = await db.select().from(services).orderBy(services.category, services.name);
-  servicesCache = result;
-  return result;
+export async function listServices({ page, pageSize, category, search } = {}) {
+  const conditions = [];
+  if (category && category.trim()) conditions.push(eq(services.category, category.trim()));
+  if (search && search.trim()) conditions.push(ilike(services.name, `%${search.trim()}%`));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // ── No pagination requested → return flat array (cache only when no filters) ──
+  if (!pageSize) {
+    if (where) {
+      return db.select().from(services).where(where).orderBy(services.category, services.name);
+    }
+    if (servicesCache) return servicesCache;
+    const result = await db.select().from(services).orderBy(services.category, services.name);
+    servicesCache = result;
+    return result;
+  }
+
+  // ── Paginated path ────────────────────────────────────────────────────────────
+  const pageNum = Math.max(1, Number(page) || 1);
+  const pageSizeNum = Math.max(1, Number(pageSize));
+  const offset = (pageNum - 1) * pageSizeNum;
+
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(services)
+    .where(where ?? sql`true`);
+
+  const totalItems = Number(total);
+  const totalPages = Math.ceil(totalItems / pageSizeNum) || 1;
+
+  const data = await db
+    .select()
+    .from(services)
+    .where(where ?? sql`true`)
+    .orderBy(services.category, services.name)
+    .limit(pageSizeNum)
+    .offset(offset);
+
+  return { data, totalItems, totalPages, currentPage: pageNum, pageSize: pageSizeNum };
+}
+
+/**
+ * Returns a map of { category → count } for every category present in services.
+ * Used by the Services page summary cards.
+ * @returns {Promise<Record<string, number>>}
+ */
+export async function getServiceCounts() {
+  const rows = await db
+    .select({ category: services.category, total: count() })
+    .from(services)
+    .groupBy(services.category);
+  return rows.reduce((acc, r) => { acc[r.category] = Number(r.total); return acc; }, {});
 }
 
 /**

@@ -45,11 +45,9 @@ export const createVitalSign = async (req, res) => {
       .json({ createdVitalSign, message: "Submitted Successfully" });
   } catch (err) {
     console.error("error creating vital sign:", err);
-    res.status(500).json({
-      message: "internal server error",
-    });
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
   }
-};
+}
 
 export const getVitalSignsByPatientId = async (req, res) => {
   try {

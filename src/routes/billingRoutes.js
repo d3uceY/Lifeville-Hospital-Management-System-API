@@ -19,6 +19,7 @@ router.delete("/billing/items/:id", authenticate, authorize([ROLES.SUPERADMIN, R
 router.post("/billing/payments", authenticate, authorize([ROLES.SUPERADMIN, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.ACCOUNTANT]), billingController.recordPayment);
 
 // Services (price catalog)
+router.get("/services/counts", authenticate, billingController.getServiceCounts);
 router.get("/services", authenticate, billingController.getServices);
 router.post("/services", authenticate, authorize([ROLES.SUPERADMIN, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.ACCOUNTANT]), billingController.createService);
 router.put("/services/:id", authenticate, authorize([ROLES.SUPERADMIN, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.ACCOUNTANT]), billingController.updateService);

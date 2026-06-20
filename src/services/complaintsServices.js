@@ -1,6 +1,7 @@
 import { db } from "../../drizzle-db.js";
-import { patients, complaints, patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { patients, complaints } from "../../drizzle/migrations/schema.js";
+import { eq, desc } from "drizzle-orm";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 // Get all complaints
 /** Returns all complaints from the database.
@@ -34,24 +35,7 @@ export const getComplaintsByPatientId = async (patientId) => {
  * @returns {Promise<object>}
  */
 export const createComplaint = async (complaint) => {
-    // Require an ongoing (not yet checked-out) visit
-    const [ongoingVisit] = await db
-        .select({ id: patientVisits.id })
-        .from(patientVisits)
-        .where(
-            and(
-                eq(patientVisits.patientId, complaint.patientId),
-                isNull(patientVisits.checkOutTime)
-            )
-        )
-        .orderBy(desc(patientVisits.checkInTime))
-        .limit(1);
-
-    if (!ongoingVisit) {
-        const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording a complaint.");
-        err.status = 400;
-        throw err;
-    }
+    const visit = await getOrCreateVisit(complaint.patientId, complaint.visitInfo ?? null);
 
     const [newComplaint] = await db
         .insert(complaints)
@@ -60,7 +44,7 @@ export const createComplaint = async (complaint) => {
             complaint: complaint.complaint,
             recordedBy: complaint.recordedBy,
             createdAt: new Date(),
-            visitId: ongoingVisit.id,
+            visitId: visit.id,
         })
         .returning();
 

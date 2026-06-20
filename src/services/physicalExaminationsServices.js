@@ -1,7 +1,8 @@
 import { query } from "../../drizzle-db.js";
 import { db } from "../../drizzle-db.js";
-import { physicalExaminations, patients, users, patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, ilike, desc, asc, count, or, sql, isNull, and } from "drizzle-orm";
+import { physicalExaminations, patients, users } from "../../drizzle/migrations/schema.js";
+import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 /** Inserts a full physical examination record and returns it enriched with patient details.
  * @param {object} examData
@@ -25,23 +26,7 @@ export const createPhysicalExamination = async (examData) => {
     } = examData;
 
     // Require an ongoing (not yet checked-out) visit
-    const [ongoingVisit] = await db
-        .select({ id: patientVisits.id })
-        .from(patientVisits)
-        .where(
-            and(
-                eq(patientVisits.patientId, patient_id),
-                isNull(patientVisits.checkOutTime)
-            )
-        )
-        .orderBy(desc(patientVisits.checkInTime))
-        .limit(1);
-
-    if (!ongoingVisit) {
-        const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording a physical examination.");
-        err.status = 400;
-        throw err;
-    }
+    const visit = await getOrCreateVisit(patient_id, examData.visitInfo ?? null);
 
     const { rows } = await query(
         `INSERT INTO physical_examinations (
@@ -77,7 +62,7 @@ export const createPhysicalExamination = async (examData) => {
             skin,
             findings,
             genitourinary,
-            ongoingVisit.id,
+            visit.id,
         ]
     );
 

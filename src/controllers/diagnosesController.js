@@ -46,7 +46,7 @@ export const createDiagnosis = async (req, res) => {
         res.status(201).json(diagnosis);
     } catch (error) {
         const statusCode = error.status || 500;
-        res.status(statusCode).json({ error: error.message });
+        res.status(statusCode).json({ error: error.message, code: error.code });
     }
 };
 

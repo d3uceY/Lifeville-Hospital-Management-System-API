@@ -138,7 +138,7 @@ export async function createLabTest(req, res) {
         res.json(labTest);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to create lab test" });
+        res.status(error.status || 500).json({ error: error.message, code: error.code });
     }
 }
 

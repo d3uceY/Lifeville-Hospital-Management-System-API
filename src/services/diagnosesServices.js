@@ -1,6 +1,7 @@
 import { db } from "../../drizzle-db.js";
-import { diagnoses, patients, patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { diagnoses, patients } from "../../drizzle/migrations/schema.js";
+import { eq, desc } from "drizzle-orm";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 /** Shared explicit snake_case select fields for diagnoses queries */
 const DIAGNOSES_SELECT = {
@@ -27,24 +28,7 @@ const DIAGNOSES_SELECT = {
 export async function createDiagnosis(diagnosisData) {
   const { patient_id, recorded_by, condition, notes } = diagnosisData;
 
-  // Require an ongoing (not yet checked-out) visit
-  const [ongoingVisit] = await db
-    .select({ id: patientVisits.id })
-    .from(patientVisits)
-    .where(
-      and(
-        eq(patientVisits.patientId, patient_id),
-        isNull(patientVisits.checkOutTime)
-      )
-    )
-    .orderBy(desc(patientVisits.checkInTime))
-    .limit(1);
-
-  if (!ongoingVisit) {
-    const err = new Error("No ongoing visit found for this patient. Please check in the patient before recording a diagnosis.");
-    err.status = 400;
-    throw err;
-  }
+  const visit = await getOrCreateVisit(patient_id, diagnosisData.visitInfo ?? null);
 
   const [newDiagnosis] = await db
     .insert(diagnoses)
@@ -53,7 +37,7 @@ export async function createDiagnosis(diagnosisData) {
       recordedBy: recorded_by,
       condition,
       notes,
-      visitId: ongoingVisit.id,
+      visitId: visit.id,
     })
     .returning();
 

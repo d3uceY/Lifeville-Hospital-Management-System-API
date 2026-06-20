@@ -1,6 +1,7 @@
 import { db } from "../../drizzle-db.js";
-import { nursesNotes, patients, patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { nursesNotes, patients } from "../../drizzle/migrations/schema.js";
+import { eq, desc } from "drizzle-orm";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 // Get all nurse's notes for a patient
 /** Returns all nurse notes for a patient joined with patient name.
@@ -33,24 +34,7 @@ export const getNurseNotesByPatientId = async (patientId) => {
 export const createNurseNote = async (noteData) => {
   const { patientId, note, recordedBy } = noteData;
 
-  // Require an ongoing (not yet checked-out) visit
-  const [ongoingVisit] = await db
-    .select({ id: patientVisits.id })
-    .from(patientVisits)
-    .where(
-      and(
-        eq(patientVisits.patientId, patientId),
-        isNull(patientVisits.checkOutTime)
-      )
-    )
-    .orderBy(desc(patientVisits.checkInTime))
-    .limit(1);
-
-  if (!ongoingVisit) {
-    const err = new Error("No ongoing visit found for this patient. Please check in the patient before adding a nurse note.");
-    err.status = 400;
-    throw err;
-  }
+  const visit = await getOrCreateVisit(patientId, noteData.visitInfo ?? null);
 
   const [newNote] = await db
     .insert(nursesNotes)
@@ -59,7 +43,7 @@ export const createNurseNote = async (noteData) => {
       note,
       recordedBy: recordedBy,
       createdAt: new Date(),
-      visitId: ongoingVisit.id,
+      visitId: visit.id,
     })
     .returning();
 

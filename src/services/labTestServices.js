@@ -1,11 +1,12 @@
 import { db } from "../../drizzle-db.js";
-import { labTests, labTestTypes, patients, patientVisits } from "../../drizzle/migrations/schema.js";
+import { labTests, patients, patientVisits } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
 import { uploadToCloudinary } from "../utils/uploadImage.js";
 import deleteImage from "../utils/deleteImage.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES, UPLOAD_SUBFOLDERS } from "../constants/domain.js";
 import { getAllSettings } from "./settingsService.js";
+import { getOrCreateVisit } from "../utils/visitGuard.js";
 
 /** Returns all lab tests from the database.
  * @returns {Promise<object[]>}
@@ -55,24 +56,7 @@ export const createLabTest = async (labTest) => {
     ? labTest.testType
     : [labTest.testType];
 
-  // Require an ongoing (not yet checked-out) visit
-  const [ongoingVisit] = await db
-    .select({ id: patientVisits.id })
-    .from(patientVisits)
-    .where(
-      and(
-        eq(patientVisits.patientId, labTest.patientId),
-        isNull(patientVisits.checkOutTime)
-      )
-    )
-    .orderBy(desc(patientVisits.checkInTime))
-    .limit(1);
-
-  if (!ongoingVisit) {
-    const err = new Error("No ongoing visit found for this patient. Please check in the patient before ordering a lab test.");
-    err.status = 400;
-    throw err;
-  }
+  const visit = await getOrCreateVisit(labTest.patientId, labTest.visitInfo ?? null);
 
   const [newTest] = await db.insert(labTests).values({
     patientId: labTest.patientId,
@@ -80,7 +64,7 @@ export const createLabTest = async (labTest) => {
     comments: labTest.comments,
     prescribedBy: labTest.prescribedBy,
     status: 'to do',
-    visitId: ongoingVisit.id,
+    visitId: visit.id,
   }).returning();
 
   // get patient details for notification
@@ -328,57 +312,24 @@ export const getPaginatedLabTests = async (
 
 
 
-// Lab Test Types
-// ─── In-memory cache ────────────────────────────────────────────────────────
-let labTestTypesCache = null;
-/** Clears the in-memory lab test types cache, forcing the next call to re-query the database. */
-export const invalidateLabTestTypesCache = () => { labTestTypesCache = null; };
-// ────────────────────────────────────────────────────────────────────────────
+// ─── Lab Test Types (now stored in services table, category = 'lab') ─────────
 
-/** Returns all lab test types (in-memory cached).
- * @returns {Promise<object[]>}
- */
+/** Returns all lab-category services (replaces the old lab_test_types table). */
 export const getLabTestTypes = async () => {
-  if (labTestTypesCache) return labTestTypesCache;
-  const result = await db.select().from(labTestTypes);
-  labTestTypesCache = result;
-  return result;
+  return billingService.listServices({ category: 'lab' });
 };
 
-/** Inserts a new lab test type and invalidates the types cache.
- * @param {object} labTestType
- * @returns {Promise<object>}
- */
-export const createLabTestType = async (labTestType) => {
-  const [newType] = await db.insert(labTestTypes).values(labTestType).returning();
-  invalidateLabTestTypesCache();
-  return newType;
+/** Creates a new lab test type as a services row (category='lab', variable price). */
+export const createLabTestType = async ({ name }) => {
+  return billingService.upsertService({ name, category: 'lab', price: 0, isVariablePrice: true });
 };
 
-/** Updates a lab test type by ID and invalidates the types cache.
- * @param {number} id
- * @param {object} labTestType
- * @returns {Promise<object>}
- */
-export const updateLabTestType = async (id, labTestType) => {
-  const [updated] = await db.update(labTestTypes)
-    .set(labTestType)
-    .where(eq(labTestTypes.id, id))
-    .returning();
-
-  invalidateLabTestTypesCache();
-  return updated;
+/** Updates a lab test type (name) by its service ID. */
+export const updateLabTestType = async (id, { name }) => {
+  return billingService.upsertService({ id: Number(id), name, category: 'lab', price: 0, isVariablePrice: true });
 };
 
-/** Deletes a lab test type by ID and invalidates the types cache.
- * @param {number} id
- * @returns {Promise<object>}
- */
+/** Deletes a lab test type by its service ID. */
 export const deleteLabTestType = async (id) => {
-  const [deleted] = await db.delete(labTestTypes)
-    .where(eq(labTestTypes.id, id))
-    .returning();
-
-  invalidateLabTestTypesCache();
-  return deleted;
+  return billingService.deleteService(Number(id));
 };
