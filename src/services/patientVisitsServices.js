@@ -147,7 +147,7 @@ export const getPaginatedPatientVisits = async (
         .from(patientVisits)
         .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
         .where(where ?? sql`true`)
-        .orderBy(desc(patientVisits.checkInTime))
+        .orderBy(sql`${patientVisits.checkOutTime} IS NULL DESC`, desc(patientVisits.checkInTime))
         .limit(pageSizeNumber)
         .offset(offset);
 
