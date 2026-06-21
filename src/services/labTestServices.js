@@ -171,6 +171,41 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     .where(eq(labTests.id, id))
     .returning();
 
+  // ── Auto-billing: when test is marked done, bill each test type ──────────
+  const DONE_STATUSES = ["done"];
+  if (DONE_STATUSES.includes(updated.status) && !DONE_STATUSES.includes(existingLabTest.status)) {
+    try {
+      const billingContext = await billingService.getPatientBillingContext(updated.patientId);
+      const admissionId = billingContext.admissionId;
+      const visitId = billingContext.visitId ?? (updated.visitId ? updated.visitId : null);
+
+      if (admissionId || visitId) {
+        const testTypes = Array.isArray(updated.testType) ? updated.testType : [updated.testType];
+        for (const typeName of testTypes) {
+          try {
+            const svc = await billingService.getServiceByName(typeName);
+            if (svc) {
+              await billingService.addItem({
+                admissionId: admissionId || null,
+                visitId: visitId || null,
+                serviceId: svc.id,
+                description: `Lab: ${svc.name}`,
+                category: SERVICE_CATEGORIES.LAB,
+                quantity: 1,
+                unitPrice: parseFloat(svc.price),
+                billingType: "credit",
+              });
+            }
+          } catch (err) {
+            console.error(`Billing error for test type "${typeName}":`, err.message);
+          }
+        }
+      }
+    } catch (billingErr) {
+      console.error("Billing error (lab test update):", billingErr.message);
+    }
+  }
+
   // Get patient details for response
   const patient = await db.select({
     first_name: patients.firstName,

@@ -183,6 +183,20 @@ export async function getServicePrice(name) {
   return svc ? parseFloat(svc.price) : 0;
 }
 
+/**
+ * Returns a service row by exact (case-insensitive) name match, or null if not found.
+ * @param {string} name
+ * @returns {Promise<object|null>}
+ */
+export async function getServiceByName(name) {
+  const [svc] = await db
+    .select()
+    .from(services)
+    .where(ilike(services.name, name.trim()))
+    .limit(1);
+  return svc ?? null;
+}
+
 /** Returns the price for a service by its ID, or null if not found. */
 export async function getServicePriceById(id) {
   const [svc] = await db
