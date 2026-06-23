@@ -29,7 +29,7 @@ export async function loginController(req, res) {
     const { email, password } = req.body;
     try {
         const { accessToken, refreshToken, user } = await userService.login({ email, password });
-        req.activityLogger(ACTIVITY_TYPES.USER_LOGIN, { email: req.body.email });
+        req.activityLogger(ACTIVITY_TYPES.USER_LOGIN, { email: req.body.email }, user.id);
         res
             .cookie("refresh_token", refreshToken, {
                 httpOnly: true,

@@ -17,13 +17,13 @@ import { logActivity } from "../services/activityLogService.js";
  */
 export function activityLogMiddleware(req, _res, next) {
     /**
-     * @param {string} activityType - One of the ACTIVITY_TYPES constants
-     * @param {object} [metadata]   - Any extra context to store with the log
-     * @returns {Promise<void>}
+     * @param {string} activityType  - One of the ACTIVITY_TYPES constants
+     * @param {object} [metadata]    - Any extra context to store with the log
+     * @param {number} [overrideUserId] - Explicit userId for routes where req.userId is not set (e.g. login)
      */
-    req.activityLogger = async (activityType, metadata = {}) => {
+    req.activityLogger = (activityType, metadata = {}, overrideUserId) => {
         try {
-            const userId = req.userId ?? null;
+            const userId = overrideUserId !== undefined ? overrideUserId : (req.userId ?? null);
             logActivity({ activityType, userId, metadata });
         } catch (err) {
             // Non-fatal: log and continue

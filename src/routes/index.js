@@ -29,6 +29,7 @@ import rolesRoutes from './rolesRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
 import aiRoutes from './aiRoutes.js';
 import icdRoutes from './icdRoutes.js';
+import activityLogRoutes from './activityLogRoutes.js';
 const router = express.Router();
 
 router.use("/api", patientRoutes);
@@ -59,5 +60,6 @@ router.use("/api", rolesRoutes);
 router.use("/api", settingsRoutes);
 router.use("/api", aiRoutes);
 router.use("/api", icdRoutes);
+router.use("/api", activityLogRoutes);
 
 export default router;

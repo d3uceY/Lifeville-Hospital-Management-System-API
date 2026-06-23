@@ -49,26 +49,54 @@ export function logActivity({ activityType, userId = null, metadata = {} }) {
 }
 
 /**
- * Retrieves paginated activity logs.
+ * Retrieves paginated activity logs joined with user info.
  *
- * @param {{ page?: number, pageSize?: number, userId?: number, activityType?: string }} options
+ * @param {{ page?: number, pageSize?: number, userId?: number, activityType?: string, startDate?: string, endDate?: string }} options
  */
-export async function getActivityLogs({ page = 1, pageSize = 50, userId, activityType } = {}) {
-    const { sql, and, eq, desc } = await import("drizzle-orm");
+export async function getActivityLogs({ page = 1, pageSize = 25, userId, activityType, startDate, endDate } = {}) {
+    const { sql, and, eq, desc, gte, lte } = await import("drizzle-orm");
+    const { users } = await import("../../drizzle/migrations/schema.js");
 
     const conditions = [];
     if (userId != null) conditions.push(eq(activityLogs.userId, userId));
     if (activityType) conditions.push(eq(activityLogs.activityType, activityType));
+    if (startDate) conditions.push(gte(activityLogs.createdAt, startDate));
+    if (endDate) conditions.push(lte(activityLogs.createdAt, `${endDate} 23:59:59`));
 
     const offset = (page - 1) * pageSize;
+    const where = conditions.length ? and(...conditions) : undefined;
 
-    const rows = await db
-        .select()
-        .from(activityLogs)
-        .where(conditions.length ? and(...conditions) : undefined)
-        .orderBy(desc(activityLogs.createdAt))
-        .limit(pageSize)
-        .offset(offset);
+    const [rows, countRows] = await Promise.all([
+        db
+            .select({
+                id: activityLogs.id,
+                activityType: activityLogs.activityType,
+                userId: activityLogs.userId,
+                metadata: activityLogs.metadata,
+                createdAt: activityLogs.createdAt,
+                userName: users.name,
+                userEmail: users.email,
+                userRole: users.role,
+            })
+            .from(activityLogs)
+            .leftJoin(users, eq(activityLogs.userId, users.id))
+            .where(where)
+            .orderBy(desc(activityLogs.createdAt))
+            .limit(pageSize)
+            .offset(offset),
+        db
+            .select({ value: sql`cast(count(*) as int)` })
+            .from(activityLogs)
+            .where(where),
+    ]);
 
-    return rows;
+    const total = Number(countRows[0]?.value ?? 0);
+
+    return {
+        data: rows,
+        totalItems: total,
+        totalPages: Math.ceil(total / pageSize),
+        page,
+        pageSize,
+    };
 }
