@@ -1,5 +1,6 @@
 // controllers/bedControllers.js
 import * as bedServices from "../services/bedServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 // BED TYPES
 
@@ -162,6 +163,7 @@ export const createBed = async (req, res) => {
     const bedData = req.body;
     const newBed = await bedServices.createBed(bedData);
     res.status(200).json({ newBed, message: "Bed created successfully" });
+    req.activityLogger(ACTIVITY_TYPES.BED_CREATED, { bedId: newBed.id });
   } catch (err) {
     console.error("Error creating bed:", err);
     res.status(500).json({ error: err.message || "Internal server error" });
@@ -177,6 +179,7 @@ export const updateBed = async (req, res) => {
       return res.status(404).json({ message: "Bed not found" });
     }
     res.status(200).json({ updatedBed, message: "Bed updated successfully" });
+    req.activityLogger(ACTIVITY_TYPES.BED_UPDATED, { bedId: Number(req.params.id) });
   } catch (err) {
     console.error("Error updating bed:", err);
     res.status(500).json({ error: err.message || "Internal server error" });
@@ -193,6 +196,7 @@ export const deleteBed = async (req, res) => {
         .json({ message: "Bed not found or already deleted" });
     }
     res.status(200).json({ deleted, message: "Bed deleted successfully" });
+    req.activityLogger(ACTIVITY_TYPES.BED_DELETED, { bedId: Number(req.params.id) });
   } catch (err) {
     console.error("Error deleting bed:", err);
     res.status(500).json({ error: err.message || "Internal server error" });

@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as appointmentService from "../services/appointmentServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 // Get all appointments
 export const getAppointments = async (req, res) => {
@@ -75,6 +76,7 @@ export const createAppointment = async (req, res) => {
     res
       .status(201)
       .json({ newAppointment, message: "Appointment created successfully" });
+    req.activityLogger(ACTIVITY_TYPES.APPOINTMENT_CREATED, { appointmentId: newAppointment.id, patientId: newAppointment.patient_id });
   } catch (error) {
     console.error(error)
     res
@@ -141,6 +143,7 @@ export const updateAppointment = async (req, res) => {
       updatedAppointment,
       message: "Appointment updated successfully",
     });
+    req.activityLogger(ACTIVITY_TYPES.APPOINTMENT_UPDATED, { appointmentId: Number(req.params.id), patientId: updatedAppointment.patient_id });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to update appointment" });
   }
@@ -214,6 +217,7 @@ export const deleteAppointment = async (req, res) => {
     }
 
     res.status(200).json({ message: "Appointment deleted successfully" });
+    req.activityLogger(ACTIVITY_TYPES.APPOINTMENT_DELETED, { appointmentId: Number(req.params.id) });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to delete appointment" });
   }

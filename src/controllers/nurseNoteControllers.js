@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as nurseNoteServices from "../services/nurseNoteServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 // Get nurse's notes by patient ID
 export const getNurseNotesByPatientId = async (req, res) => {
@@ -65,6 +66,7 @@ export const createNurseNote = async (req, res) => {
       success: true,
       data: newNote,
     });
+    req.activityLogger(ACTIVITY_TYPES.NURSE_NOTE_CREATED, { noteId: newNote.id, patientId: newNote.patient_id });
   } catch (error) {
     console.error("Error creating nurse note:", error);
     res.status(error.status || 500).json({ success: false, error: error.message, code: error.code });
@@ -87,6 +89,7 @@ export const updateNurseNote = async (req, res) => {
       success: true,
       data: updatedNote,
     });
+    req.activityLogger(ACTIVITY_TYPES.NURSE_NOTE_UPDATED, { noteId: Number(req.params.id) });
   } catch (error) {
     console.error("Error updating nurse note:", error);
     res.status(500).json({ success: false, message: "Server error" });

@@ -2,6 +2,7 @@ import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as vitalSignServices from '../services/vitalSignServices.js';
 import { addNotification } from "../services/notificationServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export const createVitalSign = async (req, res) => {
   try {
@@ -43,6 +44,7 @@ export const createVitalSign = async (req, res) => {
     res
       .status(200)
       .json({ createdVitalSign, message: "Submitted Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.VITAL_SIGNS_RECORDED, { vitalSignId: createdVitalSign.id, patientId: createdVitalSign.patient_id });
   } catch (err) {
     console.error("error creating vital sign:", err);
     res.status(err.status || 500).json({ error: err.message, code: err.code });
@@ -69,6 +71,7 @@ export const updateVitalSign = async (req, res) => {
     const { vitalSignId } = req.params;
     const response = await vitalSignServices.updateVitalSign(req.body, vitalSignId)
     res.status(200).json({ response })
+    req.activityLogger(ACTIVITY_TYPES.VITAL_SIGNS_UPDATED, { vitalSignId: Number(vitalSignId) });
   } catch (err) {
     console.error("error updating vital sign:", err);
     res.status(500).json({

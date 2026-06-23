@@ -120,6 +120,7 @@ export const updateInpatientAdmission = async (req, res) => {
       return res.status(404).json({ message: "Admission not found" });
     }
     res.status(200).json({ updatedAdmission, message: "Admission updated successfully" });
+    req.activityLogger(ACTIVITY_TYPES.ADMISSION_UPDATED, { admissionId: Number(admissionId) });
   } catch (err) {
     console.error("error updating inpatient admission:", err);
     res.status(500).json({ error: err.message || "Internal server error" });
@@ -138,6 +139,7 @@ export const deleteInpatientAdmission = async (req, res) => {
       return res.status(404).json({ message: "Admission not found or already deleted" });
     }
     res.status(200).json({ deleted, message: "Admission deleted successfully" });
+    req.activityLogger(ACTIVITY_TYPES.ADMISSION_DELETED, { admissionId: Number(admissionId) });
   } catch (err) {
     console.error("error deleting inpatient admission:", err);
     res.status(500).json({ error: err.message || "Internal server error" });
@@ -189,6 +191,7 @@ export const dischargeInpatientAdmission = async (req, res) => {
     });
 
     res.status(200).json({ discharged, message: "Admission discharged successfully" });
+    req.activityLogger(ACTIVITY_TYPES.ADMISSION_DISCHARGED, { admissionId: discharged.id, patientId: discharged.patientId });
   } catch (err) {
     console.error("error discharging inpatient admission:", err);
     res.status(500).json({ message: `${err}` });

@@ -2,6 +2,7 @@ import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as doctorNoteServices from "../services/doctorNoteServices.js";
 import { addNotification } from "../services/notificationServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 // Get doctor's notes by patient ID
 export const getDoctorNotesByPatientId = async (req, res) => {
@@ -64,6 +65,7 @@ export const createDoctorNote = async (req, res) => {
       success: true,
       data: newNote,
     });
+    req.activityLogger(ACTIVITY_TYPES.DOCTOR_NOTE_CREATED, { noteId: newNote.id, patientId: newNote.patient_id });
   } catch (error) {
     console.error("Error creating doctor note:", error);
     res.status(error.status || 500).json({ success: false, error: error.message, code: error.code });
@@ -84,6 +86,7 @@ export const updateDoctorNote = async (req, res) => {
       success: true,
       data: updatedNote,
     });
+    req.activityLogger(ACTIVITY_TYPES.DOCTOR_NOTE_UPDATED, { noteId: Number(req.params.id) });
   } catch (error) {
     console.error("Error updating doctor note:", error);
     res.status(500).json({ success: false, message: "Server error" });

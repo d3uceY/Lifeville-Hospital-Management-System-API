@@ -178,6 +178,7 @@ export async function resetPasswordController(req, res) {
 
     try {
         await passwordResetService.resetPassword(token, newPassword);
+        req.activityLogger(ACTIVITY_TYPES.USER_PASSWORD_RESET);
         return res.status(200).json({ message: "Password reset successfully. You can now log in." });
     } catch (err) {
         return res.status(err.status || 500).json({ error: err.message });

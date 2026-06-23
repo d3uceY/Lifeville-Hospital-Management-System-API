@@ -5,6 +5,7 @@
 
 import * as billingService from "../services/billingService.js";
 import * as billingStatsService from "../services/billingStatsService.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 // ─── GET /admissions/:admissionId/bill ────────────────────────────────────────
 export const getAdmissionBill = async (req, res) => {
@@ -103,6 +104,7 @@ export const recordPayment = async (req, res) => {
       createdBy: req.user?.id || null,
     });
     res.status(201).json({ payment, message: "Payment recorded" });
+    req.activityLogger(ACTIVITY_TYPES.PAYMENT_RECORDED, { invoiceId: Number(req.body.invoiceId), amount: Number(req.body.amount) });
   } catch (err) {
     console.error("recordPayment:", err);
     res.status(err.status || 500).json({ error: err.message });

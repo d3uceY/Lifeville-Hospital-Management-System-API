@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as diagnosesServices from "../services/diagnosesServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export const createDiagnosis = async (req, res) => {
     try {
@@ -44,6 +45,7 @@ export const createDiagnosis = async (req, res) => {
         });
 
         res.status(201).json(diagnosis);
+        req.activityLogger(ACTIVITY_TYPES.DIAGNOSIS_CREATED, { diagnosisId: diagnosis.id, patientId: diagnosis.patient_id });
     } catch (error) {
         const statusCode = error.status || 500;
         res.status(statusCode).json({ error: error.message, code: error.code });
@@ -74,6 +76,7 @@ export const updateDiagnosis = async (req, res) => {
     try {
         const diagnosis = await diagnosesServices.updateDiagnosis(req.params.diagnosisId, req.body);
         res.json(diagnosis);
+        req.activityLogger(ACTIVITY_TYPES.DIAGNOSIS_UPDATED, { diagnosisId: Number(req.params.diagnosisId) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -84,6 +87,7 @@ export const deleteDiagnosis = async (req, res) => {
     try {
         const diagnosis = await diagnosesServices.deleteDiagnosis(req.params.diagnosisId);
         res.json(diagnosis);
+        req.activityLogger(ACTIVITY_TYPES.DIAGNOSIS_DELETED, { diagnosisId: Number(req.params.diagnosisId) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

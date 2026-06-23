@@ -1,6 +1,7 @@
 import * as settings from "../services/settingsService.js";
 import { invalidateEmailTransport } from "../lib/emailService.js";
 import { applyStorageConfig } from "../lib/cloudinary-config.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 const ok  = (res, data)    => res.status(200).json({ success: true, data });
 const err = (res, e, msg)  => {
@@ -26,6 +27,7 @@ export async function updateAllSettingsController(req, res) {
     // Always refresh transports so any email/storage changes take effect immediately
     invalidateEmailTransport();
     await applyStorageConfig();
+    req.activityLogger(ACTIVITY_TYPES.SETTINGS_UPDATED, { updatedBy: req.userId });
     return ok(res, updated);
   } catch (e) {
     if (e.message?.startsWith("Unknown currency")) {

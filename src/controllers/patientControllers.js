@@ -137,6 +137,7 @@ export const updatePatient = async (req, res) => {
     });
 
     res.status(200).json({ updatedPatient, message: "Updated Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.PATIENT_UPDATED, { patientId: updatedPatient.patient_id });
   } catch (err) {
     console.error("this is za error", err.code);
     // Check if the error is related to duplicate id
@@ -164,6 +165,7 @@ export const deletePatient = async (req, res) => {
     const patientId = req.params.id;
     const deletedPatient = await patientServices.deletePatient(patientId);
     res.status(200).json({ deletedPatient, message: "Deleted Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.PATIENT_DELETED, { patientId: req.params.id });
   } catch (err) {
     console.error("error deleting patient:", err);
     res.status(500).json({
