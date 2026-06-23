@@ -4,6 +4,7 @@ import * as patientServices from "../services/patientServices.js";
 import * as patientImageService from "../services/patientImageService.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export const getPatients = async (req, res) => {
   try {
@@ -60,17 +61,18 @@ export const createPatients = async (req, res) => {
     });
 
     res.status(200).json({ newPatient, message: "Submitted Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.PATIENT_CREATED, { patientId: newPatient.patient_id });
   } catch (err) {
 
 
     if (err.code === "DUPLICATE_HOSPITAL_NUMBER") {
       return res.status(400).json({
-        message: err.message,
+        error: err.message,
       });
     }
 
     res.status(500).json({
-      message: "internal server error",
+      error: err.message || "Internal server error",
     });
   }
 };
@@ -193,7 +195,7 @@ export const uploadPatientProfileImage = async (req, res) => {
       return res.status(404).json({ message: err.message });
     }
 
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -215,6 +217,6 @@ export const deletePatientProfileImage = async (req, res) => {
       return res.status(404).json({ message: err.message });
     }
 
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };

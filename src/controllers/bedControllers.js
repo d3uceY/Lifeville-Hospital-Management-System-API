@@ -9,7 +9,7 @@ export const getBedTypes = async (req, res) => {
     res.status(200).json(types);
   } catch (err) {
     console.error("Error fetching bed types:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -20,7 +20,7 @@ export const createBedType = async (req, res) => {
     res.status(200).json({ newType, message: "Bed type created successfully" });
   } catch (err) {
     console.error("Error creating bed type:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -37,7 +37,7 @@ export const updateBedType = async (req, res) => {
       .json({ updatedType, message: "Bed type updated successfully" });
   } catch (err) {
     console.error("Error updating bed type:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -53,7 +53,7 @@ export const deleteBedType = async (req, res) => {
     res.status(200).json({ deleted, message: "Bed type deleted successfully" });
   } catch (err) {
     console.error("Error deleting bed type:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -65,7 +65,7 @@ export const getBedGroups = async (req, res) => {
     res.status(200).json(groups);
   } catch (err) {
     console.error("Error fetching bed groups:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -78,7 +78,7 @@ export const createBedGroup = async (req, res) => {
       .json({ newGroup, message: "Bed group created successfully" });
   } catch (err) {
     console.error("Error creating bed group:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -95,7 +95,7 @@ export const updateBedGroup = async (req, res) => {
       .json({ updatedGroup, message: "Bed group updated successfully" });
   } catch (err) {
     console.error("Error updating bed group:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -113,7 +113,7 @@ export const deleteBedGroup = async (req, res) => {
       .json({ deleted, message: "Bed group deleted successfully" });
   } catch (err) {
     console.error("Error deleting bed group:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -125,7 +125,7 @@ export const getBeds = async (req, res) => {
     res.status(200).json(beds);
   } catch (err) {
     console.error("Error fetching beds:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -139,7 +139,7 @@ export const getBedData = async (req, res) => {
     res.status(200).json({ beds, bedGroups, bedTypes });
   } catch (err) {
     console.error("Error fetching bed data:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -153,7 +153,7 @@ export const viewBed = async (req, res) => {
     res.status(200).json(bed);
   } catch (err) {
     console.error("Error fetching bed:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -164,7 +164,7 @@ export const createBed = async (req, res) => {
     res.status(200).json({ newBed, message: "Bed created successfully" });
   } catch (err) {
     console.error("Error creating bed:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -179,7 +179,7 @@ export const updateBed = async (req, res) => {
     res.status(200).json({ updatedBed, message: "Bed updated successfully" });
   } catch (err) {
     console.error("Error updating bed:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -195,6 +195,6 @@ export const deleteBed = async (req, res) => {
     res.status(200).json({ deleted, message: "Bed deleted successfully" });
   } catch (err) {
     console.error("Error deleting bed:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };

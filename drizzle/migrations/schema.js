@@ -699,6 +699,26 @@ export const patientVisits = pgTable("patient_visits", {
 	index("idx_patient_visits_patient_check_in_time").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.checkInTime.desc().nullsFirst().op("timestamptz_ops")),
 ]);
 
+// ── Activity Logs ──────────────────────────────────────────────────────────────
+// activity_type is plain text (not a DB enum) — valid values live in
+// src/constants/activityTypes.js as the ACTIVITY_TYPES config object.
+export const activityLogs = pgTable("activity_logs", {
+	id: serial().primaryKey().notNull(),
+	activityType: varchar("activity_type", { length: 100 }).notNull(),
+	userId: integer("user_id"),
+	metadata: jsonb().default(sql`'{}'::jsonb`),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_activity_logs_user_id").using("btree", table.userId.asc().nullsLast().op("int4_ops")),
+	index("idx_activity_logs_activity_type").using("btree", table.activityType.asc().nullsLast().op("varchar_ops")),
+	index("idx_activity_logs_created_at").using("btree", table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
+	foreignKey({
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "activity_logs_user_id_fkey",
+	}).onDelete("set null"),
+]);
+
 export const prescriptionItems = pgTable("prescription_items", {
 	prescriptionItemId: serial("prescription_item_id").primaryKey().notNull(),
 	prescriptionId: integer("prescription_id").notNull(),

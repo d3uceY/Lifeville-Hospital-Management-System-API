@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as labTestServices from "../services/labTestServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export async function getLabTests(req, res) {
     try {
@@ -28,6 +29,7 @@ export const getPaginatedLabTests = async (req, res) => {
 export const deleteLabTest = async (req, res) => {
     try {
         const labTest = await labTestServices.deleteLabTest(req.params.id);
+        req.activityLogger(ACTIVITY_TYPES.LAB_TEST_DELETED, { labTestId: Number(req.params.id) });
         res.json(labTest);
     } catch (error) {
         console.error(error);
@@ -37,6 +39,19 @@ export const deleteLabTest = async (req, res) => {
 
 
 export const updateLabTest = async (req, res) => {
+    // Validate required fields
+    const { status, results } = req.body;
+    if (!status || !String(status).trim()) {
+        return res.status(400).json({ error: "Status is required to update a lab test." });
+    }
+    const validStatuses = ["to do", "in progress", "done", "failed"];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}.` });
+    }
+    if (status === "done" && (!results || !String(results).trim())) {
+        return res.status(400).json({ error: "Results are required when marking a lab test as done." });
+    }
+
     try {
         // Get files from multer (if any were uploaded)
         const files = req.files || (req.file ? [req.file] : []);
@@ -44,7 +59,7 @@ export const updateLabTest = async (req, res) => {
         // Pass form data and files to service
         const labTest = await labTestServices.updateLabTest(req.params.id, req.body, files);
         if (!labTest) {
-            return res.status(400).json({ error: "Failed to update lab test" });
+            return res.status(404).json({ error: "Lab test not found or could not be updated." });
         }
 
         // notification
@@ -79,10 +94,16 @@ export const updateLabTest = async (req, res) => {
             description: `Patient: ${labTest.first_name} ${labTest.surname}`
         });
 
+        req.activityLogger(ACTIVITY_TYPES.LAB_TEST_UPDATED, {
+            labTestId: labTest.id,
+            patientId: labTest.patientId,
+            status: labTest.status,
+        });
+
         res.json(labTest);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to update lab test" });
+        res.status(error.status || 500).json({ error: error.message || "Failed to update lab test" });
     }
 }
 
@@ -133,6 +154,12 @@ export async function createLabTest(req, res) {
             recipientRoles: NOTIFICATION_ROLES.LAB,
             message: `(${labTest.testType}) Prescribed by ${labTest.prescribedBy}`,
             description: `Patient: ${labTest.first_name} ${labTest.surname}`
+        });
+
+        req.activityLogger(ACTIVITY_TYPES.LAB_TEST_CREATED, {
+            labTestId: labTest.id,
+            patientId: labTest.patientId,
+            testType: Array.isArray(labTest.testType) ? labTest.testType.join(", ") : labTest.testType,
         });
 
         res.json(labTest);

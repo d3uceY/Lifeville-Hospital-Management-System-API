@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as patientVisitsServices from "../services/patientVisitsServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export const createPatientVisit = async (req, res) => {
     try {
@@ -42,14 +43,16 @@ export const createPatientVisit = async (req, res) => {
 
 
         res.status(201).json(patientVisit);
+        req.activityLogger(ACTIVITY_TYPES.VISIT_CREATED, { visitId: patientVisit.id, patientId: patientVisit.patientId });
     } catch (error) {
         if (error.code === "ONGOING_VISIT_EXISTS") {
             return res.status(409).json({ error: error.message });
         }
-        console.error("Error creating patient visit:", error);
-        res.status(500).json({ error: "Failed to create patient visit" });
     }
-};
+    console.error("Error creating patient visit:", error);
+    res.status(500).json({ error: "Failed to create patient visit" });
+}
+
 
 export const getPaginatedPatientVisits = async (req, res) => {
     try {
@@ -105,6 +108,7 @@ export const checkOutPatientVisit = async (req, res) => {
         });
 
         res.status(200).json({ visit: updated, message: "Patient checked out successfully" });
+        req.activityLogger(ACTIVITY_TYPES.VISIT_CHECKED_OUT, { visitId, patientId: updated.patientId });
     } catch (error) {
         if (error.code === "VISIT_NOT_FOUND") {
             return res.status(404).json({ error: error.message });

@@ -1,9 +1,9 @@
 
-
 import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as inpatientServices from "../services/inpatientAdmissionsServices.js";
 import { addNotification } from "../services/notificationServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 /**
  * GET /inpatients
@@ -21,7 +21,7 @@ export const getInpatientAdmissions = async (req, res) => {
     res.status(200).json(admissions);
   } catch (err) {
     console.error("error fetching inpatient admissions:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -82,9 +82,10 @@ export const createInpatientAdmission = async (req, res) => {
     });
 
     res.status(200).json({ newAdmission, message: "Admission created successfully" });
+    req.activityLogger(ACTIVITY_TYPES.ADMISSION_CREATED, { admissionId: newAdmission.id, patientId: newAdmission.patientId });
   } catch (err) {
     console.error("error creating inpatient admission:", err);
-    res.status(500).json({ message: `${err}` });
+    res.status(500).json({ error: err.message || "Failed to create admission" });
   }
 };
 
@@ -102,7 +103,7 @@ export const viewInpatientAdmission = async (req, res) => {
     res.status(200).json(admission);
   } catch (err) {
     console.error("error fetching inpatient admission:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -121,7 +122,7 @@ export const updateInpatientAdmission = async (req, res) => {
     res.status(200).json({ updatedAdmission, message: "Admission updated successfully" });
   } catch (err) {
     console.error("error updating inpatient admission:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -139,7 +140,7 @@ export const deleteInpatientAdmission = async (req, res) => {
     res.status(200).json({ deleted, message: "Admission deleted successfully" });
   } catch (err) {
     console.error("error deleting inpatient admission:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
@@ -204,7 +205,7 @@ export const getDischargeSummaryByAdmissionId = async (req, res) => {
     res.status(200).json(dischargeSummary);
   } catch (err) {
     console.error("error fetching discharge summary:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 

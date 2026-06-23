@@ -7,6 +7,7 @@ import { loadICD } from "./icd/services/icd.services.js";
 import apiRoutes from "./routes/index.js";
 import { startJobs } from "./jobs/index.js";
 import { applyStorageConfig } from "./lib/cloudinary-config.js";
+import { activityLogMiddleware } from "./middleware/activityLog.js";
 
 import cookieParser from 'cookie-parser';
 
@@ -46,6 +47,11 @@ app.use(
 );
 
 app.use(express.json());
+
+// Attach req.activityLogger to every request (after auth middleware runs and
+// populates req.userId, so it's registered here at app level — the helper
+// reads req.userId lazily inside the closure)
+app.use(activityLogMiddleware);
 
 const httpServer = createServer(app);
 

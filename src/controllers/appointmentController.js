@@ -11,7 +11,7 @@ export const getAppointments = async (req, res) => {
     const appointments = await appointmentService.getPaginatedAppointments(page, pageSize, searchTerm);
     res.status(200).json(appointments);
   } catch (error) {
-    res.status(500).json({ error: "Failed to retrieve appointments" });
+    res.status(500).json({ error: error.message || "Failed to retrieve appointments" });
   }
 };
 
@@ -27,7 +27,7 @@ export const viewAppointment = async (req, res) => {
 
     res.status(200).json(appointment);
   } catch (error) {
-    res.status(500).json({ error: "Failed to retrieve appointment" });
+    res.status(500).json({ error: error.message || "Failed to retrieve appointment" });
   }
 };
 
@@ -89,7 +89,7 @@ export const getAppointmentsByPatientId = async (req, res) => {
     const appointments = await appointmentService.getAppointmentsByPatientId(patientId);
     res.status(200).json(appointments);
   } catch (error) {
-    res.status(500).json({ error: "Failed to retrieve appointments" });
+    res.status(500).json({ error: error.message || "Failed to retrieve appointments" });
   }
 };
 
@@ -142,7 +142,7 @@ export const updateAppointment = async (req, res) => {
       message: "Appointment updated successfully",
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to update appointment" });
+    res.status(500).json({ error: error.message || "Failed to update appointment" });
   }
 };
 
@@ -215,6 +215,6 @@ export const deleteAppointment = async (req, res) => {
 
     res.status(200).json({ message: "Appointment deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete appointment" });
+    res.status(500).json({ error: error.message || "Failed to delete appointment" });
   }
 };

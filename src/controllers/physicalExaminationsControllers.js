@@ -51,7 +51,7 @@ export const getPhysicalExaminationsByPatientId = async (req, res) => {
     res.status(200).json(physicalExaminations);
   } catch (err) {
     console.error("error fetching physical examinations:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
