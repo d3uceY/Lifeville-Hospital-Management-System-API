@@ -34,9 +34,9 @@ export const createPatients = async (req, res) => {
 
       // Jsonb data
       const data = {
-        first_name: newPatient.first_name,
+        first_name: newPatient.firstName,
         surname: newPatient.surname,
-        patient_id: newPatient.patient_id,
+        patient_id: newPatient.patientId,
         priority: priorityLevels.normal,
       }
 
@@ -44,7 +44,7 @@ export const createPatients = async (req, res) => {
         recipientRoles: NOTIFICATION_ROLES.ALL_STAFF,
         type: NOTIFICATION_TYPES.PATIENT,
         title: "New Patient Added",
-        message: `New patient ${newPatient.first_name} ${newPatient.surname} has been added`,
+        message: `New patient ${newPatient.firstName} ${newPatient.surname} has been added`,
         data,
       });
 
