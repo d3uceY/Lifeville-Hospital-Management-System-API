@@ -71,6 +71,17 @@ export const ACTIVITY_TYPES = {
     BED_CREATED:               "bed:created",
     BED_UPDATED:               "bed:updated",
     BED_DELETED:               "bed:deleted",
+
+    // ── Insurance ──────────────────────────────────────────────────────────────
+    INSURANCE_PROVIDER_CREATED: "insurance_provider:created",
+    INSURANCE_PROVIDER_UPDATED: "insurance_provider:updated",
+    INSURANCE_PROVIDER_DELETED: "insurance_provider:deleted",
+    INSURANCE_PLAN_CREATED:     "insurance_plan:created",
+    INSURANCE_PLAN_UPDATED:     "insurance_plan:updated",
+    INSURANCE_PLAN_DELETED:     "insurance_plan:deleted",
+    PATIENT_INSURANCE_CREATED:  "patient_insurance:created",
+    PATIENT_INSURANCE_UPDATED:  "patient_insurance:updated",
+    PATIENT_INSURANCE_DELETED:  "patient_insurance:deleted",
 };
 
 /** Set of all valid activity type values for quick validation */

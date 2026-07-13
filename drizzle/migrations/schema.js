@@ -743,6 +743,71 @@ export const prescriptionItems = pgTable("prescription_items", {
 	index("idx_prescription_items_prescription_id").using("btree", table.prescriptionId.asc().nullsLast().op("int4_ops")),
 ]);
 
+export const insuranceProviders = pgTable("insurance_providers", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 150 }).notNull(),
+	phone: varchar({ length: 20 }),
+	email: varchar({ length: 150 }),
+	address: text(),
+	website: varchar({ length: 255 }),
+	isActive: boolean("is_active").default(true),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_insurance_providers_name_trgm").using("gin", table.name.asc().nullsLast().op("gin_trgm_ops")),
+	unique("insurance_providers_name_key").on(table.name),
+]);
+
+export const insurancePlans = pgTable("insurance_plans", {
+	id: serial().primaryKey().notNull(),
+	providerId: integer("provider_id").notNull(),
+	name: varchar({ length: 100 }).notNull(),
+	description: text(),
+	isActive: boolean("is_active").default(true),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	foreignKey({
+			columns: [table.providerId],
+			foreignColumns: [insuranceProviders.id],
+			name: "insurance_plans_provider_id_fkey"
+		}).onDelete("cascade"),
+	index("idx_insurance_plans_provider_id").using("btree", table.providerId.asc().nullsLast().op("int4_ops")),
+	unique("insurance_plans_provider_id_name_key").on(table.providerId, table.name),
+]);
+
+export const patientInsurance = pgTable("patient_insurance", {
+	id: serial().primaryKey().notNull(),
+	patientId: integer("patient_id").notNull(),
+	providerId: integer("provider_id").notNull(),
+	planId: integer("plan_id"),
+	memberNumber: varchar("member_number", { length: 100 }).notNull(),
+	policyNumber: varchar("policy_number", { length: 100 }),
+	isPrimary: boolean("is_primary").default(true),
+	status: varchar({ length: 20 }).default('Active'),
+	startDate: date("start_date"),
+	endDate: date("end_date"),
+	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	foreignKey({
+			columns: [table.patientId],
+			foreignColumns: [patients.patientId],
+			name: "patient_insurance_patient_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.providerId],
+			foreignColumns: [insuranceProviders.id],
+			name: "patient_insurance_provider_id_fkey"
+		}),
+	foreignKey({
+			columns: [table.planId],
+			foreignColumns: [insurancePlans.id],
+			name: "patient_insurance_plan_id_fkey"
+		}).onDelete("set null"),
+	index("idx_patient_insurance_patient_id").using("btree", table.patientId.asc().nullsLast().op("int4_ops")),
+	check("patient_insurance_status_check", sql`(status)::text = ANY ((ARRAY['Active'::character varying, 'Inactive'::character varying, 'Expired'::character varying])::text[])`),
+]);
+
 // ─── Settings tables (all single-row config tables, id = 1) ──────────────────
 
 export const settingsHospitalInfo = pgTable("settings_hospital_info", {
