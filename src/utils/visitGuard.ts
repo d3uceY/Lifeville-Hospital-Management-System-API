@@ -12,6 +12,13 @@ import { db } from "../../drizzle-db.js";
 import { patientVisits } from "../../drizzle/migrations/schema.js";
 import { eq, desc, isNull, and } from "drizzle-orm";
 import { createPatientVisit } from "../services/patientVisitsServices.js";
+import { HttpError } from "../lib/errors.js";
+
+export interface VisitInfo {
+  purpose: string;
+  doctorId: number | string;
+  recordedBy?: string;
+}
 
 /**
  * Returns the currently open visit for a patient, or creates one automatically
@@ -24,7 +31,7 @@ import { createPatientVisit } from "../services/patientVisitsServices.js";
  * @returns {Promise<{ id: number }>}
  * @throws Error with code "NO_ONGOING_VISIT" if no visit exists and visitInfo is absent
  */
-export async function getOrCreateVisit(patientId, visitInfo = null) {
+export async function getOrCreateVisit(patientId: number, visitInfo: VisitInfo | null = null): Promise<{ id: number }> {
   const [ongoingVisit] = await db
     .select({ id: patientVisits.id })
     .from(patientVisits)
@@ -50,10 +57,9 @@ export async function getOrCreateVisit(patientId, visitInfo = null) {
     return { id: newVisit.id };
   }
 
-  const err = new Error(
-    "No ongoing visit found for this patient. Please start a visit before proceeding."
+  throw new HttpError(
+    "No ongoing visit found for this patient. Please start a visit before proceeding.",
+    400,
+    "NO_ONGOING_VISIT"
   );
-  err.code   = "NO_ONGOING_VISIT";
-  err.status = 400;
-  throw err;
 }

@@ -11,7 +11,9 @@ import { getAllSettings, getEmailRaw } from "../services/settingsService.js";
 
 // ─── Transport ────────────────────────────────────────────────────────────────
 
-let _transport = null;
+import type { Transporter } from "nodemailer";
+
+let _transport: Transporter | null = null;
 
 /** Call after saving email settings to force a fresh transport on next use. */
 export function invalidateEmailTransport() { _transport = null; }
@@ -54,7 +56,7 @@ async function getTransport() {
  * @param {string} opts.expiryMinutes  - How long the link is valid
  * @returns {string} HTML string
  */
-function buildResetEmailHtml({ recipientName, resetUrl, hospitalName, hospitalEmail, expiryMinutes }) {
+function buildResetEmailHtml({ recipientName, resetUrl, hospitalName, hospitalEmail, expiryMinutes }: { recipientName: string; resetUrl: string; hospitalName: string; hospitalEmail: string | null; expiryMinutes: number }): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -128,14 +130,14 @@ function buildResetEmailHtml({ recipientName, resetUrl, hospitalName, hospitalEm
  * @param {string} opts.toName        - Recipient display name
  * @param {string} opts.resetUrl      - Full reset URL (contains the raw token)
  */
-export async function sendPasswordResetEmail({ toEmail, toName, resetUrl }) {
+export async function sendPasswordResetEmail({ toEmail, toName, resetUrl }: { toEmail: string; toName: string; resetUrl: string }) {
   const expiryMinutes = Math.round(config.passwordReset.tokenExpiryMs / 60_000);
 
   // Pull branding from the in-memory settings cache (falls back to a fresh DB fetch if not yet cached)
-  const settings = await getAllSettings();
+  const settings = await getAllSettings() as Record<string, Record<string, unknown>> | null;
 
-  const hospitalName = settings?.hospitalInfo?.hospital_name ?? "Lifeville HMS";
-  const hospitalEmail = settings?.contact?.email ?? null;
+  const hospitalName = (settings?.hospitalInfo?.hospital_name as string | undefined) ?? "Lifeville HMS";
+  const hospitalEmail = (settings?.contact?.email as string | undefined) ?? null;
 
   const html = buildResetEmailHtml({
     recipientName: toName,

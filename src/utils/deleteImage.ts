@@ -14,7 +14,7 @@ import { extractPublicId } from './extractCloudinaryPublicId.js';
  * const result = await deleteImage('https://cloudinary.com/sample/image.jpg');
  * // Returns: { success: true }
  */
-const deleteImage = async (image) => {
+const deleteImage = async (image: string): Promise<{ success: boolean } | undefined> => {
     try {
         const publicId = extractPublicId(image);
         await cloudinary.uploader.destroy(publicId, { invalidate: true });

@@ -7,7 +7,7 @@
 */
 import { formatDistanceToNow } from "date-fns";
 
-export function timeAgo(dateString) {
+export function timeAgo(dateString: string): string {
     return formatDistanceToNow(new Date(dateString), {
         addSuffix: true,
     });

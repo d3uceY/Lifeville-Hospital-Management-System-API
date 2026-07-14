@@ -12,7 +12,7 @@ import { eq, gte, lte, and, sql } from "drizzle-orm";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Builds a WHERE clause that optionally constrains invoice.created_at */
-function dateRange(from, to) {
+function dateRange(from: string | undefined, to: string | undefined) {
   const conditions = [];
   if (from) conditions.push(gte(invoices.createdAt, `${from} 00:00:00`));
   // Extend to end-of-day so invoices created any time on the `to` date are included.
@@ -29,7 +29,7 @@ function dateRange(from, to) {
  *   totalInvoices, totalRevenue (sum of bill items), totalCollected (sum of payments),
  *   outstanding, collectionRate (%)
  */
-async function getKpiSummary(from, to) {
+async function getKpiSummary(from: string | undefined, to: string | undefined) {
   const where = dateRange(from, to);
 
   // Count invoices and group by status in one pass
@@ -42,7 +42,7 @@ async function getKpiSummary(from, to) {
     .where(where)
     .groupBy(invoices.status);
 
-  const totalInvoices = statusRows.reduce((s, r) => s + r.count, 0);
+  const totalInvoices = statusRows.reduce((s, r) => s + Number(r.count), 0);
   const statusBreakdown = Object.fromEntries(statusRows.map((r) => [r.status, r.count]));
 
   // Total revenue = sum of all bill_items.line_total for invoices in range
@@ -59,8 +59,8 @@ async function getKpiSummary(from, to) {
     .innerJoin(invoices, eq(billingPayments.invoiceId, invoices.id))
     .where(where);
 
-  const totalRevenue   = parseFloat(revenueRow?.total  || 0);
-  const totalCollected = parseFloat(collectedRow?.total || 0);
+  const totalRevenue   = parseFloat(String(revenueRow?.total  || 0));
+  const totalCollected = parseFloat(String(collectedRow?.total || 0));
   const outstanding    = Math.max(0, totalRevenue - totalCollected);
   const collectionRate = totalRevenue > 0
     ? Math.round((totalCollected / totalRevenue) * 100)
@@ -75,7 +75,7 @@ async function getKpiSummary(from, to) {
  * Revenue (bill items total) and collections (payments total) bucketed by day/week/month.
  * groupBy: "day" | "week" | "month"
  */
-async function getRevenueOverTime(from, to, groupBy = "day") {
+async function getRevenueOverTime(from: string | undefined, to: string | undefined, groupBy: string = "day") {
   const where = dateRange(from, to);
 
   const trunc =
@@ -108,17 +108,17 @@ async function getRevenueOverTime(from, to, groupBy = "day") {
     .orderBy(sql`DATE_TRUNC('${sql.raw(trunc)}', ${billingPayments.createdAt})::date`);
 
   // Merge by period key
-  const map = new Map();
+  const map = new Map<string, { period: string; revenue: number; collected: number }>();
   for (const r of revenueRows) {
     const key = String(r.period);
-    map.set(key, { period: key, revenue: parseFloat(r.revenue), collected: 0 });
+    map.set(key, { period: key, revenue: parseFloat(String(r.revenue)), collected: 0 });
   }
   for (const r of collectionRows) {
     const key = String(r.period);
     if (map.has(key)) {
-      map.get(key).collected = parseFloat(r.collected);
+      map.get(key)!.collected = parseFloat(String(r.collected));
     } else {
-      map.set(key, { period: key, revenue: 0, collected: parseFloat(r.collected) });
+      map.set(key, { period: key, revenue: 0, collected: parseFloat(String(r.collected)) });
     }
   }
 
@@ -128,7 +128,7 @@ async function getRevenueOverTime(from, to, groupBy = "day") {
 // ─── Payment method breakdown ─────────────────────────────────────────────────
 
 /** Sum of payments grouped by payment_method, for invoices in date range. */
-async function getPaymentMethodBreakdown(from, to) {
+async function getPaymentMethodBreakdown(from: string | undefined, to: string | undefined) {
   const where = dateRange(from, to);
 
   const rows = await db
@@ -145,7 +145,7 @@ async function getPaymentMethodBreakdown(from, to) {
 
   return rows.map((r) => ({
     method: r.method,
-    total:  parseFloat(r.total),
+    total:  parseFloat(String(r.total)),
     count:  r.count,
   }));
 }
@@ -153,7 +153,7 @@ async function getPaymentMethodBreakdown(from, to) {
 // ─── Revenue by service category ──────────────────────────────────────────────
 
 /** Revenue from bill_items grouped by category (lab, drug, service, ward …). */
-async function getRevenueByCategory(from, to) {
+async function getRevenueByCategory(from: string | undefined, to: string | undefined) {
   const where = dateRange(from, to);
 
   const rows = await db
@@ -170,7 +170,7 @@ async function getRevenueByCategory(from, to) {
 
   return rows.map((r) => ({
     category: r.category,
-    revenue:  parseFloat(r.revenue),
+    revenue:  parseFloat(String(r.revenue)),
     count:    r.count,
   }));
 }
@@ -181,7 +181,7 @@ async function getRevenueByCategory(from, to) {
  * Runs all four stat queries in parallel and returns a single response object.
  * @param {{ from?: string, to?: string, groupBy?: string }} opts
  */
-export async function getBillingStats({ from, to, groupBy = "day" } = {}) {
+export async function getBillingStats({ from, to, groupBy = "day" }: { from?: string; to?: string; groupBy?: string } = {}) {
   const [kpi, revenueOverTime, paymentMethods, revenueByCategory] = await Promise.all([
     getKpiSummary(from, to),
     getRevenueOverTime(from, to, groupBy),

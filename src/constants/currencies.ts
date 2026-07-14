@@ -24,4 +24,6 @@ export const CURRENCIES = {
   ZMW: { code: "ZMW", name: "Zambian Kwacha",           symbol: "ZK"   },
   MWK: { code: "MWK", name: "Malawian Kwacha",          symbol: "MK"   },
   BWP: { code: "BWP", name: "Botswana Pula",            symbol: "P"    },
-};
+} as const;
+
+export type CurrencyCode = keyof typeof CURRENCIES;

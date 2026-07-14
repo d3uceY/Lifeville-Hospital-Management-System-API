@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { seedSuperAdmin } from "./controllers/userControllers.js";
+import { seedSuperAdmin } from "./services/userServices.js";
 import { runBillingMigration, seedDrugServices } from "../migrate.js";
 import { loadICD } from "./icd/services/icd.services.js";
 import apiRoutes from "./routes/index.js";
@@ -74,7 +74,7 @@ runBillingMigration().then(() => seedDrugServices()).then(() => seedSuperAdmin()
   loadICD();
   await applyStorageConfig();
   await startJobs(io);
-  httpServer.listen(port, '0.0.0.0', () =>
+  httpServer.listen(Number(port), '0.0.0.0', () =>
     console.log(`Server + Socket.IO running on port ${port}`)
   );
 }).catch((err) => {

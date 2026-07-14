@@ -2,6 +2,7 @@ import { db } from "../../drizzle-db.js";
 import { diagnoses, patients } from "../../drizzle/migrations/schema.js";
 import { eq, desc } from "drizzle-orm";
 import { getOrCreateVisit } from "../utils/visitGuard.js";
+import type { VisitInfo } from "../utils/visitGuard.js";
 
 /** Shared explicit snake_case select fields for diagnoses queries */
 const DIAGNOSES_SELECT = {
@@ -25,17 +26,17 @@ const DIAGNOSES_SELECT = {
  * @param {object} diagnosisData
  * @returns {Promise<object>}
  */
-export async function createDiagnosis(diagnosisData) {
+export async function createDiagnosis(diagnosisData: { patient_id: number; recorded_by: string; condition: Record<string, string>; notes?: string; visitInfo?: Record<string, unknown> | null }) {
   const { patient_id, recorded_by, condition, notes } = diagnosisData;
 
-  const visit = await getOrCreateVisit(patient_id, diagnosisData.visitInfo ?? null);
+  const visit = await getOrCreateVisit(patient_id, diagnosisData.visitInfo as VisitInfo | null ?? null);
 
   const [newDiagnosis] = await db
     .insert(diagnoses)
     .values({
       patientId: patient_id,
       recordedBy: recorded_by,
-      condition,
+      condition: condition as unknown,
       notes,
       visitId: visit.id,
     })
@@ -65,7 +66,7 @@ export async function createDiagnosis(diagnosisData) {
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export async function getDiagnosesByPatientId(patientId) {
+export async function getDiagnosesByPatientId(patientId: number) {
   return await db
     .select(DIAGNOSES_SELECT)
     .from(diagnoses)
@@ -79,7 +80,7 @@ export async function getDiagnosesByPatientId(patientId) {
  * @param {number} diagnosisId
  * @returns {Promise<object>}
  */
-export async function getDiagnosisById(diagnosisId) {
+export async function getDiagnosisById(diagnosisId: number) {
   const [result] = await db
     .select(DIAGNOSES_SELECT)
     .from(diagnoses)
@@ -95,7 +96,7 @@ export async function getDiagnosisById(diagnosisId) {
  * @param {{ condition?: object, notes?: string, updated_by?: string }} updateData
  * @returns {Promise<object>}
  */
-export async function updateDiagnosis(diagnosisId, updateData) {
+export async function updateDiagnosis(diagnosisId: number, updateData: { condition?: Record<string, string>; notes?: string; updated_by?: string }) {
   const { condition, notes, updated_by } = updateData;
 
   const [updated] = await db
@@ -104,7 +105,7 @@ export async function updateDiagnosis(diagnosisId, updateData) {
       condition,
       notes,
       updatedBy: updated_by,
-      updatedAt: new Date(),
+      updatedAt: new Date() as unknown as string,
     })
     .where(eq(diagnoses.diagnosisId, diagnosisId))
     .returning();
@@ -127,7 +128,7 @@ export async function updateDiagnosis(diagnosisId, updateData) {
  * @param {number} diagnosisId
  * @returns {Promise<object>}
  */
-export async function deleteDiagnosis(diagnosisId) {
+export async function deleteDiagnosis(diagnosisId: number) {
   const [deleted] = await db
     .delete(diagnoses)
     .where(eq(diagnoses.diagnosisId, diagnosisId))

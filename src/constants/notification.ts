@@ -3,7 +3,9 @@ const priorityLevels = {
     normal: 'Normal',
     high: 'High',
     critical: 'Critical',
-};
+} as const;
+
+export type PriorityLevel = keyof typeof priorityLevels;
 
 const NOTIFICATION_TYPES = {
     APPOINTMENT: "APPOINTMENT",
@@ -19,6 +21,8 @@ const NOTIFICATION_TYPES = {
     NURSE_NOTE: "NURSE_NOTE",
     PHYSICAL_EXAMINATION: "PHYSICAL_EXAMINATION",
     DIAGNOSIS: "DIAGNOSIS"
-};
+} as const;
+
+export type NotificationType = typeof NOTIFICATION_TYPES[keyof typeof NOTIFICATION_TYPES];
 
 export { priorityLevels, NOTIFICATION_TYPES };

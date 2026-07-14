@@ -82,7 +82,9 @@ export const ACTIVITY_TYPES = {
     PATIENT_INSURANCE_CREATED:  "patient_insurance:created",
     PATIENT_INSURANCE_UPDATED:  "patient_insurance:updated",
     PATIENT_INSURANCE_DELETED:  "patient_insurance:deleted",
-};
+} as const;
+
+export type ActivityType = typeof ACTIVITY_TYPES[keyof typeof ACTIVITY_TYPES];
 
 /** Set of all valid activity type values for quick validation */
-export const ACTIVITY_TYPE_VALUES = new Set(Object.values(ACTIVITY_TYPES));
+export const ACTIVITY_TYPE_VALUES = new Set<string>(Object.values(ACTIVITY_TYPES));

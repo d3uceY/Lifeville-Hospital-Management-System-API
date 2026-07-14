@@ -4,7 +4,7 @@
  * @param {string} status - appointment status 
  * @returns {string} color - tailwind classes
  */
-export const getAppointmentStatusColor = (status) => {
+export const getAppointmentStatusColor = (status: string): string => {
     switch (status?.toLowerCase()) {
         case "scheduled":
             return "bg-blue-100 text-blue-800 border-blue-200"

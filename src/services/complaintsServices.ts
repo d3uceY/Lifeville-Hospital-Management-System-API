@@ -2,6 +2,7 @@ import { db } from "../../drizzle-db.js";
 import { patients, complaints } from "../../drizzle/migrations/schema.js";
 import { eq, desc } from "drizzle-orm";
 import { getOrCreateVisit } from "../utils/visitGuard.js";
+import type { VisitInfo } from "../utils/visitGuard.js";
 
 // Get all complaints
 /** Returns all complaints from the database.
@@ -16,13 +17,9 @@ export const getComplaints = async () => {
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export const getComplaintsByPatientId = async (patientId) => {
+export const getComplaintsByPatientId = async (patientId: number) => {
     return await db
-        .select({
-            ...complaints,
-            first_name: patients.firstName,
-            surname: patients.surname,
-        })
+        .select()
         .from(complaints)
         .innerJoin(patients, eq(complaints.patientId, patients.patientId))
         .where(eq(complaints.patientId, patientId))
@@ -34,8 +31,8 @@ export const getComplaintsByPatientId = async (patientId) => {
  * @param {object} complaint
  * @returns {Promise<object>}
  */
-export const createComplaint = async (complaint) => {
-    const visit = await getOrCreateVisit(complaint.patientId, complaint.visitInfo ?? null);
+export const createComplaint = async (complaint: { patientId: number; complaint: string; recordedBy: string; visitInfo?: Record<string, unknown> | null }) => {
+    const visit = await getOrCreateVisit(complaint.patientId, complaint.visitInfo as VisitInfo | null ?? null);
 
     const [newComplaint] = await db
         .insert(complaints)
@@ -43,7 +40,7 @@ export const createComplaint = async (complaint) => {
             patientId: complaint.patientId,
             complaint: complaint.complaint,
             recordedBy: complaint.recordedBy,
-            createdAt: new Date(),
+            createdAt: new Date() as unknown as string,
             visitId: visit.id,
         })
         .returning();

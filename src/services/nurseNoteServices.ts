@@ -2,13 +2,14 @@ import { db } from "../../drizzle-db.js";
 import { nursesNotes, patients } from "../../drizzle/migrations/schema.js";
 import { eq, desc } from "drizzle-orm";
 import { getOrCreateVisit } from "../utils/visitGuard.js";
+import type { VisitInfo } from "../utils/visitGuard.js";
 
 // Get all nurse's notes for a patient
 /** Returns all nurse notes for a patient joined with patient name.
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export const getNurseNotesByPatientId = async (patientId) => {
+export const getNurseNotesByPatientId = async (patientId: number) => {
   return db
     .select({
       id: nursesNotes.id,
@@ -31,10 +32,10 @@ export const getNurseNotesByPatientId = async (patientId) => {
  * @param {object} noteData
  * @returns {Promise<object>}
  */
-export const createNurseNote = async (noteData) => {
+export const createNurseNote = async (noteData: { patientId: number; note: string; recordedBy: string; visitInfo?: Record<string, unknown> | null }) => {
   const { patientId, note, recordedBy } = noteData;
 
-  const visit = await getOrCreateVisit(patientId, noteData.visitInfo ?? null);
+  const visit = await getOrCreateVisit(patientId, noteData.visitInfo as VisitInfo | null ?? null);
 
   const [newNote] = await db
     .insert(nursesNotes)
@@ -42,7 +43,7 @@ export const createNurseNote = async (noteData) => {
       patientId: patientId,
       note,
       recordedBy: recordedBy,
-      createdAt: new Date(),
+      createdAt: new Date() as unknown as string,
       visitId: visit.id,
     })
     .returning();
@@ -67,13 +68,13 @@ export const createNurseNote = async (noteData) => {
  * @param {string} newNote - New note content
  * @returns {Promise<object>}
  */
-export const updateNurseNote = async (noteId, updatedBy, newNote) => {
+export const updateNurseNote = async (noteId: number, updatedBy: string, newNote: string) => {
   const [updated] = await db
     .update(nursesNotes)
     .set({
       note: newNote,
       updatedBy: updatedBy,
-      updatedAt: new Date(),
+      updatedAt: new Date() as unknown as string,
     })
     .where(eq(nursesNotes.id, noteId))
     .returning();
@@ -86,7 +87,7 @@ export const updateNurseNote = async (noteId, updatedBy, newNote) => {
  * @param {number} noteId
  * @returns {Promise<object>}
  */
-export const deleteNurseNote = async (noteId) => {
+export const deleteNurseNote = async (noteId: number) => {
   const [deleted] = await db
     .delete(nursesNotes)
     .where(eq(nursesNotes.id, noteId))

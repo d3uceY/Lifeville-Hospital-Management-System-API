@@ -16,35 +16,36 @@ import {
  * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
  */
 export const getPaginatedAppointments = async (
-  page = 1,
-  pageSize = 10,
-  searchTerm = ""
+  page: number = 1,
+  pageSize: number = 10,
+  searchTerm: string = ""
 ) => {
+  let offset = 0;
 
   try {
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
-    const offset = (pageNumber - 1) * pageSizeNumber;
+    offset = (pageNumber - 1) * pageSizeNumber;
     const q = searchTerm.trim();
     const term = `%${q}%`;
 
     // 1. Build the base query for fetching the paginated data
     let dataQuery = db
       .select({
-        ...appointments, // selects all columns from appointments
+        ...(appointments as unknown as Record<string, unknown>), // selects all columns from appointments
         patient_first_name: patients.firstName,
         patient_surname: patients.surname,
         hospital_number: patients.hospitalNumber,
         patient_phone_number: patients.phoneNumber,
         doctor_name: users.name,
-      })
+      } as Parameters<typeof db.select>[0])
       .from(appointments)
       .leftJoin(patients, eq(appointments.patientId, patients.patientId))
       .leftJoin(users, eq(appointments.doctorId, users.id));
 
     // 2. Build the base query for counting the total items
     let countQuery = db
-      .select({ count: sql`count(*)` })
+      .select({ count: sql<number>`count(*)` })
       .from(appointments)
       .leftJoin(patients, eq(appointments.patientId, patients.patientId))
       .leftJoin(users, eq(appointments.doctorId, users.id));
@@ -102,22 +103,13 @@ export const getPaginatedAppointments = async (
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export const getAppointmentsByPatientId = async (patientId) => {
+export const getAppointmentsByPatientId = async (patientId: number) => {
   try {
-    const rows = await db
-      .select({
-        ...appointments, // selects all columns from appointments
-        patient_first_name: patients.firstName,
-        patient_surname: patients.surname,
-        hospital_number: patients.hospitalNumber,
-        patient_phone_number: patients.phoneNumber,
-        doctor_name: users.name,
-      })
-      .from(appointments)
-      .innerJoin(patients, eq(appointments.patientId, patients.patientId))
-      .innerJoin(users, eq(appointments.doctorId, users.id))
-      .where(eq(appointments.patientId, patientId))
-      .orderBy(desc(appointments.createdAt));
+    const rows = await db.select().from(appointments)
+    .innerJoin(patients, eq(appointments.patientId, patients.patientId))
+    .innerJoin(users, eq(appointments.doctorId, users.id))
+    .where(eq(appointments.patientId, patientId))
+    .orderBy(desc(appointments.createdAt));
     return rows;
   } catch (error) {
     console.error(error);
@@ -132,7 +124,7 @@ export const getAppointmentsByPatientId = async (patientId) => {
  * @param {number} appointmentId
  * @returns {Promise<object>}
  */
-export const viewAppointment = async (appointmentId) => {
+export const viewAppointment = async (appointmentId: number) => {
   const rows = await db
     .select()
     .from(appointments)
@@ -145,7 +137,7 @@ export const viewAppointment = async (appointmentId) => {
  * @param {object} appointmentData
  * @returns {Promise<object>}
  */
-export const createAppointment = async (appointmentData) => {
+export const createAppointment = async (appointmentData: { patientId: number; doctorId: number; appointmentDate: string; notes?: string }) => {
   const { patientId, doctorId, appointmentDate, notes } = appointmentData;
 
   const rows = await db.insert(appointments).values({
@@ -163,7 +155,7 @@ export const createAppointment = async (appointmentData) => {
 
   const doctor = await db.select({
     name: users.name,
-  }).from(users).where(eq(users.id, rows[0].doctorId));
+  }).from(users).where(eq(users.id, rows[0].doctorId!));
 
   const result = {
     ...rows[0],
@@ -172,7 +164,7 @@ export const createAppointment = async (appointmentData) => {
     doctor_name: doctor[0].name,
   };
 
-  upsertAppointmentCache(result);
+  upsertAppointmentCache(result as unknown as Record<string, unknown>);
   return result;
 };
 
@@ -182,14 +174,14 @@ export const createAppointment = async (appointmentData) => {
  * @param {object} appointmentData
  * @returns {Promise<object>}
  */
-export const updateAppointment = async (appointment_id, appointmentData) => {
+export const updateAppointment = async (appointment_id: number, appointmentData: { appointmentDate: string; notes?: string }) => {
   const { appointmentDate, notes } = appointmentData;
 
   const rows = await db.update(appointments)
     .set({
       appointmentDate: appointmentDate,
       notes,
-      updatedAt: new Date(),
+      updatedAt: new Date() as unknown as string,
     })
     .where(eq(appointments.appointmentId, appointment_id))
     .returning();
@@ -214,11 +206,11 @@ export const updateAppointment = async (appointment_id, appointmentData) => {
  * @param {string} status
  * @returns {Promise<object>}
  */
-export const updateAppointmentStatus = async (appointmentId, status) => {
+export const updateAppointmentStatus = async (appointmentId: number, status: string) => {
   const rows = await db.update(appointments)
     .set({
       status,
-      updatedAt: new Date(),
+      updatedAt: new Date() as unknown as string,
     })
     .where(eq(appointments.appointmentId, appointmentId))
     .returning();
@@ -244,7 +236,7 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
  * @param {number} appointmentId
  * @returns {Promise<object>}
  */
-export const deleteAppointment = async (appointmentId) => {
+export const deleteAppointment = async (appointmentId: number) => {
   const rows = await db.delete(appointments)
     .where(eq(appointments.appointmentId, appointmentId))
     .returning();

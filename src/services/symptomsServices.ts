@@ -2,9 +2,9 @@
 import { query } from "../../drizzle-db.js";
 
 // ─── In-memory cache ────────────────────────────────────────────────────────
-let symptomTypesCache = null;
+let symptomTypesCache: unknown[] | null = null;
 export const invalidateSymptomTypesCache = () => { symptomTypesCache = null; };
-let symptomHeadsCache = null;
+let symptomHeadsCache: unknown[] | null = null;
 export const invalidateSymptomHeadsCache = () => { symptomHeadsCache = null; };
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ export const getSymptomTypes = async () => {
   return rows;
 };
 
-export const createSymptomType = async (symptomTypeData) => {
+export const createSymptomType = async (symptomTypeData: { symptomText: string }) => {
   const { symptomText } = symptomTypeData;
 
   const { rows } = await query(
@@ -26,7 +26,7 @@ export const createSymptomType = async (symptomTypeData) => {
   return rows[0];
 };
 
-export const deleteSymptomType = async (symptomTypeId) => {
+export const deleteSymptomType = async (symptomTypeId: number | string) => {
   const { rows } = await query(
     `DELETE FROM symptom_types WHERE symptom_type_id = $1 RETURNING *`,
     [symptomTypeId]
@@ -35,7 +35,7 @@ export const deleteSymptomType = async (symptomTypeId) => {
   return rows.length > 0;
 };
 
-export const updateSymptomType = async (symptomTypeId, symptomTypeData) => {
+export const updateSymptomType = async (symptomTypeId: number | string, symptomTypeData: { symptomText: string }) => {
   const { symptomText } = symptomTypeData;
 
   const { rows } = await query(
@@ -63,7 +63,7 @@ export const getSymptomHeads = async () => {
   return rows;
 }; 
 
-export const createSymptomHead = async (symptomHeadData) => {
+export const createSymptomHead = async (symptomHeadData: { symptomHeadText: string; symptomTypeId: number; symptomDescription?: string }) => {
   const { symptomHeadText, symptomTypeId, symptomDescription } =
     symptomHeadData;
 
@@ -78,7 +78,7 @@ export const createSymptomHead = async (symptomHeadData) => {
   return rows[0];
 };
 
-export const deleteSymptomHead = async (symptomHeadId) => {
+export const deleteSymptomHead = async (symptomHeadId: number | string) => {
   const { rows } = await query(
     `DELETE FROM symptom_heads WHERE symptom_head_id = $1 RETURNING *`,
     [symptomHeadId]
@@ -87,7 +87,7 @@ export const deleteSymptomHead = async (symptomHeadId) => {
   return rows.length > 0;
 };
 
-export const updateSymptomHead = async (symptomHeadId, symptomHeadData) => {
+export const updateSymptomHead = async (symptomHeadId: number | string, symptomHeadData: { symptomHeadText: string; symptomTypeId: number; symptomDescription?: string }) => {
   const { symptomHeadText, symptomTypeId, symptomDescription } =
     symptomHeadData;
 

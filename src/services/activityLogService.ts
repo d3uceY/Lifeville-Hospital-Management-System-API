@@ -1,14 +1,15 @@
 import { db } from "../../drizzle-db.js";
 import { activityLogs } from "../../drizzle/migrations/schema.js";
 import { ACTIVITY_TYPE_VALUES } from "../constants/activityTypes.js";
+import type { ActivityLogEntry, ActivityLogOptions } from "../types/common.js";
 
 const FLUSH_INTERVAL_MS = 10_000; // 10s
 
-const queue = [];
-let flushTimer = null;
+const queue: ActivityLogEntry[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function flush() {
-    clearTimeout(flushTimer);
+    if (flushTimer) clearTimeout(flushTimer);
     flushTimer = null;
 
     if (!queue.length) return;
@@ -34,7 +35,7 @@ process.on("SIGINT", flush);
  *
  * @param {{ activityType: string, userId?: number|null, metadata?: object }} params
  */
-export function logActivity({ activityType, userId = null, metadata = {} }) {
+export function logActivity({ activityType, userId = null, metadata = {} }: { activityType: string; userId?: number | null; metadata?: Record<string, unknown> }): void {
     if (!ACTIVITY_TYPE_VALUES.has(activityType)) {
         console.warn(`[activityLog] Unknown activity type: "${activityType}"`);
     }
@@ -53,7 +54,7 @@ export function logActivity({ activityType, userId = null, metadata = {} }) {
  *
  * @param {{ page?: number, pageSize?: number, userId?: number, activityType?: string, startDate?: string, endDate?: string }} options
  */
-export async function getActivityLogs({ page = 1, pageSize = 25, userId, activityType, startDate, endDate } = {}) {
+export async function getActivityLogs({ page = 1, pageSize = 25, userId, activityType, startDate, endDate }: ActivityLogOptions = {}) {
     const { sql, and, eq, desc, gte, lte } = await import("drizzle-orm");
     const { users } = await import("../../drizzle/migrations/schema.js");
 

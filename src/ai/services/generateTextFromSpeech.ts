@@ -11,8 +11,8 @@ const russianRoulette = () => {
     return models[Math.floor(Math.random() * models.length)];
 };
 
-export async function transcribeSpeech(fileBuffer, originalname, mimetype) {
-    const file = new File([fileBuffer], originalname, { type: mimetype });
+export async function transcribeSpeech(fileBuffer: Buffer, originalname: string, mimetype: string): Promise<{ text: string }> {
+    const file = new File([fileBuffer as unknown as BlobPart], originalname, { type: mimetype });
 
     const transcription = await groq.audio.transcriptions.create({
         file,

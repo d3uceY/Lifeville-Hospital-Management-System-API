@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import type { Server } from "socket.io";
 import { addNotification } from "../services/notificationServices.js";
 import { NOTIFICATION_TYPES, priorityLevels } from "../constants/notification.js";
 import { NOTIFICATION_ROLES } from "../constants/domain.js";
@@ -28,7 +29,7 @@ const REMINDER_WINDOW_MINUTES = 30;
  * notified this session. Storing the date lets us prune entries once the
  * appointment has passed, keeping memory bounded.
  */
-const notifiedIds = new Map();
+const notifiedIds = new Map<number, string>();
 
 // ─── Cache-backed query ────────────────────────────────────────────────────────
 
@@ -48,12 +49,14 @@ function getUpcomingAppointments() {
  * @param {object} appt  - appointment row from getUpcomingAppointments
  * @param {import("socket.io").Server} io - Socket.IO server instance
  */
-async function sendReminder(appt, io) {
+import type { CachedAppointment } from "../lib/appointmentCache.js";
+
+async function sendReminder(appt: CachedAppointment, io: Server | null) {
     const patientName = `${appt.patientFirstName} ${appt.patientSurname}`;
     const dateLabel = formatDate(appt.appointmentDate);
 
     await addNotification({
-        recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
+        recipientRoles: [...NOTIFICATION_ROLES.APPOINTMENT],
         type: NOTIFICATION_TYPES.APPOINTMENT,
         title: "Upcoming Appointment Reminder",
         message: `Appointment with ${patientName} is in ${REMINDER_WINDOW_MINUTES} minutes (${dateLabel})`,
@@ -66,7 +69,7 @@ async function sendReminder(appt, io) {
     });
 
     io?.emit("notification", {
-        recipientRoles: NOTIFICATION_ROLES.APPOINTMENT,
+        recipientRoles: [...NOTIFICATION_ROLES.APPOINTMENT],
         message: `Upcoming appointment at ${dateLabel}`,
         description: `Patient: ${patientName}${appt.doctorName ? ` · Dr. ${appt.doctorName}` : ""}`,
     });
@@ -95,7 +98,7 @@ function pruneNotifiedIds() {
  * 4. Sends notifications for any appointment not yet notified this session.
  * @param {import("socket.io").Server} io
  */
-async function runAppointmentReminderJob(io) {
+async function runAppointmentReminderJob(io: Server | null) {
     pruneAppointmentCache();
     pruneNotifiedIds();
 
@@ -121,7 +124,7 @@ async function runAppointmentReminderJob(io) {
  * Call this once at server startup, passing the Socket.IO instance.
  * @param {import("socket.io").Server} io
  */
-export function scheduleAppointmentReminders(io) {
+export function scheduleAppointmentReminders(io: Server | null) {
     cron.schedule(CRON_SCHEDULE, async () => {
         try {
             await runAppointmentReminderJob(io);

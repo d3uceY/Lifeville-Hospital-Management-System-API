@@ -5,12 +5,13 @@ import * as nurseNoteServices from "../services/nurseNoteServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
 import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
+import { isHttpError } from "../lib/errors.js";
 
 // Get nurse's notes by patient ID
 export const getNurseNotesByPatientId = async (req: Request, res: Response) => {
   try {
     const { patientId } = req.params;
-    const notes = await nurseNoteServices.getNurseNotesByPatientId(patientId);
+    const notes = await nurseNoteServices.getNurseNotesByPatientId(Number(patientId));
 
     res.json({
       success: true,
@@ -38,16 +39,16 @@ export const createNurseNote = async (req: Request, res: Response) => {
       const data = {
         first_name: newNote.first_name,
         surname: newNote.surname,
-        patient_id: newNote.patient_id,
+        patient_id: newNote.patientId,
         note: newNote.note,
-        recorded_by: newNote.recorded_by,
+        recorded_by: newNote.recordedBy,
         priority: priorityLevels.normal,
       }
       await addNotification({
-        recipientRoles: NOTIFICATION_ROLES.CLINICAL,
+        recipientRoles: [...NOTIFICATION_ROLES.CLINICAL],
         type: NOTIFICATION_TYPES.NURSE_NOTE,
         title: "Nurse's Note Added",
-        message: `Nurse's note added for ${newNote.first_name} ${newNote.surname} by ${newNote.recorded_by}`,
+        message: `Nurse's note added for ${newNote.first_name} ${newNote.surname} by ${newNote.recordedBy}`,
         data,
       });
 
@@ -67,10 +68,13 @@ export const createNurseNote = async (req: Request, res: Response) => {
       success: true,
       data: newNote,
     });
-    req.activityLogger(ACTIVITY_TYPES.NURSE_NOTE_CREATED, { noteId: newNote.id, patientId: newNote.patient_id });
+    req.activityLogger(ACTIVITY_TYPES.NURSE_NOTE_CREATED, { noteId: newNote.id, patientId: newNote.patientId });
   } catch (error) {
     console.error("Error creating nurse note:", error);
-    res.status(error.status || 500).json({ success: false, error: error.message, code: error.code });
+    const status = isHttpError(error) ? error.status : 500;
+    const message = isHttpError(error) ? error.message : "Server error";
+    const code = isHttpError(error) ? error.code : undefined;
+    res.status(status).json({ success: false, error: message, code });
   }
 };
 
@@ -81,7 +85,7 @@ export const updateNurseNote = async (req: Request, res: Response) => {
     const { updatedBy, note } = req.body;
 
     const updatedNote = await nurseNoteServices.updateNurseNote(
-      id,
+      Number(id),
       updatedBy,
       note
     );
@@ -101,7 +105,7 @@ export const updateNurseNote = async (req: Request, res: Response) => {
 export const deleteNurseNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deletedNote = await nurseNoteServices.deleteNurseNote(id);
+    const deletedNote = await nurseNoteServices.deleteNurseNote(Number(id));
 
     res.json({
       success: true,

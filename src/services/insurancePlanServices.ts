@@ -17,7 +17,7 @@ const PLAN_SELECT = {
  * @param {number} providerId
  * @returns {Promise<object[]>}
  */
-export async function getPlansByProviderId(providerId) {
+export async function getPlansByProviderId(providerId: number) {
   return await db
     .select(PLAN_SELECT)
     .from(insurancePlans)
@@ -30,7 +30,7 @@ export async function getPlansByProviderId(providerId) {
  * @param {{ provider_id: number, name: string, description?: string, is_active?: boolean }} data
  * @returns {Promise<object>}
  */
-export async function createInsurancePlan(data) {
+export async function createInsurancePlan(data: { provider_id: number; name: string; description?: string; is_active?: boolean }) {
   const [created] = await db
     .insert(insurancePlans)
     .values({
@@ -57,7 +57,7 @@ export async function createInsurancePlan(data) {
  * @param {{ name?: string, description?: string, is_active?: boolean }} data
  * @returns {Promise<object>}
  */
-export async function updateInsurancePlan(id, data) {
+export async function updateInsurancePlan(id: number, data: { name?: string; description?: string; is_active?: boolean }) {
   const [updated] = await db
     .update(insurancePlans)
     .set({
@@ -83,7 +83,7 @@ export async function updateInsurancePlan(id, data) {
  * @param {number} id
  * @returns {Promise<object>}
  */
-export async function deleteInsurancePlan(id) {
+export async function deleteInsurancePlan(id: number) {
   const [deleted] = await db
     .delete(insurancePlans)
     .where(eq(insurancePlans.id, id))

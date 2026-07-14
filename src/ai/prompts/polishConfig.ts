@@ -15,7 +15,7 @@ Guidelines:
 - Skip any section for which there is no data
 - Use the dates provided to give the reader a clear clinical timeline
 - The patient's name is provided as the placeholder {fullName} in the input data. Wherever you would write the patient's name in your output, use {fullName} exactly as written — do not substitute, invent, or infer any name`,
-        prompt: (formattedData) =>
+        prompt: (formattedData: string) =>
             `Today's date: ${new Date().toISOString().split('T')[0]}\n\nGenerate a structured clinical patient summary based on the following EMR records:\n\n${formattedData}`,
     },
 
@@ -29,7 +29,7 @@ Follow these rules:
 - Remove filler words, typos, and informal language.
 - Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished complaint text. No explanations, labels, or extra commentary.`,
-        prompt: (rawText) =>
+        prompt: (rawText: string) =>
             `Polish the following patient complaint into an EMR-ready chief complaint entry:\n\n"${rawText}"`,
     },
 
@@ -44,7 +44,7 @@ Follow these rules:
 - Remove redundancy, filler words, and grammatical errors.
 - Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished note text. No explanations or meta-commentary.`,
-        prompt: (rawText) =>
+        prompt: (rawText: string) =>
             `Polish the following physician's note into a professional EMR-ready clinical note:\n\n"${rawText}"`,
     },
 
@@ -75,10 +75,14 @@ A practical list of investigations to confirm or exclude the provisional diagnos
 
 - Supplementary clinical context (vital signs, recent complaints, doctor's notes) may be appended below the examination fields. Use it as supporting background only — the physical examination findings remain the primary basis for your assessment. If a supplementary data point is marked as recorded more than 7 days ago, treat it with caution: acknowledge it may not reflect the patient's current condition, but still incorporate it where clinically relevant.
 - Output only the structured text. No preamble, no meta-commentary.`,
-        prompt: (data) => {
+        prompt: (data: Record<string, unknown> | string) => {
             // Support both legacy call (examFields object directly) and enriched format ({ examFields, context })
-            const examFields = data.examFields ?? data;
-            const context = data.context ?? null;
+            const examFields = (data as Record<string, unknown>).examFields ?? data;
+            const context = (data as Record<string, unknown>).context as {
+                vitalSigns?: { data: string; date: string; daysSince: number };
+                complaints?: { data: string; date: string; daysSince: number };
+                doctorNote?: { note: string; date: string; daysSince: number };
+            } | null ?? null;
             const LABELS = {
                 general_appearance: 'General Appearance',
                 heent: 'HEENT',
@@ -93,7 +97,7 @@ A practical list of investigations to confirm or exclude the provisional diagnos
             };
             const lines = Object.entries(examFields)
                 .filter(([, val]) => val && val.trim())
-                .map(([key, val]) => `${LABELS[key] || key}: ${val}`)
+                .map(([key, val]) => `${(LABELS as Record<string, string>)[key] || key}: ${val}`)
                 .join('\n');
             let prompt = `Based on the following physical examination findings, generate a professional Findings / Provisional Diagnosis:\n\n${lines}`;
             if (context) {
@@ -139,7 +143,7 @@ Follow these rules:
 - Do not add, invent, or assume any values or findings not present in the original text.
 - Remove informal language, filler words, spelling errors, and redundancy.
 - Output only the polished result text. No labels, preamble, or meta-commentary.`,
-        prompt: (rawText) =>
+        prompt: (rawText: string) =>
             `Polish the following lab test result into a professional EMR-ready laboratory report entry:\n\n"${rawText}"`,
     },
 
@@ -156,7 +160,7 @@ Follow these rules:
 - Keep the instruction concise: 3–7 sentences maximum (slightly longer if multiple tests are requested).
 - Do not invent, assume, or extrapolate any clinical details not explicitly stated in the provided examination data.
 - Output only the instruction text. No labels, preamble, or meta-commentary.`,
-        prompt: ({ testTypes, examDate, daysSinceExam, examFindings }) => {
+        prompt: ({ testTypes, examDate, daysSinceExam, examFindings }: { testTypes: string | string[]; examDate: string; daysSinceExam: number; examFindings: string }) => {
             const stalenessNote = daysSinceExam > 7
                 ? `NOTE: The most recent physical examination was recorded ${daysSinceExam} day(s) ago (${examDate}). This is a notable time gap — the findings below may not reflect the patient's current clinical status. The lab scientist should factor this in.`
                 : `The most recent physical examination was recorded ${daysSinceExam} day(s) ago (${examDate}), which is recent and clinically current.`;
@@ -178,7 +182,7 @@ Follow these rules:
 - Remove informal language, filler words, and spelling errors.
 - Do NOT use markdown formatting. Do not use asterisks, bold, italics, headers, or any markdown syntax. Use plain text only.
 - Output only the polished nursing note text. No explanations or meta-commentary.`,
-        prompt: (rawText) =>
+        prompt: (rawText: string) =>
             `Polish the following nurse's note into a professional EMR-ready nursing note:\n\n"${rawText}"`,
     },
 
@@ -195,7 +199,7 @@ Follow these rules:
 - Be concise: 3–5 sentences maximum.
 - Do not invent, assume, or extrapolate any clinical detail not explicitly present in the data.
 - Output only the diagnostic notes text. No preamble, no heading, no meta-commentary.`,
-        prompt: (data) => {
+        prompt: (data: { patientContext?: string; identifiedDiagnoses?: { code: string; description: string }[]; vitalSigns?: string; complaints?: string; physicalExamFindings?: string; latestDoctorNote?: string; formNotes?: string }) => {
             const lines = [`Today's date: ${new Date().toISOString().split('T')[0]}`];
             if (data.patientContext) lines.push(`\nPatient Details:\n${data.patientContext}`);
             if (data.identifiedDiagnoses?.length) lines.push(`\nIdentified Diagnoses (ICD-10-CM):\n${data.identifiedDiagnoses.map(d => `${d.code}: ${d.description}`).join('\n')}`);

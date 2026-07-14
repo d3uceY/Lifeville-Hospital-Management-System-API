@@ -3,12 +3,13 @@ import { db } from "../../drizzle-db.js";
 import { physicalExaminations, patients, users } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql } from "drizzle-orm";
 import { getOrCreateVisit } from "../utils/visitGuard.js";
+import type { VisitInfo } from "../utils/visitGuard.js";
 
 /** Inserts a full physical examination record and returns it enriched with patient details.
  * @param {object} examData
  * @returns {Promise<object>}
  */
-export const createPhysicalExamination = async (examData) => {
+export const createPhysicalExamination = async (examData: { patient_id: number; recorded_by: string; general_appearance?: string; heent?: string; cardiovascular?: string; respiration?: string; gastrointestinal?: string; gynecology_obstetrics?: string; musculoskeletal?: string; neurological?: string; skin?: string; findings?: string; genitourinary?: string; visitInfo?: Record<string, unknown> | null }) => {
     const {
         patient_id,
         recorded_by,
@@ -26,7 +27,7 @@ export const createPhysicalExamination = async (examData) => {
     } = examData;
 
     // Require an ongoing (not yet checked-out) visit
-    const visit = await getOrCreateVisit(patient_id, examData.visitInfo ?? null);
+    const visit = await getOrCreateVisit(patient_id, examData.visitInfo as VisitInfo | null ?? null);
 
     const { rows } = await query(
         `INSERT INTO physical_examinations (
@@ -86,14 +87,14 @@ export const createPhysicalExamination = async (examData) => {
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export const getPhysicalExaminationsByPatientId = async (patientId) => {
+export const getPhysicalExaminationsByPatientId = async (patientId: number) => {
     const rows = await db
       .select({
-        ...physicalExaminations, // expands into all physical_examinations columns
+        ...(physicalExaminations as unknown as Parameters<typeof db.select>[0]),
         first_name: patients.firstName,
         surname: patients.surname,
         hospitalNumber: patients.hospitalNumber,
-      })
+      } as Parameters<typeof db.select>[0])
       .from(physicalExaminations)
       .innerJoin(
         patients,

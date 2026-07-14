@@ -5,9 +5,9 @@ import { timeAgo } from "../utils/getTimeAgo.js";
 
 // ─── Shared WHERE condition for a user's notifications ──────────────────────
 // Matches: direct recipient OR user's role string is in the recipient_roles array
-function userNotificationWhere(userId, role, userCreatedAt) {
+function userNotificationWhere(userId: number, role: string, userCreatedAt: string | Date) {
     return and(
-        gte(notificationsTable.createdAt, userCreatedAt),
+        gte(notificationsTable.createdAt, String(userCreatedAt)),
         or(
             eq(notificationsTable.recipientId, userId),
             sql`${role} = ANY(${notificationsTable.recipientRoles})`
@@ -21,14 +21,14 @@ function userNotificationWhere(userId, role, userCreatedAt) {
  * @param {{ id: number, role: string, userCreatedAt: Date }} userData
  * @returns {Promise<object[]>}
  */
-export const getNotificationsByUserData = async (userData) => {
+export const getNotificationsByUserData = async (userData: { id: number; role: string; userCreatedAt: string | Date }) => {
     const { role, id: userId, userCreatedAt } = userData;
 
     const notificationsList = await db.select(
         {
-            ...notificationsTable,
+            ...(notificationsTable as unknown as Parameters<typeof db.select>[0]),
             is_read: sql`CASE WHEN ${notificationReads.id} IS NULL THEN false ELSE true END`,
-        }
+        } as Parameters<typeof db.select>[0]
     )
         .from(notificationsTable)
         .leftJoin(
@@ -44,7 +44,7 @@ export const getNotificationsByUserData = async (userData) => {
 
     return notificationsList.map(notification => ({
         ...notification,
-        time: timeAgo(notification.createdAt),
+        time: timeAgo((notification as unknown as Record<string, unknown>).createdAt as string),
     }));
 }
 
@@ -54,15 +54,15 @@ export const getNotificationsByUserData = async (userData) => {
  * @param {{ id: number, role: string, userCreatedAt: Date }} userData
  * @returns {Promise<{ unreadNotifications: object[], totalUnread: number }>}
  */
-export const getUnreadNotifications = async (userData) => {
+export const getUnreadNotifications = async (userData: { id: number; role: string; userCreatedAt: string | Date }) => {
     const { role, id: userId, userCreatedAt } = userData;
     const where = userNotificationWhere(userId, role, userCreatedAt);
 
     const unreadNotifications = await db
         .select({
-            ...notificationsTable,
+            ...(notificationsTable as unknown as Parameters<typeof db.select>[0]),
             is_read: sql`CASE WHEN ${notificationReads.id} IS NULL THEN false ELSE true END`,
-        })
+        } as Parameters<typeof db.select>[0])
         .from(notificationsTable)
         .leftJoin(
             notificationReads,
@@ -92,7 +92,7 @@ export const getUnreadNotifications = async (userData) => {
             .filter(notification => !notification.is_read)
             .map(notification => ({
                 ...notification,
-                time: timeAgo(notification.createdAt),
+                time: timeAgo((notification as unknown as Record<string, unknown>).createdAt as string),
             })),
         totalUnread: Number(totalUnread.count),
     };
@@ -108,9 +108,9 @@ export const getUnreadNotifications = async (userData) => {
  * @returns {Promise<{ data: object[], totalItems: number, totalPages: number, currentPage: number, pageSize: number, skipped: number }>}
  */
 export const getPaginatedNotificationsByUserData = async (
-    userData,
-    page = 1,
-    pageSize = 10
+    userData: { id: number; role: string; userCreatedAt: string | Date },
+    page: number = 1,
+    pageSize: number = 10
 ) => {
     const { role, id: userId, userCreatedAt } = userData;
     const pageNumber = Number(page);
@@ -151,7 +151,7 @@ export const getPaginatedNotificationsByUserData = async (
     return {
         data: notificationsWithRead.map(notification => ({
             ...notification,
-            time: timeAgo(notification.createdAt),
+            time: timeAgo(notification.createdAt as string),
         })),
         totalItems: Number(totalItems.count),
         totalPages: Math.ceil(Number(totalItems.count) / pageSizeNumber),
@@ -167,13 +167,13 @@ export const getPaginatedNotificationsByUserData = async (
  * @param {{ id: number }} userData
  * @returns {Promise<void>}
  */
-export const markNotificationAsRead = async (notificationId, userData) => {
+export const markNotificationAsRead = async (notificationId: number, userData: { id: number }) => {
     const { id } = userData;
     await db.insert(notificationReads)
         .values({
             notificationId: notificationId,
             userId: id,
-            readAt: new Date(),
+            readAt: new Date() as unknown as string,
         })
 }
 
@@ -183,16 +183,16 @@ export const markNotificationAsRead = async (notificationId, userData) => {
  *
  * @param {{ recipientRoles: string[], type: string, title: string, message: string, data?: object, recipientId?: number }} opts
  */
-export const addNotification = async ({ recipientRoles, type, title, message, data, recipientId = null }) => {
+export const addNotification = async ({ recipientRoles, type, title, message, data, recipientId = null }: { recipientRoles?: readonly string[] | string[]; type: string; title?: string; message?: string; data?: Record<string, unknown>; recipientId?: number | null }) => {
     try {
         await db.insert(notificationsTable).values({
-            recipientRoles: recipientRoles ?? [],
+            recipientRoles: (recipientRoles ?? []) as string[],
             recipientId,
             type,
             title,
             message,
             data: data ?? null,
-            createdAt: new Date(),
+            createdAt: new Date() as unknown as string,
         });
     } catch (error) {
         console.error("addNotification error:", error);

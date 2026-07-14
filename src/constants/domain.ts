@@ -6,7 +6,9 @@ export const ROLES = {
   RECEPTIONIST: "receptionist",
   LAB:          "lab",
   ACCOUNTANT:   "accountant",
-};
+} as const;
+
+export type Role = typeof ROLES[keyof typeof ROLES];
 
 /** Human-readable labels — used to seed the roles table */
 export const ROLE_LABELS = {
@@ -16,7 +18,7 @@ export const ROLE_LABELS = {
   receptionist: "Receptionist",
   lab:          "Lab Technician",
   accountant:   "Accountant",
-};
+} as const;
 
 // ─── Predefined role groups used in notifications ─────────────────────────────
 export const NOTIFICATION_ROLES = {
@@ -34,7 +36,7 @@ export const NOTIFICATION_ROLES = {
   VISIT:         [ROLES.SUPERADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.LAB, ROLES.NURSE],
   /** Patient-level events — virtually all staff */
   ALL_STAFF:     [ROLES.SUPERADMIN, ROLES.DOCTOR, ROLES.LAB, ROLES.RECEPTIONIST, ROLES.NURSE],
-};
+} as const;
 
 // ─── Billing / service categories ────────────────────────────────────────────
 export const SERVICE_CATEGORIES = {
@@ -45,13 +47,18 @@ export const SERVICE_CATEGORIES = {
   SERVICE:      "service",
   WARD:         "ward",
   FOOD:         "food",
-};
+} as const;
+
+export type ServiceCategory = typeof SERVICE_CATEGORIES[keyof typeof SERVICE_CATEGORIES];
 
 // ─── Billing types ────────────────────────────────────────────────────────────
 export const BILLING_TYPES = {
   CREDIT:   "credit",
   PAY_NOW:  "pay_now",
-};
+} as const;
+
+export type BillingType = typeof BILLING_TYPES[keyof typeof BILLING_TYPES];
+
 // ─── Invoice statuses ──────────────────────────────────────────────
 export const INVOICE_STATUSES = {
   OPEN:      "open",      // no payment made yet
@@ -59,11 +66,13 @@ export const INVOICE_STATUSES = {
   PAID:      "paid",      // fully settled
   OVERDUE:   "overdue",   // past due, unpaid
   CANCELLED: "cancelled",
-};
+} as const;
+
+export type InvoiceStatus = typeof INVOICE_STATUSES[keyof typeof INVOICE_STATUSES];
 
 // ─── Cloudinary upload subfolders ────────────────────────────────────────────
 export const UPLOAD_SUBFOLDERS = {
   LAB_DOCS:        "lab-test-docs",
   PATIENT_PROFILE: "patient-profiles",
   USER_PROFILE:    "user-profiles",
-};
+} as const;

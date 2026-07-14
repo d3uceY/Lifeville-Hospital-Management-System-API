@@ -2,11 +2,11 @@
 import { query } from "../../drizzle-db.js";
 
 // ─── In-memory cache ────────────────────────────────────────────────────────
-let bedTypesCache = null;
+let bedTypesCache: unknown[] | null = null;
 export const invalidateBedTypesCache = () => { bedTypesCache = null; };
-let bedGroupsCache = null;
+let bedGroupsCache: unknown[] | null = null;
 export const invalidateBedGroupsCache = () => { bedGroupsCache = null; };
-let bedsCache = null;
+let bedsCache: unknown[] | null = null;
 export const invalidateBedsCache = () => { bedsCache = null; };
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ export const getBedTypes = async () => {
 /**
  * Create a new bed type
  */
-export const createBedType = async (typeData) => {
+export const createBedType = async (typeData: { typeName: string }) => {
   const { typeName } = typeData;
   const { rows } = await query(
     `
@@ -48,7 +48,7 @@ export const createBedType = async (typeData) => {
 /**
  * Update an existing bed type
  */
-export const updateBedType = async (typeId, typeData) => {
+export const updateBedType = async (typeId: number | string, typeData: { typeName: string }) => {
   const { typeName } = typeData;
   const { rows } = await query(
     `
@@ -68,7 +68,7 @@ export const updateBedType = async (typeId, typeData) => {
 /**
  * Delete a bed type
  */
-export const deleteBedType = async (typeId) => {
+export const deleteBedType = async (typeId: number | string) => {
   const { rows } = await query(
     `
     DELETE FROM bed_types
@@ -103,7 +103,7 @@ export const getBedGroups = async () => {
 /**
  * Create a new bed group
  */
-export const createBedGroup = async (groupData) => {
+export const createBedGroup = async (groupData: { groupName: string }) => {
   const { groupName } = groupData;
   const { rows } = await query(
     `
@@ -120,7 +120,7 @@ export const createBedGroup = async (groupData) => {
 /**
  * Update an existing bed group
  */
-export const updateBedGroup = async (groupId, groupData) => {
+export const updateBedGroup = async (groupId: number | string, groupData: { groupName: string }) => {
   const { groupName } = groupData;
   const { rows } = await query(
     `
@@ -140,7 +140,7 @@ export const updateBedGroup = async (groupId, groupData) => {
 /**
  * Delete a bed group
  */
-export const deleteBedGroup = async (groupId) => {
+export const deleteBedGroup = async (groupId: number | string) => {
   const { rows } = await query(
     `
     DELETE FROM bed_groups
@@ -184,7 +184,7 @@ export const getBeds = async () => {
 /**
  * Fetch one bed by ID
  */
-export const viewBed = async (bedId) => {
+export const viewBed = async (bedId: number | string) => {
   const { rows } = await query(
     `
     SELECT
@@ -211,7 +211,7 @@ export const viewBed = async (bedId) => {
 /**
  * Create a new bed
  */
-export const createBed = async (bedData) => {
+export const createBed = async (bedData: { bedName: string; used?: boolean; bedTypeId: number; bedGroupId: number }) => {
   const { bedName, used = false, bedTypeId, bedGroupId } = bedData;
   const { rows } = await query(
     `
@@ -228,7 +228,7 @@ export const createBed = async (bedData) => {
 /**
  * Update an existing bed
  */
-export const updateBed = async (bedId, bedData) => {
+export const updateBed = async (bedId: number | string, bedData: { bedName: string; inUse: boolean; bedTypeId: number; bedGroupId: number }) => {
   const { bedName, inUse, bedTypeId, bedGroupId } = bedData;
   const { rows } = await query(
     `
@@ -250,7 +250,7 @@ export const updateBed = async (bedId, bedData) => {
 /**
  * Delete a bed
  */
-export const deleteBed = async (bedId) => {
+export const deleteBed = async (bedId: number | string) => {
   const { rows } = await query(
     `
     DELETE FROM beds

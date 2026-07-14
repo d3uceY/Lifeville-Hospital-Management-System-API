@@ -26,7 +26,7 @@ const PATIENT_INSURANCE_SELECT = {
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export async function getPatientInsuranceByPatientId(patientId) {
+export async function getPatientInsuranceByPatientId(patientId: number) {
   return await db
     .select(PATIENT_INSURANCE_SELECT)
     .from(patientInsurance)
@@ -42,7 +42,7 @@ export async function getPatientInsuranceByPatientId(patientId) {
  *   policy_number?: string, is_primary?: boolean, status?: string, start_date?: string, end_date?: string }} data
  * @returns {Promise<object>}
  */
-export async function createPatientInsurance(data) {
+export async function createPatientInsurance(data: { patient_id: number; provider_id: number; plan_id?: number; member_number: string; policy_number?: string; is_primary?: boolean; status?: string; start_date?: string; end_date?: string }) {
   const [created] = await db
     .insert(patientInsurance)
     .values({
@@ -66,7 +66,7 @@ export async function createPatientInsurance(data) {
  * @param {number} id
  * @returns {Promise<object>}
  */
-export async function getPatientInsuranceById(id) {
+export async function getPatientInsuranceById(id: number) {
   const [result] = await db
     .select(PATIENT_INSURANCE_SELECT)
     .from(patientInsurance)
@@ -83,7 +83,7 @@ export async function getPatientInsuranceById(id) {
  * @param {object} data
  * @returns {Promise<object>}
  */
-export async function updatePatientInsurance(id, data) {
+export async function updatePatientInsurance(id: number, data: { provider_id?: number; plan_id?: number; member_number?: string; policy_number?: string; is_primary?: boolean; status?: string; start_date?: string; end_date?: string }) {
   await db
     .update(patientInsurance)
     .set({
@@ -95,7 +95,7 @@ export async function updatePatientInsurance(id, data) {
       status: data.status,
       startDate: data.start_date || null,
       endDate: data.end_date || null,
-      updatedAt: new Date(),
+      updatedAt: new Date() as unknown as string,
     })
     .where(eq(patientInsurance.id, id));
 
@@ -107,7 +107,7 @@ export async function updatePatientInsurance(id, data) {
  * @param {number} id
  * @returns {Promise<object>}
  */
-export async function deletePatientInsurance(id) {
+export async function deletePatientInsurance(id: number) {
   const [deleted] = await db
     .delete(patientInsurance)
     .where(eq(patientInsurance.id, id))

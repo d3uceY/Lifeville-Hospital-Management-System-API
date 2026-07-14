@@ -1,6 +1,6 @@
 import { query } from "../../drizzle-db.js";
 
-let rolesCache = null;
+let rolesCache: { id: number; name: string; label: string }[] | null = null;
 
 /** Clears the in-memory roles cache, forcing the next call to `listRoles` to re-query the database. */
 export function invalidateRolesCache() {

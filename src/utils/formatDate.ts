@@ -9,7 +9,7 @@
  * formatDate("2024-01-15T14:30:00Z") // Returns "15 Jan 2024, 02:30 PM"
  * formatDate(null) // Returns "—"
  */
-export function formatDate(isoString) {
+export function formatDate(isoString: string | null | undefined): string {
     if (!isoString) return "—";
     const date = new Date(isoString);
     return new Intl.DateTimeFormat("en-GB", {

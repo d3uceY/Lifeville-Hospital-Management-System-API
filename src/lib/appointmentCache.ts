@@ -18,6 +18,17 @@ import { db } from "../../drizzle-db.js";
 import { appointments, patients, users } from "../../drizzle/migrations/schema.js";
 import { eq, and, gte, or } from "drizzle-orm";
 
+// ─── Types ──────────────────────────────────────────────────────────────────────────────
+export interface CachedAppointment {
+  appointmentId: number;
+  appointmentDate: string;
+  status: string;
+  patientId: number;
+  patientFirstName: string | null;
+  patientSurname: string | null;
+  doctorName?: string | null;
+}
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 /** Statuses that are eligible to be tracked for reminders. */
@@ -25,15 +36,14 @@ const ELIGIBLE_STATUSES = new Set(["scheduled", "confirmed"]);
 
 // ─── Store ─────────────────────────────────────────────────────────────────────
 
-/** @type {Map<number, CachedAppointment>} */
-export const appointmentCache = new Map();
+export const appointmentCache = new Map<number, CachedAppointment>();
 
 /**
  * Single init-promise guard.  Prevents duplicate DB fetches when the cron fires
  * before the first fetch has resolved (e.g. extremely short CRON_SCHEDULE).
  * @type {Promise<void> | null}
  */
-let _initPromise = null;
+let _initPromise: Promise<void> | null = null;
 
 // ─── Initialisation ────────────────────────────────────────────────────────────
 
@@ -107,21 +117,21 @@ export function isCacheInitialized() {
  *
  * @param {object} rawAppt
  */
-export function upsertAppointmentCache(rawAppt) {
+export function upsertAppointmentCache(rawAppt: Record<string, unknown>) {
     // Support both camelCase (initializeCache explicit aliases) and
     // snake_case (Drizzle .returning() with casing: "snake_case").
     // Coerce to Number — req.params IDs arrive as strings but cache keys are numbers.
-    const appointmentId = Number(rawAppt?.appointmentId ?? rawAppt?.appointment_id);
+    const appointmentId = Number(rawAppt?.appointmentId ?? rawAppt?.appointment_id as unknown);
     if (!appointmentId) return;
 
-    const normalised = {
+    const normalised: CachedAppointment = {
         appointmentId,
-        appointmentDate: rawAppt.appointmentDate  ?? rawAppt.appointment_date,
-        status:          rawAppt.status,
-        patientId:       rawAppt.patientId        ?? rawAppt.patient_id,
-        patientFirstName: rawAppt.patientFirstName ?? rawAppt.first_name,
-        patientSurname:   rawAppt.patientSurname   ?? rawAppt.surname,
-        doctorName:       rawAppt.doctorName        ?? rawAppt.doctor_name,
+        appointmentDate: (rawAppt.appointmentDate ?? rawAppt.appointment_date) as string,
+        status:          rawAppt.status as string,
+        patientId:       (rawAppt.patientId ?? rawAppt.patient_id) as number,
+        patientFirstName: (rawAppt.patientFirstName ?? rawAppt.first_name) as string,
+        patientSurname:   (rawAppt.patientSurname ?? rawAppt.surname) as string,
+        doctorName:       (rawAppt.doctorName ?? rawAppt.doctor_name) as string | null,
     };
 
     const isEligible =
@@ -135,11 +145,11 @@ export function upsertAppointmentCache(rawAppt) {
 
     // Merge: only overwrite defined, non-null values so we never lose existing
     // fields (e.g. doctorName) that the caller's service didn't return.
-    const existing = appointmentCache.get(normalised.appointmentId) ?? {};
-    const merged = { ...existing };
+    const existing = appointmentCache.get(normalised.appointmentId) ?? {} as Partial<CachedAppointment>;
+    const merged: CachedAppointment = { ...existing } as CachedAppointment;
     for (const [key, value] of Object.entries(normalised)) {
         if (value !== undefined && value !== null) {
-            merged[key] = value;
+            (merged as unknown as Record<string, unknown>)[key] = value;
         }
     }
 
@@ -151,7 +161,7 @@ export function upsertAppointmentCache(rawAppt) {
  * Coerces to Number so string IDs from req.params also match numeric cache keys.
  * @param {number|string} appointmentId
  */
-export function removeFromAppointmentCache(appointmentId) {
+export function removeFromAppointmentCache(appointmentId: number | string) {
     appointmentCache.delete(Number(appointmentId));
 }
 
@@ -163,10 +173,10 @@ export function removeFromAppointmentCache(appointmentId) {
  * @param {number} windowMinutes
  * @returns {CachedAppointment[]}
  */
-export function getAppointmentsInWindow(windowMinutes) {
+export function getAppointmentsInWindow(windowMinutes: number): CachedAppointment[] {
     const now = new Date();
     const windowEnd = new Date(now.getTime() + windowMinutes * 60_000);
-    const results = [];
+    const results: CachedAppointment[] = [];
 
     for (const appt of appointmentCache.values()) {
         const date = new Date(appt.appointmentDate);
@@ -185,7 +195,7 @@ export function getAppointmentsInWindow(windowMinutes) {
  * Call this at every cron tick to keep memory bounded.
  * @returns {number} number of entries removed
  */
-export function pruneAppointmentCache() {
+export function pruneAppointmentCache(): number {
     const now = new Date();
     let pruned = 0;
 

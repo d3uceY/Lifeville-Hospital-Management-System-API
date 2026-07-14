@@ -14,8 +14,12 @@ import sharp from "sharp";
  * @returns {Promise<string>} The secure URL of the uploaded image on Cloudinary
  * @throws {Error} If the upload to Cloudinary fails
  */
-export async function uploadToCloudinary(fileBuffer, folder, type = 'default') {
-    let imageSpec = {};
+export async function uploadToCloudinary(
+    fileBuffer: Buffer,
+    folder: string,
+    type: 'lab-doc' | 'avatar' | 'patient-photo' | 'default' = 'default'
+): Promise<string> {
+    let imageSpec: { width?: number; height?: number; fit?: string } | null = {};
     let quality = 80; // Default quality for JPEG compression
 
     switch (type) {
@@ -36,13 +40,13 @@ export async function uploadToCloudinary(fileBuffer, folder, type = 'default') {
     }
 
     const sharpPipeline = sharp(fileBuffer).jpeg({ quality });
-    if (imageSpec) sharpPipeline.resize(imageSpec);
+    if (imageSpec) sharpPipeline.resize(imageSpec as Parameters<typeof sharpPipeline.resize>[0]);
     const optimizedBuffer = await sharpPipeline.toBuffer();
 
-    const result = await new Promise((resolve, reject) => {
+    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
         cloudinary.uploader
             .upload_stream({ folder }, (err, res) =>
-                err ? reject(err) : resolve(res)
+                err ? reject(err) : resolve({ secure_url: res!.secure_url })
             )
             .end(optimizedBuffer);
     });

@@ -9,7 +9,7 @@ import { lookupByCode } from "../icd/services/icd.services.js";
  * Returns all 5 summary datasets for the patient dashboard in a single call.
  * Each dataset is limited to the most recent N records.
  */
-export const getPatientDashboardSummary = async (patientId) => {
+export const getPatientDashboardSummary = async (patientId: number | string) => {
     const id = Number(patientId);
 
     const [admissionsResult, diagnosesResult, labTestsResult, vitalSignsResult, visitsResult] = await Promise.all([
@@ -76,50 +76,50 @@ export const getPatientDashboardSummary = async (patientId) => {
 };
 
 
-export const getAdmissionSummaryByPatientId = async (patientId) => {
+export const getAdmissionSummaryByPatientId = async (patientId: number | string) => {
     const result = await db.select({
         admissionDate: inpatientAdmissions.createdAt,
         consultantDoctorName: users.name,
         dischargeCondition: inpatientAdmissions.dischargeCondition,
     }).from(inpatientAdmissions)
         .innerJoin(users, eq(inpatientAdmissions.consultantDoctorId, users.id))
-        .where(eq(inpatientAdmissions.patientId, patientId))
+        .where(eq(inpatientAdmissions.patientId, Number(patientId)))
         .orderBy(desc(inpatientAdmissions.createdAt))
         .limit(8);
 
     return result;
 }
 
-export const getDiagnosisSummaryByPatientId = async (patientId) => {
+export const getDiagnosisSummaryByPatientId = async (patientId: number | string) => {
 
     const result = await db.select({
         diagnosisDate: diagnoses.diagnosisDate,
         consultantDoctorName: diagnoses.recordedBy,
         condition: diagnoses.condition,
     }).from(diagnoses)
-        .where(eq(diagnoses.patientId, patientId))
+        .where(eq(diagnoses.patientId, Number(patientId)))
         .orderBy(desc(diagnoses.diagnosisDate))
         .limit(8);
     return result;
 }
 
-export const getLabTestSummaryByPatientId = async (patientId) => {
+export const getLabTestSummaryByPatientId = async (patientId: number | string) => {
     const result = await db.select({
         testDate: labTests.createdAt,
         consultantDoctorName: labTests.prescribedBy,
         testType: labTests.testType,
         status: labTests.status,
     }).from(labTests)
-        .where(eq(labTests.patientId, patientId))
+        .where(eq(labTests.patientId, Number(patientId)))
         .orderBy(desc(labTests.createdAt))
         .limit(8);
     return result;
 }
 
-export const getVitalSignSummaryByPatientId = async (patientId) => {
+export const getVitalSignSummaryByPatientId = async (patientId: number | string) => {
     const result = await db.select()
         .from(vitalSigns)
-        .where(eq(vitalSigns.patientId, patientId))
+        .where(eq(vitalSigns.patientId, Number(patientId)))
         .orderBy(desc(vitalSigns.createdAt))
         .limit(3);
 
@@ -128,7 +128,7 @@ export const getVitalSignSummaryByPatientId = async (patientId) => {
 
 // ─── AI Patient Summary ───────────────────────────────────────────────────────
 
-export const getPatientSummaryData = async (patientId) => {
+export const getPatientSummaryData = async (patientId: number | string) => {
     const id = Number(patientId);
 
     const [
@@ -299,10 +299,11 @@ export const getPatientSummaryData = async (patientId) => {
     };
 };
 
-export const formatPatientSummaryData = (data) => {
-    const lines = [];
-    const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
-    const val = (v) => (v !== null && v !== undefined && v !== '') ? v : null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const formatPatientSummaryData = (data: any): string => {
+    const lines: string[] = [];
+    const fmt = (v: unknown) => v ? new Date(v as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+    const val = (v: unknown) => (v !== null && v !== undefined && v !== '') ? v : null;
 
     const { patient, vitalSigns, complaints, doctorNotes, nurseNotes, physicalExams, labTests, diagnoses, prescriptions, procedures, admissions, visits } = data;
 
@@ -319,7 +320,7 @@ export const formatPatientSummaryData = (data) => {
 
     if (vitalSigns.length) {
         lines.push('\n=== RECENT VITAL SIGNS (most recent first) ===');
-        vitalSigns.forEach(v => {
+        vitalSigns.forEach((v: any) => {
             const bp = (v.blood_pressure_systolic && v.blood_pressure_diastolic)
                 ? `${v.blood_pressure_systolic}/${v.blood_pressure_diastolic} mmHg` : null;
             const parts = [
@@ -338,14 +339,14 @@ export const formatPatientSummaryData = (data) => {
 
     if (complaints.length) {
         lines.push("\n=== RECENT COMPLAINTS (most recent first) ===");
-        complaints.forEach(c => {
+        complaints.forEach((c: any) => {
             lines.push(`[${fmt(c.created_at)}] "${c.complaint}" — By: ${c.recorded_by}`);
         });
     }
 
     if (diagnoses.length) {
         lines.push('\n=== RECENT DIAGNOSES (most recent first) ===');
-        diagnoses.forEach(d => {
+        diagnoses.forEach((d: any) => {
             let conditionLabel = 'N/A';
             if (d.condition && typeof d.condition === 'object') {
                 conditionLabel = Object.entries(d.condition)
@@ -362,21 +363,21 @@ export const formatPatientSummaryData = (data) => {
 
     if (doctorNotes.length) {
         lines.push("\n=== RECENT DOCTOR'S NOTES (most recent first) ===");
-        doctorNotes.forEach(n => {
+        doctorNotes.forEach((n: any) => {
             lines.push(`[${fmt(n.created_at)}] ${n.note} — By: ${n.recorded_by}`);
         });
     }
 
     if (nurseNotes.length) {
         lines.push("\n=== RECENT NURSE'S NOTES (most recent first) ===");
-        nurseNotes.forEach(n => {
+        nurseNotes.forEach((n: any) => {
             lines.push(`[${fmt(n.created_at)}] ${n.note} — By: ${n.recorded_by}`);
         });
     }
 
     if (physicalExams.length) {
         lines.push('\n=== RECENT PHYSICAL EXAMINATIONS (most recent first) ===');
-        physicalExams.forEach(e => {
+        physicalExams.forEach((e: any) => {
             lines.push(`[${fmt(e.created_at)}] Recorded by: ${e.recorded_by}`);
             if (val(e.general_appearance)) lines.push(`  General Appearance: ${e.general_appearance}`);
             if (val(e.heent)) lines.push(`  HEENT: ${e.heent}`);
@@ -394,7 +395,7 @@ export const formatPatientSummaryData = (data) => {
 
     if (labTests.length) {
         lines.push('\n=== RECENT LAB TESTS (most recent first) ===');
-        labTests.forEach(t => {
+        labTests.forEach((t: any) => {
             const result = val(t.results) ? ` | Results: ${t.results}` : '';
             const comments = val(t.comments) ? ` | Comments: ${t.comments}` : '';
             lines.push(`[${fmt(t.created_at)}] ${t.test_type} — Status: ${t.status}${result}${comments} — By: ${t.prescribed_by}`);
@@ -403,11 +404,11 @@ export const formatPatientSummaryData = (data) => {
 
     if (prescriptions.length) {
         lines.push('\n=== RECENT PRESCRIPTIONS (most recent first) ===');
-        prescriptions.forEach(p => {
+        prescriptions.forEach((p: any) => {
             lines.push(`[${fmt(p.prescription_date)}] Status: ${p.status || 'N/A'} — By: ${p.prescribed_by}`);
             if (val(p.notes)) lines.push(`  Notes: ${p.notes}`);
             if (p.items && p.items.length) {
-                p.items.forEach(item => {
+                p.items.forEach((item: any) => {
                     if (item.drug) {
                         lines.push(`  - ${item.drug} | Dosage: ${item.dosage || 'N/A'} | Frequency: ${item.frequency || 'N/A'} | Duration: ${item.duration || 'N/A'}`);
                     }
@@ -418,7 +419,7 @@ export const formatPatientSummaryData = (data) => {
 
     if (procedures.length) {
         lines.push('\n=== RECENT PROCEDURES (most recent first) ===');
-        procedures.forEach(p => {
+        procedures.forEach((p: any) => {
             const comments = val(p.comments) ? ` — ${p.comments}` : '';
             lines.push(`[${fmt(p.performed_at)}] ${p.procedure_name}${comments} — By: ${p.recorded_by}`);
         });
@@ -426,7 +427,7 @@ export const formatPatientSummaryData = (data) => {
 
     if (admissions.length) {
         lines.push('\n=== RECENT ADMISSIONS (most recent first) ===');
-        admissions.forEach(a => {
+        admissions.forEach((a: any) => {
             lines.push(`[${fmt(a.admission_date)}] Doctor: ${a.doctor_name} | Discharge Condition: ${a.discharge_condition}${a.bed_group ? ` | Ward: ${a.bed_group}` : ''}`);
             if (a.symptom_types && a.symptom_types.length) lines.push(`  Symptoms: ${Array.isArray(a.symptom_types) ? a.symptom_types.join(', ') : a.symptom_types}`);
             if (val(a.symptom_description)) lines.push(`  Description: ${a.symptom_description}`);
@@ -455,7 +456,7 @@ export const formatPatientSummaryData = (data) => {
 
     if (visits.length) {
         lines.push('\n=== RECENT VISITS (most recent first) ===');
-        visits.forEach(v => {
+        visits.forEach((v: any) => {
             const checkout = v.check_out_time ? `Checked out: ${fmt(v.check_out_time)}` : 'Ongoing';
             lines.push(`[${fmt(v.check_in_time)}] ${v.visit_type} visit — Purpose: ${v.purpose || 'N/A'} — Doctor: ${v.doctor_name || 'N/A'} — ${checkout}`);
         });

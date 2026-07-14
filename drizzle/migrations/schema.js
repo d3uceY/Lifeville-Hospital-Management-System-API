@@ -877,3 +877,7 @@ export const settingsStorage = pgTable("settings_storage", {
 	folderName: varchar("folder_name", { length: 255 }),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
+export const conditions = pgTable("conditions", {
+        conditionId: serial("condition_id").primaryKey().notNull(),
+        name: text().notNull(),
+});

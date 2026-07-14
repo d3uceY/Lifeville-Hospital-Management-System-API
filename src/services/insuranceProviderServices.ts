@@ -22,7 +22,7 @@ const PROVIDER_SELECT = {
  * @param {string} q
  * @returns {Promise<object[]>}
  */
-export async function searchInsuranceProviders(q) {
+export async function searchInsuranceProviders(q: string) {
   const term = (q ?? "").trim();
   if (!term) return [];
 
@@ -39,7 +39,7 @@ export async function searchInsuranceProviders(q) {
  *
  * @param {{ page?: number, pageSize?: number, search?: string }} options
  */
-export async function getPaginatedInsuranceProviders({ page = 1, pageSize = 10, search } = {}) {
+export async function getPaginatedInsuranceProviders({ page = 1, pageSize = 10, search }: { page?: number; pageSize?: number; search?: string } = {}) {
   const offset = (page - 1) * pageSize;
   const where = search?.trim() ? ilike(insuranceProviders.name, `%${search.trim()}%`) : undefined;
 
@@ -73,7 +73,7 @@ export async function getPaginatedInsuranceProviders({ page = 1, pageSize = 10, 
  * @param {{ name: string, phone?: string, email?: string, address?: string, website?: string, is_active?: boolean }} data
  * @returns {Promise<object>}
  */
-export async function createInsuranceProvider(data) {
+export async function createInsuranceProvider(data: { name: string; phone?: string; email?: string; address?: string; website?: string; is_active?: boolean }) {
   const [created] = await db
     .insert(insuranceProviders)
     .values({
@@ -105,7 +105,7 @@ export async function createInsuranceProvider(data) {
  * @param {{ name?: string, phone?: string, email?: string, address?: string, website?: string, is_active?: boolean }} data
  * @returns {Promise<object>}
  */
-export async function updateInsuranceProvider(id, data) {
+export async function updateInsuranceProvider(id: number, data: { name?: string; phone?: string; email?: string; address?: string; website?: string; is_active?: boolean }) {
   const [updated] = await db
     .update(insuranceProviders)
     .set({
@@ -115,7 +115,7 @@ export async function updateInsuranceProvider(id, data) {
       address: data.address,
       website: data.website,
       isActive: data.is_active,
-      updatedAt: new Date(),
+      updatedAt: new Date() as unknown as string,
     })
     .where(eq(insuranceProviders.id, id))
     .returning();
@@ -138,7 +138,7 @@ export async function updateInsuranceProvider(id, data) {
  * @param {number} id
  * @returns {Promise<object>}
  */
-export async function deleteInsuranceProvider(id) {
+export async function deleteInsuranceProvider(id: number) {
   const [deleted] = await db
     .delete(insuranceProviders)
     .where(eq(insuranceProviders.id, id))

@@ -4,6 +4,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as physicalExaminationsServices from "../services/physicalExaminationsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
+import { isHttpError } from "../lib/errors.js";
 
 export const createPhysicalExamination = async (req: Request, res: Response) => {
   try {
@@ -20,7 +21,7 @@ export const createPhysicalExamination = async (req: Request, res: Response) => 
         priority: priorityLevels.normal,
       }
       await addNotification({
-        recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
+        recipientRoles: [...NOTIFICATION_ROLES.ALL_CLINICAL],
         type: NOTIFICATION_TYPES.PHYSICAL_EXAMINATION,
         title: "Physical Examination Recorded",
         message: `Physical examination recorded for ${physicalExamination.first_name} ${physicalExamination.surname} by ${physicalExamination.recorded_by}`,
@@ -34,7 +35,7 @@ export const createPhysicalExamination = async (req: Request, res: Response) => 
     // emit notification
     const io = req.app.get("socketio");
     io.emit("notification", {
-      recipientRoles: NOTIFICATION_ROLES.ALL_CLINICAL,
+      recipientRoles: [...NOTIFICATION_ROLES.ALL_CLINICAL],
       message: `Physical examination recorded by ${physicalExamination.recorded_by}`,
       description: `Patient: ${physicalExamination.first_name} ${physicalExamination.surname}`
     });
@@ -42,17 +43,20 @@ export const createPhysicalExamination = async (req: Request, res: Response) => 
     res.status(200).json({ physicalExamination, message: "Submitted Successfully" });
   } catch (err) {
     console.error("error creating physical examination:", err);
-    res.status(err.status || 500).json({ error: err.message, code: err.code });
+    const status = isHttpError(err) ? err.status : 500;
+    const message = isHttpError(err) ? err.message : "Server error";
+    const code = isHttpError(err) ? err.code : undefined;
+    res.status(status).json({ error: message, code });
   }
 };
 
 export const getPhysicalExaminationsByPatientId = async (req: Request, res: Response) => {
   try {
-    const physicalExaminations = await physicalExaminationsServices.getPhysicalExaminationsByPatientId(req.params.patientId);
+    const physicalExaminations = await physicalExaminationsServices.getPhysicalExaminationsByPatientId(Number(req.params.patientId));
     res.status(200).json(physicalExaminations);
   } catch (err) {
     console.error("error fetching physical examinations:", err);
-    res.status(500).json({ error: err.message || "Internal server error" });
+    res.status(500).json({ error: isHttpError(err) ? err.message : "Internal server error" });
   }
 };
 

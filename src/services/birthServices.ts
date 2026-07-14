@@ -1,7 +1,7 @@
 // import query connection
 import { query } from "../../drizzle-db.js";
 
-export const getBirthRecords = async ({ page = 1, pageSize = 10, search = "", gender = "" } = {}) => {
+export const getBirthRecords = async ({ page = 1, pageSize = 10, search = "", gender = "" }: { page?: number; pageSize?: number; search?: string; gender?: string } = {}) => {
   const offset = (page - 1) * pageSize;
   const filterParams = [];
   const conditions = [];
@@ -41,7 +41,7 @@ export const getBirthRecords = async ({ page = 1, pageSize = 10, search = "", ge
   };
 };
 
-export const updateBirthRecord = async (birthId, birthData) => {
+export const updateBirthRecord = async (birthId: number | string, birthData: { childName: string; gender: string; birthDate: string; motherName: string; fatherName?: string; weight?: string; phoneNumber?: string; address?: string; report?: string }) => {
   const {
     childName,
     gender,
@@ -86,7 +86,7 @@ export const updateBirthRecord = async (birthId, birthData) => {
   return rows[0];
 };
 
-export const createBirthRecord = async (birthData) => {
+export const createBirthRecord = async (birthData: { childName: string; gender: string; birthDate: string; motherName: string; fatherName?: string; weight?: string; phoneNumber?: string; address?: string; report?: string }) => {
   const {
     childName,
     gender,
@@ -129,7 +129,7 @@ export const createBirthRecord = async (birthData) => {
   return rows[0];
 };
 
-export const deleteBirthRecord = async (birthId) => {
+export const deleteBirthRecord = async (birthId: number | string) => {
   const { rows } = await query(
     `DELETE FROM birth_records
        WHERE birth_id = $1

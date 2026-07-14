@@ -45,7 +45,7 @@ export async function runBillingMigration() {
     }
     console.log("\n  Billing migration complete.");
   } catch (err) {
-    console.error("\n  Billing migration failed:", err.message);
+    console.error("\n  Billing migration failed:", (err as Error).message);
     console.error(err);
   }
 }
@@ -80,7 +80,7 @@ export async function seedDrugServices() {
     await query(sql);
     console.log(`  Drug services seeded (${drugServices.length} entries, conflicts skipped).`);
   } catch (err) {
-    console.error("  Drug service seeding failed:", err.message);
+    console.error("  Drug service seeding failed:", (err as Error).message);
     console.error(err);
   }
 }

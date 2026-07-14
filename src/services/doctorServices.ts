@@ -2,7 +2,7 @@
 import { query } from "../../drizzle-db.js";
 
 // ─── In-memory cache ────────────────────────────────────────────────────────
-let doctorsCache = null;
+let doctorsCache: unknown[] | null = null;
 export const invalidateDoctorsCache = () => { doctorsCache = null; };
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -13,22 +13,22 @@ export const getDoctors = async () => {
   return rows;
 };
 
-export const viewDoctor = async (doctorId) => {
+export const viewDoctor = async (doctorId: number | string) => {
   const { rows } = await query(`SELECT id, role, name, email FROM users WHERE id = $1`, [
     doctorId,
   ]);
   return rows[0];
 };
 
-export const deleteDoctor = async (doctorId) => {
+export const deleteDoctor = async (doctorId: number | string) => {
   const { rowCount } = await query("DELETE FROM doctors WHERE doctor_id = $1", [
     doctorId,
   ]);
   invalidateDoctorsCache();
-  return rowCount > 0;
+  return (rowCount ?? 0) > 0;
 };
 
-export const createDoctor = async (doctorData) => {
+export const createDoctor = async (doctorData: { firstName: string; lastName: string; specialty: string }) => {
   const { firstName, lastName, specialty } = doctorData;
 
   const { rows } = await query(
@@ -43,7 +43,7 @@ export const createDoctor = async (doctorData) => {
   return rows[0];
 };
 
-export const updateDoctor = async (doctorData) => {
+export const updateDoctor = async (doctorData: { firstName: string; lastName: string; specialty: string; doctorId: number }) => {
   const { firstName, lastName, specialty, doctorId } = doctorData;
 
   const { rows } = await query(

@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
  * @param {{ key: string, url: string, contentType: string, metadata?: object }} params
  * @returns {Promise<object>}
  */
-export const insertMediaContent = async ({ key, url, contentType, metadata = null }) => {
+export const insertMediaContent = async ({ key, url, contentType, metadata = null }: { key: string; url: string; contentType: string; metadata?: Record<string, unknown> | null }) => {
   const [record] = await db
     .insert(mediaContent)
     .values({ key, url, contentType, metadata, type: "cloud" })
@@ -19,7 +19,7 @@ export const insertMediaContent = async ({ key, url, contentType, metadata = nul
  * @param {number} id
  * @returns {Promise<object|undefined>}
  */
-export const getMediaContentById = async (id) => {
+export const getMediaContentById = async (id: number) => {
   const [record] = await db
     .select()
     .from(mediaContent)
@@ -33,7 +33,7 @@ export const getMediaContentById = async (id) => {
  * @param {{ key: string, url: string, contentType: string }} params
  * @returns {Promise<object>}
  */
-export const updateMediaContent = async (id, { key, url, contentType }) => {
+export const updateMediaContent = async (id: number, { key, url, contentType }: { key: string; url: string; contentType: string }) => {
   const [record] = await db
     .update(mediaContent)
     .set({ key, url, contentType })
@@ -47,7 +47,7 @@ export const updateMediaContent = async (id, { key, url, contentType }) => {
  * @param {number} id
  * @returns {Promise<object>} The deleted record
  */
-export const deleteMediaContentById = async (id) => {
+export const deleteMediaContentById = async (id: number) => {
   const [record] = await db
     .delete(mediaContent)
     .where(eq(mediaContent.id, id))

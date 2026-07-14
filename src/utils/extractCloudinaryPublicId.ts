@@ -12,7 +12,7 @@
  * // Returns "sample"
  * extractPublicId("https://res.cloudinary.com/demo/image/upload/v1/sample.png")
  */
-export const extractPublicId = (url) => {
+export const extractPublicId = (url: string): string => {
     const parts = url.split('/upload/').pop()?.split('/') ?? [];
     const withoutVersion = parts.slice(1).join('/');
     return withoutVersion.split('.').slice(0, -1).join('.');

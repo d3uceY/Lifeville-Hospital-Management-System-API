@@ -6,8 +6,13 @@ import config from "../../constants/config.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let icdList = [];
-let icdMap = {};
+interface IcdEntry {
+  code: string;
+  description: string;
+}
+
+let icdList: IcdEntry[] = [];
+let icdMap: Record<string, IcdEntry> = {};
 
 export function loadICD() {
   const filePath = path.join(__dirname, `../data/${config.icd.icdTextName}`);
@@ -33,7 +38,7 @@ const MAX_RESULTS = 40;
 // any mix of digits, dots, and letters (e.g. "A00", "E11.9", "S52.001A", "T14.91XA", "Z")
 const CODE_PATTERN = /^[a-zA-Z](\d[\d.a-zA-Z]*)?$/;
 
-export function searchICD(q) {
+export function searchICD(q: string): IcdEntry[] {
   const trimmed = q.trim();
   if (!trimmed) return [];
 
@@ -62,7 +67,7 @@ export function searchICD(q) {
   return results;
 }
 
-export function lookupByCode(code) {
+export function lookupByCode(code: string): IcdEntry | null {
   if (typeof code !== 'string') return null;
   return icdMap[code.toUpperCase()] ?? null;
 }

@@ -3,7 +3,7 @@ import { conditions } from "../../drizzle/migrations/schema.js";
 import { eq } from "drizzle-orm";
 
 // ─── In-memory cache ────────────────────────────────────────────────────────
-let conditionsCache = null;
+let conditionsCache: unknown[] | null = null;
 /** Clears the in-memory conditions cache, forcing the next call to `getConditions` to re-query the database. */
 export const invalidateConditionsCache = () => { conditionsCache = null; };
 // ────────────────────────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ export const invalidateConditionsCache = () => { conditionsCache = null; };
  * @param {{ name: string }} conditionData
  * @returns {Promise<object>}
  */
-export async function createCondition(conditionData) {
+export async function createCondition(conditionData: { name: string }) {
   const [newCondition] = await db
     .insert(conditions)
     .values({
@@ -41,7 +41,7 @@ export async function getConditions() {
  * @param {number} conditionId
  * @returns {Promise<object>}
  */
-export async function deleteCondition(conditionId) {
+export async function deleteCondition(conditionId: number) {
   const [deleted] = await db
     .delete(conditions)
     .where(eq(conditions.conditionId, conditionId))
@@ -57,7 +57,7 @@ export async function deleteCondition(conditionId) {
  * @param {{ name: string }} conditionData
  * @returns {Promise<object>}
  */
-export async function updateCondition(conditionId, conditionData) {
+export async function updateCondition(conditionId: number, conditionData: { name: string }) {
   const [updated] = await db
     .update(conditions)
     .set({

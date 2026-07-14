@@ -1,13 +1,14 @@
 import { query } from "../../drizzle-db.js";
 import { db } from "../../drizzle-db.js";
 import { getOrCreateVisit } from "../utils/visitGuard.js";
+import type { VisitInfo } from "../utils/visitGuard.js";
 
 
 /** Returns all doctor notes for a patient joined with patient name.
  * @param {number} patientId
  * @returns {Promise<object[]>}
  */
-export const getDoctorNotesByPatientId = async (patientId) => {
+export const getDoctorNotesByPatientId = async (patientId: number) => {
     const { rows } = await query(
       `SELECT dn.id, dn.note, dn.recorded_by, dn.updated_by, 
               dn.created_at, dn.updated_at,
@@ -26,10 +27,10 @@ export const getDoctorNotesByPatientId = async (patientId) => {
  * @param {object} noteData
  * @returns {Promise<object>}
  */
-export const createDoctorNote = async (noteData) => {
+export const createDoctorNote = async (noteData: { patientId: number; note: string; recordedBy: string; visitInfo?: Record<string, unknown> | null }) => {
     const { patientId, note, recordedBy } = noteData;
 
-    const visit = await getOrCreateVisit(patientId, noteData.visitInfo ?? null);
+    const visit = await getOrCreateVisit(patientId, noteData.visitInfo as VisitInfo | null ?? null);
 
     const result = await query(
         `INSERT INTO doctors_notes (patient_id, note, recorded_by, created_at, visit_id)
@@ -58,7 +59,7 @@ export const createDoctorNote = async (noteData) => {
  * @param {number} noteId
  * @returns {Promise<object>}
  */
-export const updateDoctorNote = async (updatedNoteData, noteId) => {
+export const updateDoctorNote = async (updatedNoteData: { note: string; updatedBy: string }, noteId: number) => {
     const {note, updatedBy} = updatedNoteData;
     const result = await query(
         `UPDATE doctors_notes
@@ -78,7 +79,7 @@ export const updateDoctorNote = async (updatedNoteData, noteId) => {
  * @param {number} noteId
  * @returns {Promise<object>}
  */
-export const deleteDoctorNote = async (noteId) => {
+export const deleteDoctorNote = async (noteId: number) => {
     const result = await query(
         `DELETE FROM doctors_notes
        WHERE id = $1
