@@ -1,0 +1,67 @@
+import type { Request, Response } from "express";
+import { priorityLevels, NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_ROLES } from "../constants/domain.js";
+import * as complaintsServices from "../services/complaintsServices.js";
+import { addNotification } from "../services/notificationServices.js";
+import { formatDate } from "../utils/formatDate.js";
+
+export async function getComplaints(req: Request, res: Response) {
+    try {
+        const complaints = await complaintsServices.getComplaints();
+        res.json(complaints);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to retrieve complaints" });
+    }
+}
+
+export async function getComplaintsByPatientId(req: Request, res: Response) {
+    try {
+        const complaints = await complaintsServices.getComplaintsByPatientId(req.params.patientId);
+        res.json(complaints);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to retrieve complaints" });
+    }
+}
+
+export async function createComplaint(req: Request, res: Response) {
+    try {
+        const complaint = await complaintsServices.createComplaint(req.body);
+        
+        // Send notification
+        try {
+            const data = {
+                first_name: complaint.first_name,
+                surname: complaint.surname,
+                patient_id: complaint.patient_id,
+                complaint: complaint.complaint,
+                recorded_by: complaint.recorded_by,
+                priority: priorityLevels.normal,
+            }
+            await addNotification({
+                recipientRoles: NOTIFICATION_ROLES.CLINICAL,
+                type: NOTIFICATION_TYPES.COMPLAINT,
+                title: "New Patient Complaint",
+                message: `Complaint recorded for ${complaint.first_name} ${complaint.surname} by ${complaint.recorded_by}`,
+                data,
+            });
+
+        } catch (error) {
+            console.error(error);
+        }
+
+        // emit notification
+        const io = req.app.get("socketio");
+        io.emit("notification", {
+            recipientRoles: NOTIFICATION_ROLES.CLINICAL,
+            message: `New complaint recorded by ${complaint.recordedBy}`,
+            description: `Patient: ${complaint.first_name} ${complaint.surname}`
+        });
+
+        res.json(complaint);
+    } catch (error) {
+        console.error(error);
+        res.status(error.status || 500).json({ error: error.message, code: error.code });
+    }
+}
