@@ -10,6 +10,8 @@ const router = express.Router();
 
 router.get("/patients", authenticate, patientController.getPatients);
 
+router.get("/patients/check-hospital-number", authenticate, patientController.checkHospitalNumber);
+
 router.get("/patients/:id", authenticate, patientController.viewPatient);
 
 router.post("/patients", authenticate, authorize([ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.SUPERADMIN]), patientController.createPatients);
