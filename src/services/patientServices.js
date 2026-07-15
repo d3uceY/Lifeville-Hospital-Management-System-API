@@ -52,6 +52,25 @@ export const getPatientNameId = async () => {
 export const getPatientNameAndId = getPatientNameId;
 
 /**
+ * Checks whether a given hospital number already exists.
+ * Uses the in-memory cache when populated; otherwise queries the database.
+ * @param {number} hospitalNumber
+ * @returns {Promise<boolean>}
+ */
+export const checkHospitalNumberExists = async (hospitalNumber) => {
+  const num = Number(hospitalNumber);
+  if (patientsCache) {
+    return patientsCache.some(p => Number(p.hospitalNumber) === num);
+  }
+  const [existing] = await db
+    .select({ hospitalNumber: patients.hospitalNumber })
+    .from(patients)
+    .where(eq(patients.hospitalNumber, num))
+    .limit(1);
+  return !!existing;
+};
+
+/**
  * Creates a new full patient record, auto-incrementing `hospitalNumber` if not provided.
  * @param {object} patientData
  * @returns {Promise<object>} The newly inserted patient row

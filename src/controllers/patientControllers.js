@@ -6,6 +6,20 @@ import { formatDate } from "../utils/formatDate.js";
 import { addNotification } from "../services/notificationServices.js";
 import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
+export const checkHospitalNumber = async (req, res) => {
+  try {
+    const hospitalNumber = Number(req.query.hospitalNumber);
+    if (!hospitalNumber || isNaN(hospitalNumber)) {
+      return res.status(400).json({ error: "Invalid hospital number" });
+    }
+    const exists = await patientServices.checkHospitalNumberExists(hospitalNumber);
+    res.status(200).json({ exists });
+  } catch (err) {
+    console.error("error checking hospital number:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getPatients = async (req, res) => {
   try {
     const patients = await patientServices.getPatients();
