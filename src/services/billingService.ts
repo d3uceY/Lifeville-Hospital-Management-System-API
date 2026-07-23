@@ -324,6 +324,7 @@ export async function getBillForAdmission(admissionId: number) {
     balance: totalAmount - totalPaid,
     payments,
     days,
+    patientId: admission.patientId,
     patientName,
     hospitalNumber,
   };
@@ -342,12 +343,14 @@ export async function getBillForVisit(visitId: number) {
   // Fetch patient name + hospital number via the visit's patientId
   let patientName = "—";
   let hospitalNumber = null;
+  let visitPatientId: number | null = null;
   if (invoice.visitId) {
     const [visit] = await db
       .select({ patientId: patientVisits.patientId })
       .from(patientVisits)
       .where(eq(patientVisits.id, invoice.visitId))
       .limit(1);
+    visitPatientId = visit?.patientId ?? null;
     if (visit?.patientId) {
       const [pt] = await db
         .select({ surname: patients.surname, firstName: patients.firstName, hospitalNumber: patients.hospitalNumber })
@@ -393,6 +396,7 @@ export async function getBillForVisit(visitId: number) {
     totalPaid,
     balance: totalAmount - totalPaid,
     payments,
+    patientId: visitPatientId,
     patientName,
     hospitalNumber,
   };
@@ -438,20 +442,21 @@ async function computeInvoiceTotal(invoiceId: number, invoiceRow: typeof invoice
 
 /**
  * Records a payment against an invoice and auto-closes it when fully settled.
- * @param {{ invoiceId: number, amount: number, paymentMethod?: string, notes?: string|null, createdBy?: number|null }} opts
- * @returns {Promise<object>} The inserted payment row
+ * @param opts
  */
 export async function recordPayment({
   invoiceId,
   amount,
   paymentMethod = "cash",
   notes = null,
+  patientInsuranceId = null,
   createdBy = null,
 }: {
   invoiceId: number;
   amount: number;
   paymentMethod?: string;
   notes?: string | null;
+  patientInsuranceId?: number | null;
   createdBy?: number | null;
 }) {
   // Cancelled invoices cannot receive payments
@@ -462,7 +467,7 @@ export async function recordPayment({
 
   const [payment] = await db
     .insert(billingPayments)
-    .values({ invoiceId, amount: String(amount), paymentMethod, notes, createdBy })
+    .values({ invoiceId, amount: String(amount), paymentMethod, notes, patientInsuranceId, createdBy })
     .returning();
 
   // Auto-close invoice if fully paid — include virtual daily charges for admissions

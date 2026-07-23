@@ -6,7 +6,7 @@
  */
 
 import { db } from "../../drizzle-db.js";
-import { invoices, billingPayments, billItems } from "../../drizzle/migrations/schema.js";
+import { invoices, billingPayments, billItems, patientInsurance, insuranceProviders } from "../../drizzle/migrations/schema.js";
 import { eq, gte, lte, and, sql } from "drizzle-orm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -175,19 +175,48 @@ async function getRevenueByCategory(from: string | undefined, to: string | undef
   }));
 }
 
+// ─── Insurance revenue by provider ────────────────────────────────────────────
+
+/** Sum of insurance payments grouped by provider for invoices in date range. */
+async function getInsuranceRevenueByProvider(from: string | undefined, to: string | undefined) {
+  const where = dateRange(from, to);
+
+  const rows = await db
+    .select({
+      providerId: insuranceProviders.id,
+      providerName: insuranceProviders.name,
+      total: sql`COALESCE(SUM(${billingPayments.amount}), 0)`,
+      count: sql`COUNT(*)::int`,
+    })
+    .from(billingPayments)
+    .innerJoin(invoices, eq(billingPayments.invoiceId, invoices.id))
+    .innerJoin(patientInsurance, eq(billingPayments.patientInsuranceId, patientInsurance.id))
+    .innerJoin(insuranceProviders, eq(patientInsurance.providerId, insuranceProviders.id))
+    .where(and(where, eq(billingPayments.paymentMethod, "insurance")))
+    .groupBy(insuranceProviders.id, insuranceProviders.name)
+    .orderBy(sql`SUM(${billingPayments.amount}) DESC`);
+
+  return rows.map((r) => ({
+    providerId: r.providerId,
+    providerName: r.providerName,
+    total: parseFloat(String(r.total)),
+    count: r.count,
+  }));
+}
+
 // ─── Top-level export ─────────────────────────────────────────────────────────
 
 /**
- * Runs all four stat queries in parallel and returns a single response object.
- * @param {{ from?: string, to?: string, groupBy?: string }} opts
+ * Runs all five stat queries in parallel and returns a single response object.
  */
 export async function getBillingStats({ from, to, groupBy = "day" }: { from?: string; to?: string; groupBy?: string } = {}) {
-  const [kpi, revenueOverTime, paymentMethods, revenueByCategory] = await Promise.all([
+  const [kpi, revenueOverTime, paymentMethods, revenueByCategory, insuranceRevenueByProvider] = await Promise.all([
     getKpiSummary(from, to),
     getRevenueOverTime(from, to, groupBy),
     getPaymentMethodBreakdown(from, to),
     getRevenueByCategory(from, to),
+    getInsuranceRevenueByProvider(from, to),
   ]);
 
-  return { kpi, revenueOverTime, paymentMethods, revenueByCategory };
+  return { kpi, revenueOverTime, paymentMethods, revenueByCategory, insuranceRevenueByProvider };
 }

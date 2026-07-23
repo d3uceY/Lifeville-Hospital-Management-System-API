@@ -1,6 +1,6 @@
 import { HttpError } from "../lib/errors.js";
 import { db } from "../../drizzle-db.js";
-import { patientVisits, patients, users, vitalSigns, diagnoses, prescriptions, labTests, complaints, nursesNotes, doctorsNotes, physicalExaminations, procedures } from "../../drizzle/migrations/schema.js";
+import { patientVisits, patients, users, vitalSigns, diagnoses, prescriptions, labTests, complaints, nursesNotes, doctorsNotes, physicalExaminations, procedures, patientInsurance, insuranceProviders } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
@@ -144,9 +144,20 @@ export const getPaginatedPatientVisits = async (
             otherNames: patients.otherNames,
             phoneNumber: patients.phoneNumber,
             hospitalNumber: patients.hospitalNumber,
+            provider_name: insuranceProviders.name,
+            insurance_status: patientInsurance.status,
         })
         .from(patientVisits)
         .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
+        .leftJoin(
+            patientInsurance,
+            and(
+                eq(patientInsurance.patientId, patients.patientId),
+                eq(patientInsurance.isPrimary, true),
+                eq(patientInsurance.status, "Active")
+            )
+        )
+        .leftJoin(insuranceProviders, eq(patientInsurance.providerId, insuranceProviders.id))
         .where(where ?? sql`true`)
         .orderBy(sql`${patientVisits.checkOutTime} IS NULL DESC`, desc(patientVisits.checkInTime))
         .limit(pageSizeNumber)
@@ -169,6 +180,8 @@ export const getPaginatedPatientVisits = async (
         check_out_time: row.checkOutTime,
         admission_id: row.admissionId,
         created_at: row.createdAt,
+        insurance_provider: row.provider_name ?? null,
+        insurance_status: row.insurance_status ?? null,
     }));
 
     return {
@@ -368,4 +381,50 @@ export const checkOutPatientVisit = async (visitId) => {
         first_name: patientData?.first_name,
         surname: patientData?.surname,
     };
+};
+
+/**
+ * Returns the last N unique patient visits (most recent per patient).
+ * Used for the "Recent Visits" dashboard widget.
+ */
+export const getRecentUniqueVisits = async (limit: number = 5) => {
+    const rows = await db
+        .select({
+            visitId: patientVisits.id,
+            patientId: patientVisits.patientId,
+            checkInTime: patientVisits.checkInTime,
+            firstName: patients.firstName,
+            surname: patients.surname,
+            sex: patients.sex,
+            hospitalNumber: patients.hospitalNumber,
+        })
+        .from(patientVisits)
+        .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
+        .orderBy(desc(patientVisits.checkInTime))
+        .limit(limit * 3); // fetch extra to deduplicate
+
+    const seen = new Set<number>();
+    const unique: Array<{
+        patientId: number;
+        first_name: string | null;
+        surname: string | null;
+        sex: string | null;
+        hospitalNumber: number | null;
+        lastVisit: string | null;
+    }> = [];
+    for (const row of rows) {
+        if (seen.has(row.patientId)) continue;
+        seen.add(row.patientId);
+        unique.push({
+            patientId: row.patientId,
+            first_name: row.firstName,
+            surname: row.surname,
+            sex: row.sex,
+            hospitalNumber: row.hospitalNumber,
+            lastVisit: row.checkInTime,
+        });
+        if (unique.length >= limit) break;
+    }
+
+    return unique;
 };
