@@ -1,0 +1,3 @@
+ALTER TABLE "billing_payments" ADD COLUMN "patient_insurance_id" integer;--> statement-breakpoint
+ALTER TABLE "billing_payments" ADD CONSTRAINT "billing_payments_patient_insurance_id_fkey" FOREIGN KEY ("patient_insurance_id") REFERENCES "public"."patient_insurance"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "idx_billing_payments_patient_insurance_id" ON "billing_payments" USING btree ("patient_insurance_id" int4_ops);
