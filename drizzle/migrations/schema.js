@@ -148,11 +148,14 @@ export const billingPayments = pgTable("billing_payments", {
 	amount: numeric({ precision: 12, scale: 2 }).notNull(),
 	paymentMethod: text("payment_method").notNull().default("cash"),
 	notes: text(),
+	patientInsuranceId: integer("patient_insurance_id"),
 	createdBy: integer("created_by"),
 	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	foreignKey({ columns: [table.invoiceId], foreignColumns: [invoices.id], name: "billing_payments_invoice_id_fkey" }).onDelete("cascade"),
+	foreignKey({ columns: [table.patientInsuranceId], foreignColumns: [patientInsurance.id], name: "billing_payments_patient_insurance_id_fkey" }).onDelete("set null"),
 	foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "billing_payments_created_by_fkey" }).onDelete("set null"),
+	index("idx_billing_payments_patient_insurance_id").using("btree", table.patientInsuranceId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const bills = pgTable("bills", {

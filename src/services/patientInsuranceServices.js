@@ -43,6 +43,14 @@ export async function getPatientInsuranceByPatientId(patientId) {
  * @returns {Promise<object>}
  */
 export async function createPatientInsurance(data) {
+  // Enforce single primary: unset all other primary records for this patient
+  if (data.is_primary !== false) {
+    await db
+      .update(patientInsurance)
+      .set({ isPrimary: false })
+      .where(eq(patientInsurance.patientId, data.patient_id));
+  }
+
   const [created] = await db
     .insert(patientInsurance)
     .values({
@@ -84,6 +92,21 @@ export async function getPatientInsuranceById(id) {
  * @returns {Promise<object>}
  */
 export async function updatePatientInsurance(id, data) {
+  // Enforce single primary: if setting this record as primary, unset all others for the same patient
+  if (data.is_primary) {
+    const [existing] = await db
+      .select({ patientId: patientInsurance.patientId })
+      .from(patientInsurance)
+      .where(eq(patientInsurance.id, id))
+      .limit(1);
+    if (existing?.patientId) {
+      await db
+        .update(patientInsurance)
+        .set({ isPrimary: false })
+        .where(eq(patientInsurance.patientId, existing.patientId));
+    }
+  }
+
   await db
     .update(patientInsurance)
     .set({

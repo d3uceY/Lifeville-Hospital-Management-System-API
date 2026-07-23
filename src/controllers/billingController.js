@@ -92,7 +92,7 @@ export const addBillItem = async (req, res) => {
 // ─── POST /billing/payments ───────────────────────────────────────────────────
 export const recordPayment = async (req, res) => {
   try {
-    const { invoiceId, amount, paymentMethod, notes } = req.body;
+    const { invoiceId, amount, paymentMethod, notes, patientInsuranceId } = req.body;
     if (!invoiceId || !amount) {
       return res.status(400).json({ error: "invoiceId and amount are required" });
     }
@@ -101,6 +101,7 @@ export const recordPayment = async (req, res) => {
       amount: Number(amount),
       paymentMethod: paymentMethod || "cash",
       notes: notes || null,
+      patientInsuranceId: patientInsuranceId ? Number(patientInsuranceId) : null,
       createdBy: req.user?.id || null,
     });
     res.status(201).json({ payment, message: "Payment recorded" });

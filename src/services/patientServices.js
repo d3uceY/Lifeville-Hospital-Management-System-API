@@ -1,7 +1,7 @@
 // drizzlePatients.js
 import { db } from "../../drizzle-db.js";
-import { patients, mediaContent } from "../../drizzle/migrations/schema.js";
-import { desc, eq } from "drizzle-orm";
+import { patients, mediaContent, patientInsurance, insuranceProviders } from "../../drizzle/migrations/schema.js";
+import { desc, eq, and } from "drizzle-orm";
 
 // ─── In-memory cache ───────────────────────────────────────────────────────
 let patientsCache = null;
@@ -27,8 +27,18 @@ export const getPatients = async () => {
       sex: patients.sex,
       dateOfBirth: patients.dateOfBirth,
       phoneNumber: patients.phoneNumber,
+      provider_name: insuranceProviders.name,
     })
-    .from(patients);
+    .from(patients)
+    .leftJoin(
+      patientInsurance,
+      and(
+        eq(patientInsurance.patientId, patients.patientId),
+        eq(patientInsurance.isPrimary, true),
+        eq(patientInsurance.status, "Active")
+      )
+    )
+    .leftJoin(insuranceProviders, eq(patientInsurance.providerId, insuranceProviders.id));
 
   patientsCache = result;
   return result;

@@ -1,5 +1,5 @@
 import { db } from "../../drizzle-db.js";
-import { patientVisits, patients, users, vitalSigns, diagnoses, prescriptions, labTests, complaints, nursesNotes, doctorsNotes, physicalExaminations, procedures } from "../../drizzle/migrations/schema.js";
+import { patientVisits, patients, users, vitalSigns, diagnoses, prescriptions, labTests, complaints, nursesNotes, doctorsNotes, physicalExaminations, procedures, patientInsurance, insuranceProviders } from "../../drizzle/migrations/schema.js";
 import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES } from "../constants/domain.js";
@@ -143,9 +143,20 @@ export const getPaginatedPatientVisits = async (
             otherNames: patients.otherNames,
             phoneNumber: patients.phoneNumber,
             hospitalNumber: patients.hospitalNumber,
+            provider_name: insuranceProviders.name,
+            insurance_status: patientInsurance.status,
         })
         .from(patientVisits)
         .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
+        .leftJoin(
+            patientInsurance,
+            and(
+                eq(patientInsurance.patientId, patients.patientId),
+                eq(patientInsurance.isPrimary, true),
+                eq(patientInsurance.status, "Active")
+            )
+        )
+        .leftJoin(insuranceProviders, eq(patientInsurance.providerId, insuranceProviders.id))
         .where(where ?? sql`true`)
         .orderBy(sql`${patientVisits.checkOutTime} IS NULL DESC`, desc(patientVisits.checkInTime))
         .limit(pageSizeNumber)
@@ -168,6 +179,8 @@ export const getPaginatedPatientVisits = async (
         check_out_time: row.checkOutTime,
         admission_id: row.admissionId,
         created_at: row.createdAt,
+        insurance_provider: row.provider_name ?? null,
+        insurance_status: row.insurance_status ?? null,
     }));
 
     return {
