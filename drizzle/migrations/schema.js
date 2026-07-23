@@ -157,7 +157,6 @@ export const billingPayments = pgTable("billing_payments", {
 	foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "billing_payments_created_by_fkey" }).onDelete("set null"),
 	index("idx_billing_payments_patient_insurance_id").using("btree", table.patientInsuranceId.asc().nullsLast().op("int4_ops")),
 ]);
-]);
 
 export const bills = pgTable("bills", {
 	id: serial().primaryKey().notNull(),
