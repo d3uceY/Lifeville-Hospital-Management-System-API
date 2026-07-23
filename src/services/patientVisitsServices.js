@@ -368,3 +368,44 @@ export const checkOutPatientVisit = async (visitId) => {
         surname: patientData?.surname,
     };
 };
+
+/**
+ * Returns the last N unique patient visits (most recent per patient).
+ * Used for the "Recent Visits" dashboard widget.
+ * @param {number} [limit=5]
+ * @returns {Promise<object[]>}
+ */
+export const getRecentUniqueVisits = async (limit = 5) => {
+    const rows = await db
+        .select({
+            visitId: patientVisits.id,
+            patientId: patientVisits.patientId,
+            checkInTime: patientVisits.checkInTime,
+            firstName: patients.firstName,
+            surname: patients.surname,
+            sex: patients.sex,
+            hospitalNumber: patients.hospitalNumber,
+        })
+        .from(patientVisits)
+        .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
+        .orderBy(desc(patientVisits.checkInTime))
+        .limit(limit * 3); // fetch extra to deduplicate
+
+    const seen = new Set();
+    const unique = [];
+    for (const row of rows) {
+        if (seen.has(row.patientId)) continue;
+        seen.add(row.patientId);
+        unique.push({
+            patientId: row.patientId,
+            first_name: row.firstName,
+            surname: row.surname,
+            sex: row.sex,
+            hospitalNumber: row.hospitalNumber,
+            lastVisit: row.checkInTime,
+        });
+        if (unique.length >= limit) break;
+    }
+
+    return unique;
+};

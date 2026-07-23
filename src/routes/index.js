@@ -32,8 +32,10 @@ import icdRoutes from './icdRoutes.js';
 import activityLogRoutes from './activityLogRoutes.js';
 import insuranceRoutes from './insuranceRoutes.js';
 import patientInsuranceRoutes from './patientInsuranceRoutes.js';
+import recentPatientsRoutes from './recentPatientsRoutes.js';
 const router = express.Router();
 
+router.use("/api", recentPatientsRoutes);
 router.use("/api", patientRoutes);
 router.use("/api", vitalSignsRoutes);
 router.use("/api", doctorRoutes);
