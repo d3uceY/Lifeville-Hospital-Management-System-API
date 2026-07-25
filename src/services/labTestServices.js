@@ -1,12 +1,44 @@
 import { db } from "../../drizzle-db.js";
-import { labTests, patients, patientVisits } from "../../drizzle/migrations/schema.js";
-import { eq, ilike, desc, asc, count, or, sql, and, between, isNull } from "drizzle-orm";
-import { uploadToCloudinary } from "../utils/uploadImage.js";
-import deleteImage from "../utils/deleteImage.js";
+import { labTests, labTestFiles, mediaContent, patients, patientVisits } from "../../drizzle/migrations/schema.js";
+import { eq, ilike, desc, asc, count, or, sql, and, between, isNull, inArray } from "drizzle-orm";
+import * as storageService from "./storageService.js";
 import * as billingService from "./billingService.js";
 import { SERVICE_CATEGORIES, UPLOAD_SUBFOLDERS } from "../constants/domain.js";
 import { getAllSettings } from "./settingsService.js";
 import { getOrCreateVisit } from "../utils/visitGuard.js";
+
+// ─── File resolution helper ───────────────────────────────────────────────────
+
+/**
+ * Queries the lab_test_files junction + media_content for a lab test,
+ * resolves all stored keys to presigned download URLs.
+ * @param {number} labTestId
+ * @returns {Promise<Array<{url: string, mediaContentId: number}>>}
+ */
+async function resolveFiles(labTestId) {
+  const rows = await db
+    .select({ key: mediaContent.key, mediaContentId: mediaContent.id, contentType: mediaContent.contentType })
+    .from(labTestFiles)
+    .innerJoin(mediaContent, eq(labTestFiles.mediaContentId, mediaContent.id))
+    .where(eq(labTestFiles.labTestId, labTestId));
+
+  const files = await Promise.all(
+    rows.map(async r => ({
+      url: await storageService.generateDownloadUrl(r.key).catch(() => null),
+      mediaContentId: r.mediaContentId,
+      contentType: r.contentType,
+    }))
+  );
+  return files.filter(f => f.url);
+}
+
+/** Attaches `files` (presigned URLs + IDs) to a single lab test result object. */
+async function attachFiles(row) {
+  if (!row) return row;
+  const id = row.id ?? row.lab_test_id;
+  if (!id) return row;
+  return { ...row, files: await resolveFiles(id) };
+}
 
 /** Returns all lab tests from the database.
  * @returns {Promise<object[]>}
@@ -20,7 +52,7 @@ export const getLabTests = async () => {
  * @returns {Promise<object[]>}
  */
 export const getLabTestsByPatientId = async (patientId) => {
-  return db
+  const rows = await db
     .select({
       ...labTests,
       first_name: patients.firstName,
@@ -38,11 +70,12 @@ export const getLabTestsByPatientId = async (patientId) => {
  * @returns {Promise<object>}
  */
 export const getLabTestById = async (id) => {
-  return db
+  const row = await db
     .select()
     .from(labTests)
     .where(eq(labTests.id, id))
     .then(res => res[0]);
+  return attachFiles(row);
 };
 
 /**
@@ -104,15 +137,15 @@ export const createLabTest = async (labTest) => {
 };
 
 /**
- * Updates status, results, comments, and optionally replaces Cloudinary images for a lab test.
+ * Updates status, results, comments, and optionally replaces attached files for a lab test.
+ * New files are uploaded to R2, stored in media_content, and linked via lab_test_files.
+ * Old files are deleted from R2 and their media_content rows are removed (cascade).
  * @param {number} id
  * @param {object} formRequest
- * @param {object[]} [files=[]] - Uploaded files (Cloudinary handles storage)
+ * @param {object[]} [files=[]] - Uploaded files (multer buffers)
  * @returns {Promise<object>} The updated lab test enriched with patient name
  */
 export const updateLabTest = async (id, formRequest, files = []) => {
-  // Get the existing lab test
-
   if (!formRequest.status || !formRequest.results) {
     throw new Error('Status and results are required');
   }
@@ -127,33 +160,23 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     throw new Error('Lab test not found');
   }
 
-  let imageUrls = existingLabTest.images || [];
-
-  // Handle image upload if user uploaded new images
+  // Handle file upload if user uploaded new files
   if (files && files.length > 0) {
-    // If images already exist in db, delete them from cloudinary
-    if (imageUrls.length > 0) {
-      for (const imageUrl of imageUrls) {
-        try {
-          await deleteImage(imageUrl);
-        } catch (error) {
-          console.error('Error deleting old image:', error);
-        }
-      }
-    }
-
-    // Upload new images to cloudinary and store in array
-    imageUrls = [];
-    const storageRow = (await getAllSettings()).storage;
-    const baseFolder = storageRow?.folder_name;
+    const settings = await getAllSettings();
+    const baseFolder = settings?.storage?.folder_name;
     const uploadFolder = baseFolder ? `${baseFolder}/${UPLOAD_SUBFOLDERS.LAB_DOCS}` : UPLOAD_SUBFOLDERS.LAB_DOCS;
+
     for (const file of files) {
       try {
-        const uploadedUrl = await uploadToCloudinary(file.buffer, uploadFolder, 'lab-doc');
-        imageUrls.push(uploadedUrl);
+        const objectKey = storageService.buildObjectKey(uploadFolder, file.mimetype);
+        await storageService.uploadObject(file.buffer, objectKey, storageService.UPLOAD_PRESETS.LAB_DOC, file.mimetype);
+        const [mc] = await db.insert(mediaContent)
+          .values({ key: objectKey, contentType: file.mimetype, type: 'cloud' })
+          .returning();
+        await db.insert(labTestFiles).values({ labTestId: id, mediaContentId: mc.id });
       } catch (error) {
-        console.error('Error uploading image:', error);
-        throw new Error('Failed to upload image');
+        console.error('Error uploading file:', error);
+        throw new Error('Failed to upload file');
       }
     }
   }
@@ -162,7 +185,6 @@ export const updateLabTest = async (id, formRequest, files = []) => {
   const updateData = {
     status: formRequest.status,
     results: formRequest.results,
-    images: imageUrls,
     updatedAt: new Date()
   };
 
@@ -212,15 +234,17 @@ export const updateLabTest = async (id, formRequest, files = []) => {
     surname: patients.surname,
   }).from(patients).where(eq(patients.patientId, updated.patientId));
 
-  return {
+  const result = {
     ...updated,
     first_name: patient[0].first_name,
     surname: patient[0].surname,
   };
+  return attachFiles(result);
 };
 
 
-/** Deletes a lab test by ID and removes associated Cloudinary images.
+/** Deletes a lab test by ID and removes associated R2 files + media_content rows.
+ * Junction rows are cascade-deleted; we clean up R2 objects first.
  * @param {number} id
  * @returns {Promise<object>} The deleted lab test row
  */
@@ -231,23 +255,57 @@ export const deleteLabTest = async (id) => {
     .where(eq(labTests.id, id))
     .then(res => res[0]);
 
-  for (const imageUrl of existingLabTest.images || []) {
-    try {
-      await deleteImage(imageUrl);
-    } catch (error) {
-      console.error('Error deleting old image:', error);
-    }
+  // Delete R2 objects before removing DB rows
+  const oldFiles = await db
+    .select({ key: mediaContent.key, mediaId: mediaContent.id })
+    .from(labTestFiles)
+    .innerJoin(mediaContent, eq(labTestFiles.mediaContentId, mediaContent.id))
+    .where(eq(labTestFiles.labTestId, id));
+
+  for (const f of oldFiles) {
+    try { await storageService.deleteObject(f.key); } catch (e) { console.error('Error deleting file:', e); }
   }
 
   const [deleted] = await db.delete(labTests)
     .where(eq(labTests.id, id))
     .returning();
 
+  // Clean up orphaned media_content rows (junction rows cascade-delete with labTests)
+  if (oldFiles.length > 0) {
+    await db.delete(mediaContent).where(inArray(mediaContent.id, oldFiles.map(f => f.mediaId)));
+  }
+
   return deleted;
 };
 
 
 
+
+
+/** Deletes a single file attachment from a lab test (R2 object + junction + media_content).
+ * @param {number} labTestId
+ * @param {number} mediaContentId
+ * @returns {Promise<void>}
+ */
+export const deleteLabTestFile = async (labTestId, mediaContentId) => {
+  const [file] = await db
+    .select({ key: mediaContent.key })
+    .from(labTestFiles)
+    .innerJoin(mediaContent, eq(labTestFiles.mediaContentId, mediaContent.id))
+    .where(and(
+      eq(labTestFiles.labTestId, labTestId),
+      eq(labTestFiles.mediaContentId, mediaContentId),
+    ));
+
+  if (!file) throw new Error('File not found');
+
+  try { await storageService.deleteObject(file.key); } catch (e) { console.error('Error deleting R2 object:', e); }
+  await db.delete(labTestFiles).where(and(
+    eq(labTestFiles.labTestId, labTestId),
+    eq(labTestFiles.mediaContentId, mediaContentId),
+  ));
+  await db.delete(mediaContent).where(eq(mediaContent.id, mediaContentId));
+};
 
 
 /**
@@ -319,7 +377,6 @@ export const getPaginatedLabTests = async (
       first_name: patients.firstName,
       surname: patients.surname,
       hospital_number: patients.hospitalNumber,
-      images: labTests.images
     })
     .from(labTests)
     .innerJoin(patients, eq(labTests.patientId, patients.patientId))
@@ -341,11 +398,7 @@ export const getPaginatedLabTests = async (
     pageSize,
     skipped: offset,
   };
-};
-
-
-
-
+}; 
 
 // ─── Lab Test Types (now stored in services table, category = 'lab') ─────────
 

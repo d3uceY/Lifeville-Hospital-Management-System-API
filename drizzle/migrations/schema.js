@@ -11,10 +11,12 @@ export const mediaTypeEnum = pgEnum("media_type_enum", ['local', 'cloud'])
 
 
 // ── Media Content ─────────────────────────────────────────────────────────────
+// Canonical file metadata table. Every uploaded file gets one row here.
+// Other tables reference this via FK (patients.media_id, lab_test_files.media_content_id, etc.)
 export const mediaContent = pgTable("media_content", {
 	id: serial().primaryKey().notNull(),
 	key: varchar({ length: 500 }).notNull(),
-	url: text().notNull(),
+	url: text(),
 	metadata: jsonb(),
 	type: mediaTypeEnum().notNull().default('cloud'),
 	contentType: varchar("content_type", { length: 100 }),
@@ -492,7 +494,6 @@ export const labTests = pgTable("lab_tests", {
 	results: text(),
 	createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
-	images: text().array(),
 	visitId: integer("visit_id"),
 }, (table) => [
 	foreignKey({
@@ -873,10 +874,31 @@ export const settingsEmail = pgTable("settings_email", {
 
 export const settingsStorage = pgTable("settings_storage", {
 	id: integer().primaryKey().default(1).notNull(),
-	provider: varchar({ length: 50 }).notNull().default("cloudinary"),
-	cloudName: varchar("cloud_name", { length: 255 }),
-	apiKey: varchar("api_key", { length: 255 }),
-	apiSecret: text("api_secret"),
+	provider: varchar({ length: 50 }).notNull().default("r2"),
+	accountId: varchar("account_id", { length: 255 }),
+	accessKeyId: varchar("access_key_id", { length: 255 }),
+	secretAccessKey: text("secret_access_key"),
+	bucket: varchar("bucket", { length: 255 }),
 	folderName: varchar("folder_name", { length: 255 }),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
+
+// ─── Lab Test Files (junction: lab_tests ↔ media_content)
+export const labTestFiles = pgTable("lab_test_files", {
+	id: serial().primaryKey().notNull(),
+	labTestId: integer("lab_test_id").notNull(),
+	mediaContentId: integer("media_content_id").notNull(),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+		columns: [table.labTestId],
+		foreignColumns: [labTests.id],
+		name: "lab_test_files_lab_test_id_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.mediaContentId],
+		foreignColumns: [mediaContent.id],
+		name: "lab_test_files_media_content_id_fkey"
+	}).onDelete("cascade"),
+	unique("lab_test_files_lab_test_id_media_content_id_key").on(table.labTestId, table.mediaContentId),
+]);

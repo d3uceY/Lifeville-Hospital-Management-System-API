@@ -18,5 +18,6 @@ router.get("/lab-tests/patient/:patientId", authenticate, labTestControllers.get
 router.get("/lab-tests/laboratory/paginated", authenticate, labTestControllers.getPaginatedLabTests);
 router.put("/lab-tests/:id", authenticate, uploadOptionalMultiple('images', 5), labTestControllers.updateLabTest);
 router.delete("/lab-tests/:id/delete", authenticate, labTestControllers.deleteLabTest);
+router.delete("/lab-tests/:labTestId/files/:mediaContentId", authenticate, labTestControllers.deleteLabTestFile);
 
 export default router;

@@ -179,9 +179,9 @@ export async function upsertEmail({ smtpHost, smtpPort, smtpSecure, smtpUser, sm
   return rows[0];
 }
 
-// ─── Storage (Cloudinary) ─────────────────────────────────────────────────────
+// ─── Storage (Cloudflare R2) ──────────────────────────────────────────────────
 
-/** Internal — returns the full row including api_key/api_secret (never expose to API). */
+/** Internal — returns the full row including access_key_id/secret_access_key (never expose to API). */
 export async function getStorageRaw() {
   const { rows } = await query(`SELECT * FROM settings_storage WHERE id = 1`);
   return rows[0] ?? null;
@@ -191,25 +191,26 @@ export async function getStorageRaw() {
 export async function getStorage() {
   const row = await getStorageRaw();
   if (!row) return null;
-  const { api_key, api_secret, ...rest } = row;
-  return { ...rest, has_api_key: !!(api_key), has_api_secret: !!(api_secret) };
+  const { access_key_id, secret_access_key, ...rest } = row;
+  return { ...rest, has_access_key_id: !!(access_key_id), has_secret_access_key: !!(secret_access_key) };
 }
 
-export async function upsertStorage({ cloudName, apiKey, apiSecret, folderName }) {
+export async function upsertStorage({ accountId, accessKeyId, secretAccessKey, bucket, folderName }) {
   const { rows } = await query(
-    `INSERT INTO settings_storage (id, provider, cloud_name, api_key, api_secret, folder_name, updated_at)
-     VALUES (1, 'cloudinary', $1, $2, $3, $4, NOW())
+    `INSERT INTO settings_storage (id, provider, account_id, access_key_id, secret_access_key, bucket, folder_name, updated_at)
+     VALUES (1, 'r2', $1, $2, $3, $4, $5, NOW())
      ON CONFLICT (id) DO UPDATE SET
-       provider    = 'cloudinary',
-       cloud_name  = EXCLUDED.cloud_name,
-       api_key     = COALESCE(EXCLUDED.api_key, settings_storage.api_key),
-       api_secret  = COALESCE(EXCLUDED.api_secret, settings_storage.api_secret),
-       folder_name = EXCLUDED.folder_name,
-       updated_at  = NOW()
-     RETURNING id, provider, cloud_name, folder_name, updated_at,
-               (api_key IS NOT NULL AND api_key <> '') AS has_api_key,
-               (api_secret IS NOT NULL AND api_secret <> '') AS has_api_secret`,
-    [cloudName ?? null, apiKey ?? null, apiSecret ?? null, folderName ?? null]
+       provider         = 'r2',
+       account_id       = EXCLUDED.account_id,
+       access_key_id    = COALESCE(EXCLUDED.access_key_id, settings_storage.access_key_id),
+       secret_access_key = COALESCE(EXCLUDED.secret_access_key, settings_storage.secret_access_key),
+       bucket           = EXCLUDED.bucket,
+       folder_name      = EXCLUDED.folder_name,
+       updated_at       = NOW()
+     RETURNING id, provider, account_id, bucket, folder_name, updated_at,
+               (access_key_id IS NOT NULL AND access_key_id <> '') AS has_access_key_id,
+               (secret_access_key IS NOT NULL AND secret_access_key <> '') AS has_secret_access_key`,
+    [accountId ?? null, accessKeyId ?? null, secretAccessKey ?? null, bucket ?? null, folderName ?? null]
   );
   return rows[0];
 }
@@ -248,7 +249,7 @@ const PREFIXES_KEYS      = new Set([
 const BILLING_KEYS       = new Set(["currencyCode", "currencySymbolPosition"]);
 const DOCUMENTS_KEYS     = new Set(["labReportFooter", "printFooterText", "showHospitalHeader"]);
 const EMAIL_KEYS         = new Set(["smtpHost", "smtpPort", "smtpSecure", "smtpUser", "smtpPass", "smtpFrom"]);
-const STORAGE_KEYS       = new Set(["cloudName", "apiKey", "apiSecret", "folderName"]);
+const STORAGE_KEYS       = new Set(["accountId", "accessKeyId", "secretAccessKey", "bucket", "folderName"]);
 
 function pickKeys(payload, keySet) {
   const picked = {};

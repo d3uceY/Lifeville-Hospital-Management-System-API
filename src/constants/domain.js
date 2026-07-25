@@ -61,7 +61,7 @@ export const INVOICE_STATUSES = {
   CANCELLED: "cancelled",
 };
 
-// ─── Cloudinary upload subfolders ────────────────────────────────────────────
+// ─── R2 upload subfolders ────────────────────────────────────────────────────
 export const UPLOAD_SUBFOLDERS = {
   LAB_DOCS:        "lab-test-docs",
   PATIENT_PROFILE: "patient-profiles",

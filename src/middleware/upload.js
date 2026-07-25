@@ -12,13 +12,18 @@ const storage = multer.memoryStorage();
  * @param {Object} file - Multer file object containing file information
  * @param {Function} cb - Callback function (error, acceptFile)
  */
+const ALLOWED_MIME_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+]);
+
 const fileFilter = (req, file, cb) => {
-    // Accept images and PDFs
-    // if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
-    if (file.mimetype.startsWith('image/')) {
+    if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Invalid file type. Only images are allowed'), false);
+        cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and PDF files are allowed'), false);
     }
 };
 
@@ -90,7 +95,7 @@ export const uploadAudio = multer({
  *     
  *     if (req.file) {
  *         // Handle file upload
- *         const imageUrl = await uploadToCloudinary(req.file.buffer);
+ *         const imageUrl = await storageService.uploadObject(req.file.buffer, key);
  *     }
  *     // Continue processing...
  * };
@@ -137,7 +142,7 @@ export const uploadOptionalSingle = (fieldName) => {
  *     if (req.files && req.files.length > 0) {
  *         // Handle multiple file uploads
  *         for (const file of req.files) {
- *             const imageUrl = await uploadToCloudinary(file.buffer);
+ *             const imageUrl = await storageService.uploadObject(file.buffer, key);
  *         }
  *     }
  *     // Continue processing...

@@ -224,3 +224,17 @@ export const updateLabTestType = async (req, res) => {
         res.status(500).json({ error: "Failed to update lab test type" });
     }
 }
+
+export const deleteLabTestFile = async (req, res) => {
+    try {
+        await labTestServices.deleteLabTestFile(
+            Number(req.params.labTestId),
+            Number(req.params.mediaContentId),
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(error.message === 'File not found' ? 404 : 500)
+            .json({ error: error.message || "Failed to delete file" });
+    }
+}

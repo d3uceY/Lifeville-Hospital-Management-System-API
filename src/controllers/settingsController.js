@@ -1,6 +1,6 @@
 import * as settings from "../services/settingsService.js";
 import { invalidateEmailTransport } from "../lib/emailService.js";
-import { applyStorageConfig } from "../lib/cloudinary-config.js";
+import { refreshR2Client } from "../lib/r2Client.js";
 import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 const ok  = (res, data)    => res.status(200).json({ success: true, data });
@@ -26,7 +26,7 @@ export async function updateAllSettingsController(req, res) {
     const updated = await settings.updateAllSettings(req.body);
     // Always refresh transports so any email/storage changes take effect immediately
     invalidateEmailTransport();
-    await applyStorageConfig();
+    refreshR2Client();
     req.activityLogger(ACTIVITY_TYPES.SETTINGS_UPDATED, { updatedBy: req.userId });
     return ok(res, updated);
   } catch (e) {
@@ -164,7 +164,7 @@ export async function getStorageController(_req, res) {
 export async function upsertStorageController(req, res) {
   try {
     const data = await settings.upsertStorage(req.body);
-    await applyStorageConfig();
+    refreshR2Client();
     return ok(res, data);
   } catch (e) {
     return err(res, e, "Failed to save storage settings");

@@ -120,6 +120,13 @@
       "when": 1784839483085,
       "tag": "0016_add_payment_insurance_link",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784993196461,
+      "tag": "0017_migrate_cloudinary_to_r2",
+      "breakpoints": true
     }
   ]
 }

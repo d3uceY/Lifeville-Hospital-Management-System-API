@@ -3,13 +3,13 @@ import { mediaContent } from "../../drizzle/migrations/schema.js";
 import { eq } from "drizzle-orm";
 
 /** Inserts a new media_content record and returns it.
- * @param {{ key: string, url: string, contentType: string, metadata?: object }} params
+ * @param {{ key: string, contentType: string, metadata?: object }} params
  * @returns {Promise<object>}
  */
-export const insertMediaContent = async ({ key, url, contentType, metadata = null }) => {
+export const insertMediaContent = async ({ key, contentType, metadata = null }) => {
   const [record] = await db
     .insert(mediaContent)
-    .values({ key, url, contentType, metadata, type: "cloud" })
+    .values({ key, contentType, metadata, type: "cloud" })
     .returning();
 
   return record;
@@ -28,15 +28,15 @@ export const getMediaContentById = async (id) => {
   return record;
 };
 
-/** Updates the key, url, and contentType of an existing media_content record.
+/** Updates the key and contentType of an existing media_content record.
  * @param {number} id
- * @param {{ key: string, url: string, contentType: string }} params
+ * @param {{ key: string, contentType: string }} params
  * @returns {Promise<object>}
  */
-export const updateMediaContent = async (id, { key, url, contentType }) => {
+export const updateMediaContent = async (id, { key, contentType }) => {
   const [record] = await db
     .update(mediaContent)
-    .set({ key, url, contentType })
+    .set({ key, contentType })
     .where(eq(mediaContent.id, id))
     .returning();
 

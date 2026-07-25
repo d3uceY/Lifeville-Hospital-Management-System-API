@@ -14,9 +14,10 @@
   "description": "",
   "dependencies": {
     "@ai-sdk/groq": "^3.0.31",
+    "@aws-sdk/client-s3": "^3.1095.0",
+    "@aws-sdk/s3-request-presigner": "^3.1095.0",
     "ai": "^6.0.141",
     "bcrypt": "^6.0.0",
-    "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",

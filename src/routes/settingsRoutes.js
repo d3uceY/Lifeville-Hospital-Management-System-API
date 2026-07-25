@@ -26,7 +26,7 @@ router.put("/settings", authenticate, authorize([ROLES.SUPERADMIN]), updateAllSe
 router.get("/settings/email", authenticate, authorize([ROLES.SUPERADMIN]), getEmailController);
 router.put("/settings/email", authenticate, authorize([ROLES.SUPERADMIN]), upsertEmailController);
 
-// Storage (Cloudinary) — superadmin only
+// Storage (Cloudflare R2) — superadmin only
 router.get("/settings/storage", authenticate, authorize([ROLES.SUPERADMIN]), getStorageController);
 router.put("/settings/storage", authenticate, authorize([ROLES.SUPERADMIN]), upsertStorageController);
 

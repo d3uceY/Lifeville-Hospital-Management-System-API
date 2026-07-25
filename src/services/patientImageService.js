@@ -1,17 +1,15 @@
 import { db } from "../../drizzle-db.js";
 import { patients } from "../../drizzle/migrations/schema.js";
 import { eq } from "drizzle-orm";
-import { uploadToCloudinary } from "../utils/uploadImage.js";
-import deleteImage from "../utils/deleteImage.js";
-import { extractPublicId } from "../utils/extractCloudinaryPublicId.js";
+import * as storageService from "./storageService.js";
 import * as mediaContentService from "./mediaContentService.js";
 import { getAllSettings } from "./settingsService.js";
 import { UPLOAD_SUBFOLDERS } from "../constants/domain.js";
 import { invalidatePatientsCache } from "./patientServices.js";
 
 /**
- * Uploads a new patient profile image to Cloudinary and upserts the media_content record.
- * If the patient already has a profile image, the old image is removed from Cloudinary
+ * Uploads a new patient profile image to R2 and upserts the media_content record.
+ * If the patient already has a profile image, the old image is removed from R2
  * and the media_content row is updated in-place. Otherwise a new row is inserted and
  * linked to the patient via mediaId.
  *
@@ -35,9 +33,9 @@ export const upsertPatientProfileImage = async (patientId, fileBuffer, contentTy
     throw err;
   }
 
-  // Upload the new image to Cloudinary
-  const imageUrl = await uploadToCloudinary(fileBuffer, uploadFolder, "patient-photo");
-  const publicKey = extractPublicId(imageUrl);
+  // Upload the new image to R2
+  const objectKey = storageService.buildObjectKey(uploadFolder, contentType);
+  await storageService.uploadObject(fileBuffer, objectKey, storageService.UPLOAD_PRESETS.PATIENT_PHOTO, contentType);
 
   let mediaRecord;
 
@@ -45,16 +43,15 @@ export const upsertPatientProfileImage = async (patientId, fileBuffer, contentTy
     const existingMedia = await mediaContentService.getMediaContentById(patient.mediaId);
 
     if (existingMedia) {
-      // Delete the old Cloudinary image and update the existing media_content row
-      await deleteImage(existingMedia.url);
+      // Delete the old R2 object and update the existing media_content row
+      if (existingMedia.key) await storageService.deleteObject(existingMedia.key);
       mediaRecord = await mediaContentService.updateMediaContent(patient.mediaId, {
-        key: publicKey,
-        url: imageUrl,
+        key: objectKey,
         contentType,
       });
     } else {
       // The mediaId reference is dangling — insert a fresh record and relink
-      mediaRecord = await mediaContentService.insertMediaContent({ key: publicKey, url: imageUrl, contentType });
+      mediaRecord = await mediaContentService.insertMediaContent({ key: objectKey, contentType });
       await db
         .update(patients)
         .set({ mediaId: mediaRecord.id })
@@ -62,7 +59,7 @@ export const upsertPatientProfileImage = async (patientId, fileBuffer, contentTy
     }
   } else {
     // No existing profile image — insert and link
-    mediaRecord = await mediaContentService.insertMediaContent({ key: publicKey, url: imageUrl, contentType });
+    mediaRecord = await mediaContentService.insertMediaContent({ key: objectKey, contentType });
     await db
       .update(patients)
       .set({ mediaId: mediaRecord.id })
@@ -74,7 +71,7 @@ export const upsertPatientProfileImage = async (patientId, fileBuffer, contentTy
 };
 
 /**
- * Deletes a patient's profile image from Cloudinary and removes the media_content record.
+ * Deletes a patient's profile image from R2 and removes the media_content record.
  * The FK ON DELETE SET NULL constraint automatically nullifies patients.mediaId.
  *
  * @param {number} patientId
@@ -101,7 +98,7 @@ export const deletePatientProfileImage = async (patientId) => {
   const mediaRecord = await mediaContentService.getMediaContentById(patient.mediaId);
 
   if (mediaRecord) {
-    await deleteImage(mediaRecord.url);
+    if (mediaRecord.key) await storageService.deleteObject(mediaRecord.key);
     await mediaContentService.deleteMediaContentById(mediaRecord.id);
     // FK ON DELETE SET NULL handles nullifying patients.mediaId
   }

@@ -2,6 +2,7 @@
 import { db } from "../../drizzle-db.js";
 import { patients, mediaContent, patientInsurance, insuranceProviders } from "../../drizzle/migrations/schema.js";
 import { desc, eq, and } from "drizzle-orm";
+import * as storageService from "./storageService.js";
 
 // ─── In-memory cache ───────────────────────────────────────────────────────
 let patientsCache = null;
@@ -207,11 +208,23 @@ export const viewPatient = async (patientId) => {
       patientType: patients.patientType,
       isInpatient: patients.isInpatient,
       mediaId: patients.mediaId,
-      profileImageUrl: mediaContent.url,
+      profileImageKey: mediaContent.key,
     })
     .from(patients)
     .leftJoin(mediaContent, eq(patients.mediaId, mediaContent.id))
     .where(eq(patients.patientId, patientId));
+
+  // Resolve object key to a presigned download URL
+  if (patient && patient.profileImageKey) {
+    try {
+      patient.profileImageUrl = await storageService.generateDownloadUrl(patient.profileImageKey);
+    } catch {
+      patient.profileImageUrl = null;
+    }
+  } else {
+    patient.profileImageUrl = null;
+  }
+  delete patient.profileImageKey; // don't leak internal key
 
   return patient;
 };
