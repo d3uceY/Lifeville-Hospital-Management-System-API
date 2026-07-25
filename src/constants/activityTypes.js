@@ -17,6 +17,7 @@ export const ACTIVITY_TYPES = {
     PATIENT_CREATED:           "patient:created",
     PATIENT_UPDATED:           "patient:updated",
     PATIENT_DELETED:           "patient:deleted",
+    PATIENT_VIEWED:            "patient:viewed",      // PHI access logged per HIPAA 
 
     // ── Visits ─────────────────────────────────────────────────────────────────
     VISIT_CREATED:             "visit:created",
@@ -59,12 +60,15 @@ export const ACTIVITY_TYPES = {
     // ── Vital signs ────────────────────────────────────────────────────────────
     VITAL_SIGNS_RECORDED:      "vital_signs:recorded",
     VITAL_SIGNS_UPDATED:       "vital_signs:updated",
+    VITAL_SIGNS_DELETED:       "vital_signs:deleted",
 
     // ── Notes ──────────────────────────────────────────────────────────────────
     DOCTOR_NOTE_CREATED:       "doctor_note:created",
     DOCTOR_NOTE_UPDATED:       "doctor_note:updated",
+    DOCTOR_NOTE_DELETED:       "doctor_note:deleted",
     NURSE_NOTE_CREATED:        "nurse_note:created",
     NURSE_NOTE_UPDATED:        "nurse_note:updated",
+    NURSE_NOTE_DELETED:        "nurse_note:deleted",
 
     // ── Settings ───────────────────────────────────────────────────────────────
     SETTINGS_UPDATED:          "settings:updated",
@@ -84,6 +88,32 @@ export const ACTIVITY_TYPES = {
     PATIENT_INSURANCE_CREATED:  "patient_insurance:created",
     PATIENT_INSURANCE_UPDATED:  "patient_insurance:updated",
     PATIENT_INSURANCE_DELETED:  "patient_insurance:deleted",
+
+    // ── Birth records ──────────────────────────────────────────────────────────
+    BIRTH_CREATED:             "birth:created",
+    BIRTH_UPDATED:             "birth:updated",
+    BIRTH_DELETED:             "birth:deleted",
+
+    // ── Death records ─────────────────────────────────────────────────────────
+    DEATH_CREATED:             "death:created",
+    DEATH_UPDATED:             "death:updated",
+    DEATH_DELETED:             "death:deleted",
+
+    // ── Complaints ────────────────────────────────────────────────────────────
+    COMPLAINT_CREATED:         "complaint:created",
+
+    // ── Conditions ────────────────────────────────────────────────────────────
+    CONDITION_CREATED:         "condition:created",
+    CONDITION_UPDATED:         "condition:updated",
+    CONDITION_DELETED:         "condition:deleted",
+
+    // ── Doctors (staff) ───────────────────────────────────────────────────────
+    DOCTOR_CREATED:            "doctor:created",
+    DOCTOR_UPDATED:            "doctor:updated",
+    DOCTOR_DELETED:            "doctor:deleted",
+
+    // ── Physical examinations ─────────────────────────────────────────────────
+    PHYSICAL_EXAM_CREATED:     "physical_exam:created",
 };
 
 /** Set of all valid activity type values for quick validation */

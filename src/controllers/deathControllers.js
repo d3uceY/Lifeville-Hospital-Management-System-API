@@ -1,4 +1,5 @@
 import * as deathServices from "../services/deathServices.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export const getDeathRecords = async (req, res) => {
   try {
@@ -19,6 +20,7 @@ export const createDeathRecord = async (req, res) => {
   try {
     const deathRecord = await deathServices.createDeathRecord(req.body);
     res.status(201).json({ deathRecord, message: "Submitted Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.DEATH_CREATED, { deathId: deathRecord.id });
   } catch (err) {
     if (err.code === "DUPLICATE_DEATH_RECORD") {
       return res.status(400).json({
@@ -41,6 +43,7 @@ export const deleteDeathRecord = async (req, res) => {
     res
       .status(200)
       .json({ deletedDeathRecord, message: "Deleted Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.DEATH_DELETED, { deathId: Number(id) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -57,6 +60,7 @@ export const updateDeathRecord = async (req, res) => {
     res
       .status(200)
       .json({ updatedDeathRecord, message: "Updated Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.DEATH_UPDATED, { deathId: Number(id) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

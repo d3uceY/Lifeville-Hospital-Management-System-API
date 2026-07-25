@@ -103,6 +103,7 @@ export const deleteDoctorNote = async (req, res) => {
       success: true,
       data: deletedNote,
     });
+    req.activityLogger(ACTIVITY_TYPES.DOCTOR_NOTE_DELETED, { noteId: Number(id) });
   } catch (error) {
     console.error("Error deleting doctor note:", error);
     res.status(500).json({ success: false, message: "Server error" });

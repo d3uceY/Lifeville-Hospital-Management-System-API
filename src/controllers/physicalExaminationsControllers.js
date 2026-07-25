@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as physicalExaminationsServices from "../services/physicalExaminationsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export const createPhysicalExamination = async (req, res) => {
   try {
@@ -39,6 +40,7 @@ export const createPhysicalExamination = async (req, res) => {
     });
 
     res.status(200).json({ physicalExamination, message: "Submitted Successfully" });
+    req.activityLogger(ACTIVITY_TYPES.PHYSICAL_EXAM_CREATED, { examId: physicalExamination.id, patientId: physicalExamination.patient_id });
   } catch (err) {
     console.error("error creating physical examination:", err);
     res.status(err.status || 500).json({ error: err.message, code: err.code });

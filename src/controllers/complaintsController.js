@@ -3,6 +3,7 @@ import { NOTIFICATION_ROLES } from "../constants/domain.js";
 import * as complaintsServices from "../services/complaintsServices.js";
 import { addNotification } from "../services/notificationServices.js";
 import { formatDate } from "../utils/formatDate.js";
+import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
 
 export async function getComplaints(req, res) {
     try {

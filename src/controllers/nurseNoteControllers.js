@@ -106,6 +106,7 @@ export const deleteNurseNote = async (req, res) => {
       success: true,
       data: deletedNote,
     });
+    req.activityLogger(ACTIVITY_TYPES.NURSE_NOTE_DELETED, { noteId: Number(id) });
   } catch (error) {
     console.error("Error deleting nurse note:", error);
     res.status(500).json({ success: false, message: "Server error" });
