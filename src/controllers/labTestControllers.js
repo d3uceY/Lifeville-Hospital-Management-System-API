@@ -175,7 +175,7 @@ export async function getLabTestById(req, res) {
         res.json(labTest);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to retrieve lab test" });
+        res.status(error.status || 500).json({ error: error.message || "Failed to retrieve lab test" });
     }
 }
 
@@ -234,7 +234,7 @@ export const deleteLabTestFile = async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error(error);
-        res.status(error.message === 'File not found' ? 404 : 500)
-            .json({ error: error.message || "Failed to delete file" });
+        const status = error.message === 'File not found' ? 404 : (error.status || 500);
+        res.status(status).json({ error: error.message || "Failed to delete file" });
     }
 }

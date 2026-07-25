@@ -13,7 +13,9 @@ export async function getR2Client() {
 
   const row = await getStorageRaw();
   if (!row?.account_id || !row?.access_key_id || !row?.secret_access_key || !row?.bucket) {
-    throw new Error("R2 storage is not configured");
+    const err = new Error("R2 storage is not configured. Set Cloudflare R2 credentials in Settings → Storage.");
+    err.status = 400;
+    throw err;
   }
 
   const client = new S3Client({
