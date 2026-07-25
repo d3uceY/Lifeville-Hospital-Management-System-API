@@ -76,6 +76,28 @@ export const getPatientVisitsByPatientId = async (req, res) => {
     }
 };
 
+export const getActiveVisit = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const visit = await patientVisitsServices.getActiveVisitByPatientId(patientId);
+        res.status(200).json(visit);
+    } catch (error) {
+        console.error("Error fetching active visit:", error);
+        res.status(500).json({ error: "Failed to fetch active visit" });
+    }
+};
+
+export const getActiveVisitsQueue = async (req, res) => {
+    try {
+        const { limit } = req.query;
+        const queue = await patientVisitsServices.getActiveVisitsQueue(limit ? Number(limit) : undefined);
+        res.status(200).json(queue);
+    } catch (error) {
+        console.error("Error fetching active visits queue:", error);
+        res.status(500).json({ error: "Failed to fetch active visits queue" });
+    }
+};
+
 export const checkOutPatientVisit = async (req, res) => {
     try {
         const visitId = Number(req.params.visitId);

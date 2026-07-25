@@ -9,7 +9,9 @@ const allowedRoles = [ROLES.SUPERADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.RECEPTI
 
 router.post("/patient-visits", authenticate, authorize(allowedRoles), patientVisitsController.createPatientVisit);
 router.get("/patient-visits/paginated", authenticate, authorize(allowedRoles), patientVisitsController.getPaginatedPatientVisits);
+router.get("/patient-visits/queue", authenticate, authorize(allowedRoles), patientVisitsController.getActiveVisitsQueue);
 router.get("/patient-visits/:patientId/patient", authenticate, authorize(allowedRoles), patientVisitsController.getPatientVisitsByPatientId);
+router.get("/patient-visits/:patientId/active", authenticate, authorize(allowedRoles), patientVisitsController.getActiveVisit);
 router.get("/patient-visits/:visitId/summary", authenticate, authorize(allowedRoles), patientVisitsController.getVisitSummary);
 router.patch("/patient-visits/:visitId/checkout", authenticate, authorize(allowedRoles), patientVisitsController.checkOutPatientVisit);
 

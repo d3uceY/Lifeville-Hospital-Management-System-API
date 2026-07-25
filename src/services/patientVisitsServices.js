@@ -194,6 +194,36 @@ export const getPaginatedPatientVisits = async (
 };
 
 
+/**
+ * Returns the currently active (not checked-out) visit for a patient, enriched with doctor name.
+ * @param {number} patientId
+ * @returns {Promise<object|null>}
+ */
+export const getActiveVisitByPatientId = async (patientId) => {
+    const [visit] = await db
+        .select({
+            id: patientVisits.id,
+            patientId: patientVisits.patientId,
+            doctorId: patientVisits.doctorId,
+            purpose: patientVisits.purpose,
+            visitType: patientVisits.visitType,
+            checkInTime: patientVisits.checkInTime,
+            doctorName: users.name,
+        })
+        .from(patientVisits)
+        .leftJoin(users, eq(patientVisits.doctorId, users.id))
+        .where(
+            and(
+                eq(patientVisits.patientId, Number(patientId)),
+                isNull(patientVisits.checkOutTime)
+            )
+        )
+        .orderBy(desc(patientVisits.checkInTime))
+        .limit(1);
+
+    return visit ?? null;
+};
+
 /** Returns all visits for a patient joined with patient and doctor data.
  * @param {number} patientId
  * @returns {Promise<object[]>}
@@ -421,4 +451,34 @@ export const getRecentUniqueVisits = async (limit = 5) => {
     }
 
     return unique;
+};
+
+/**
+ * Returns all currently active (not checked-out) outpatient/inpatient visits,
+ * ordered by longest-waiting first. Used for the dashboard "Active Queue" widget.
+ * @param {number} [limit=20]
+ * @returns {Promise<object[]>}
+ */
+export const getActiveVisitsQueue = async (limit = 20) => {
+    const rows = await db
+        .select({
+            id: patientVisits.id,
+            patientId: patientVisits.patientId,
+            visitType: patientVisits.visitType,
+            purpose: patientVisits.purpose,
+            checkInTime: patientVisits.checkInTime,
+            admissionId: patientVisits.admissionId,
+            firstName: patients.firstName,
+            surname: patients.surname,
+            hospitalNumber: patients.hospitalNumber,
+            doctorName: users.name,
+        })
+        .from(patientVisits)
+        .leftJoin(patients, eq(patientVisits.patientId, patients.patientId))
+        .leftJoin(users, eq(patientVisits.doctorId, users.id))
+        .where(isNull(patientVisits.checkOutTime))
+        .orderBy(asc(patientVisits.checkInTime))
+        .limit(limit);
+
+    return rows;
 };
