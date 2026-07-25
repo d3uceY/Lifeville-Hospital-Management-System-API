@@ -456,6 +456,9 @@ export const getRecentUniqueVisits = async (limit = 5) => {
 /**
  * Returns all currently active (not checked-out) outpatient/inpatient visits,
  * ordered by longest-waiting first. Used for the dashboard "Active Queue" widget.
+ *
+ * HIPAA: This query exposes PHI (patient name, hospital number, visit purpose)
+ * in potentially large batches. Consumption is role-gated at the route level.
  * @param {number} [limit=20]
  * @returns {Promise<object[]>}
  */

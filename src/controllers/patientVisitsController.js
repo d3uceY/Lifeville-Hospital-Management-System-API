@@ -35,6 +35,9 @@ export const createPatientVisit = async (req, res) => {
         }
 
         const io = req.app.get("socketio");
+        // HIPAA: socket.io notification includes patient name — PHI transmitted
+        // over WebSocket. Ensure the connection is WSS (TLS) and that the
+        // recipientRoles filter prevents broadcast to unauthorized users.
         io.emit("notification", {
             recipientRoles: NOTIFICATION_ROLES.VISIT,
             message: `( New Patient Visit on ${formatDate(patientVisit.check_in_time)} ) Doctor: ${patientVisit.doctor_name}`,
@@ -80,6 +83,8 @@ export const getActiveVisit = async (req, res) => {
     try {
         const { patientId } = req.params;
         const visit = await patientVisitsServices.getActiveVisitByPatientId(patientId);
+        // HIPAA audit: log PHI read — who accessed which patient's active visit
+        req.activityLogger(ACTIVITY_TYPES.VISIT_VIEWED, { patientId: Number(patientId) });
         res.status(200).json(visit);
     } catch (error) {
         console.error("Error fetching active visit:", error);
@@ -90,6 +95,8 @@ export const getActiveVisit = async (req, res) => {
 export const getActiveVisitsQueue = async (req, res) => {
     try {
         const { limit } = req.query;
+        // HIPAA audit: log that a user viewed the active queue (bulk PHI access)
+        req.activityLogger(ACTIVITY_TYPES.ACTIVE_VISITS_VIEWED, { limit: limit ? Number(limit) : undefined });
         const queue = await patientVisitsServices.getActiveVisitsQueue(limit ? Number(limit) : undefined);
         res.status(200).json(queue);
     } catch (error) {
@@ -123,6 +130,8 @@ export const checkOutPatientVisit = async (req, res) => {
         }
 
         const io = req.app.get("socketio");
+        // HIPAA: socket.io notification includes patient name — PHI transmitted
+        // over WebSocket. Ensure WSS and role-gated recipient filter.
         io.emit("notification", {
             recipientRoles: NOTIFICATION_ROLES.VISIT,
             message: `Patient Checked Out`,

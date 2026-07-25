@@ -21,6 +21,8 @@ export const ACTIVITY_TYPES = {
     // ── Visits ─────────────────────────────────────────────────────────────────
     VISIT_CREATED:             "visit:created",
     VISIT_CHECKED_OUT:         "visit:checked_out",
+    VISIT_VIEWED:              "visit:viewed",      // PHI access logged per HIPAA
+    ACTIVE_VISITS_VIEWED:      "active_visits:viewed",
 
     // ── Admissions ─────────────────────────────────────────────────────────────
     ADMISSION_CREATED:         "admission:created",
