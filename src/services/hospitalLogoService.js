@@ -17,6 +17,15 @@ import { UPLOAD_SUBFOLDERS } from "../constants/domain.js";
  */
 export const upsertHospitalLogo = async (fileBuffer, contentType) => {
   const settings = await getAllSettings();
+
+  if (!settings.storage?.folder_name) {
+    const err = new Error(
+      "Storage is not configured. Go to Settings -> Storage to set up R2 credentials and folder name before uploading a logo."
+    );
+    err.code = "STORAGE_NOT_CONFIGURED";
+    throw err;
+  }
+
   const uploadFolder = `${settings.storage.folder_name}/${UPLOAD_SUBFOLDERS.HOSPITAL_LOGO}`;
 
   // Store logo as PNG to preserve alpha transparency

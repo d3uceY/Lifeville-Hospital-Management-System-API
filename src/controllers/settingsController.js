@@ -186,7 +186,9 @@ export async function uploadHospitalLogoController(req, res) {
     req.activityLogger(ACTIVITY_TYPES.SETTINGS_UPDATED, { updatedBy: req.userId, field: "hospital_logo" });
     return ok(res, result);
   } catch (e) {
-    return err(res, e, "Failed to upload hospital logo");
+    console.error("Failed to upload hospital logo", e);
+    const status = e.code === "STORAGE_NOT_CONFIGURED" ? 400 : 500;
+    return res.status(status).json({ success: false, message: e.message || "Failed to upload hospital logo" });
   }
 }
 
