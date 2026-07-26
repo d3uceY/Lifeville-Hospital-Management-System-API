@@ -1,0 +1,2 @@
+ALTER TABLE "settings_hospital_info" ALTER COLUMN "hospital_name" SET DEFAULT 'Aldera Health System';--> statement-breakpoint
+ALTER TABLE "settings_hospital_info" ALTER COLUMN "hospital_short_name" SET DEFAULT 'Aldera';

@@ -1,6 +1,6 @@
 # Database Migration Guide (Development)
 
-Steps to set up and migrate the Lifeville HMS database on your local machine.
+Steps to set up and migrate the AHS database on your local machine.
 
 ---
 

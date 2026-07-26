@@ -127,6 +127,13 @@
       "when": 1784993196461,
       "tag": "0017_migrate_cloudinary_to_r2",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785061951929,
+      "tag": "0018_rename_hospital_defaults",
+      "breakpoints": true
     }
   ]
 }

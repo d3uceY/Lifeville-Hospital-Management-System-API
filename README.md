@@ -1,6 +1,6 @@
-# Lifeville HMS — API
+# Aldera — API
 
-The backend REST API and WebSocket server for [Lifeville HMS](../LHMS), a Hospital Management System built for clinical environments.
+The backend REST API and WebSocket server for [Aldera Health System](../LHMS), a Hospital Management System built for clinical environments.
 
 ---
 
@@ -129,7 +129,7 @@ Models used (Groq):
 ### Installation
 
 ```bash
-cd LHMS-API
+cd lhmsapi
 npm install
 ```
 
@@ -138,7 +138,7 @@ npm install
 Create a `.env` file:
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/lifeville
+DATABASE_URL=postgresql://user:password@localhost:5432/LIFEVILLE_HMS_db
 JWT_SECRET=your_jwt_secret
 GROQ_API_KEY=your_groq_api_key
 PORT=3000

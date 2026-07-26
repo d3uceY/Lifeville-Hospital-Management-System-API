@@ -134,7 +134,7 @@ export async function sendPasswordResetEmail({ toEmail, toName, resetUrl }) {
   // Pull branding from the in-memory settings cache (falls back to a fresh DB fetch if not yet cached)
   const settings = await getAllSettings();
 
-  const hospitalName = settings?.hospitalInfo?.hospital_name ?? "Lifeville HMS";
+  const hospitalName = settings?.hospitalInfo?.hospital_name ?? "Aldera Health System";
   const hospitalEmail = settings?.contact?.email ?? null;
 
   const html = buildResetEmailHtml({

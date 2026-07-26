@@ -816,8 +816,8 @@ export const patientInsurance = pgTable("patient_insurance", {
 
 export const settingsHospitalInfo = pgTable("settings_hospital_info", {
 	id: integer().primaryKey().default(1).notNull(),
-	hospitalName: varchar("hospital_name", { length: 255 }).notNull().default("Lifeville Specialist Hospital"),
-	hospitalShortName: varchar("hospital_short_name", { length: 100 }).default("Lifeville"),
+	hospitalName: varchar("hospital_name", { length: 255 }).notNull().default("Aldera Health System"),
+	hospitalShortName: varchar("hospital_short_name", { length: 100 }).default("Aldera"),
 	licenseNumber: varchar("license_number", { length: 100 }),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
