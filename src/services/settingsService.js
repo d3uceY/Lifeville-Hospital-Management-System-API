@@ -1,5 +1,7 @@
 import { query } from "../../drizzle-db.js";
 import { CURRENCIES } from "../constants/currencies.js";
+import * as storageService from "./storageService.js";
+import * as mediaContentService from "./mediaContentService.js";
 
 // ─── Currencies ───────────────────────────────────────────────────────────────
 
@@ -129,17 +131,18 @@ export async function getDocuments() {
   return rows[0] ?? null;
 }
 
-export async function upsertDocuments({ labReportFooter, printFooterText, showHospitalHeader }) {
+export async function upsertDocuments({ labReportFooter, printFooterText, showHospitalHeader, hospitalLogoMediaId }) {
   const { rows } = await query(
-    `INSERT INTO settings_documents (id, lab_report_footer, print_footer_text, show_hospital_header, updated_at)
-     VALUES (1, $1, $2, $3, NOW())
+    `INSERT INTO settings_documents (id, lab_report_footer, print_footer_text, show_hospital_header, hospital_logo_media_id, updated_at)
+     VALUES (1, $1, $2, $3, $4, NOW())
      ON CONFLICT (id) DO UPDATE SET
-       lab_report_footer    = EXCLUDED.lab_report_footer,
-       print_footer_text    = EXCLUDED.print_footer_text,
-       show_hospital_header = EXCLUDED.show_hospital_header,
-       updated_at           = NOW()
+       lab_report_footer        = EXCLUDED.lab_report_footer,
+       print_footer_text        = EXCLUDED.print_footer_text,
+       show_hospital_header     = EXCLUDED.show_hospital_header,
+       hospital_logo_media_id   = EXCLUDED.hospital_logo_media_id,
+       updated_at               = NOW()
      RETURNING *`,
-    [labReportFooter, printFooterText, showHospitalHeader ?? true]
+    [labReportFooter, printFooterText, showHospitalHeader ?? true, hospitalLogoMediaId ?? null]
   );
   return rows[0];
 }
@@ -222,7 +225,10 @@ let settingsCache = null;
 export const invalidateSettingsCache = () => { settingsCache = null; };
 
 export async function getAllSettings() {
-  if (settingsCache) return settingsCache;
+  if (settingsCache) {
+    // Resolve logo URL per-request — presigned URLs expire independently of cache
+    return { ...settingsCache, documents: await attachLogoUrl(settingsCache.documents) };
+  }
 
   const [hospitalInfo, contact, prefixes, billing, documents, email, storage] = await Promise.all([
     getHospitalInfo(),
@@ -233,8 +239,20 @@ export async function getAllSettings() {
     getEmail(),
     getStorage(),
   ]);
+
+  const documentsWithLogo = await attachLogoUrl(documents);
+
   settingsCache = { hospitalInfo, contact, prefixes, billing, documents, email, storage };
-  return settingsCache;
+  return { ...settingsCache, documents: documentsWithLogo };
+}
+
+/** Resolves hospital_logo_url from the media ID — called per-request, never cached. */
+async function attachLogoUrl(documents) {
+  if (!documents?.hospital_logo_media_id) return documents;
+  const media = await mediaContentService.getMediaContentById(documents.hospital_logo_media_id);
+  if (!media?.key) return documents;
+  const url = await storageService.generateDownloadUrl(media.key, 604800).catch(() => null);
+  return { ...documents, hospital_logo_url: url };
 }
 
 // ─── Unified update — routes each field to the correct table ─────────────────
@@ -247,7 +265,7 @@ const PREFIXES_KEYS      = new Set([
   "birthIdPrefix", "deathIdPrefix", "appointmentIdPrefix", "invoiceIdPrefix",
 ]);
 const BILLING_KEYS       = new Set(["currencyCode", "currencySymbolPosition"]);
-const DOCUMENTS_KEYS     = new Set(["labReportFooter", "printFooterText", "showHospitalHeader"]);
+const DOCUMENTS_KEYS     = new Set(["labReportFooter", "printFooterText", "showHospitalHeader", "hospitalLogoMediaId"]);
 const EMAIL_KEYS         = new Set(["smtpHost", "smtpPort", "smtpSecure", "smtpUser", "smtpPass", "smtpFrom"]);
 const STORAGE_KEYS       = new Set(["accountId", "accessKeyId", "secretAccessKey", "bucket", "folderName"]);
 

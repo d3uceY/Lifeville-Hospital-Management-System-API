@@ -1,4 +1,5 @@
 import * as settings from "../services/settingsService.js";
+import * as hospitalLogoService from "../services/hospitalLogoService.js";
 import { invalidateEmailTransport } from "../lib/emailService.js";
 import { refreshR2Client } from "../lib/r2Client.js";
 import { ACTIVITY_TYPES } from "../constants/activityTypes.js";
@@ -168,5 +169,36 @@ export async function upsertStorageController(req, res) {
     return ok(res, data);
   } catch (e) {
     return err(res, e, "Failed to save storage settings");
+  }
+}
+
+// ─── Hospital Logo ────────────────────────────────────────────────────────────
+
+export async function uploadHospitalLogoController(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+    const result = await hospitalLogoService.upsertHospitalLogo(
+      req.file.buffer,
+      req.file.mimetype,
+    );
+    req.activityLogger(ACTIVITY_TYPES.SETTINGS_UPDATED, { updatedBy: req.userId, field: "hospital_logo" });
+    return ok(res, result);
+  } catch (e) {
+    return err(res, e, "Failed to upload hospital logo");
+  }
+}
+
+export async function deleteHospitalLogoController(req, res) {
+  try {
+    await hospitalLogoService.deleteHospitalLogo();
+    req.activityLogger(ACTIVITY_TYPES.SETTINGS_UPDATED, { updatedBy: req.userId, field: "hospital_logo" });
+    return ok(res, { message: "Logo deleted" });
+  } catch (e) {
+    if (e.code === "NO_LOGO") {
+      return res.status(404).json({ success: false, message: e.message });
+    }
+    return err(res, e, "Failed to delete hospital logo");
   }
 }

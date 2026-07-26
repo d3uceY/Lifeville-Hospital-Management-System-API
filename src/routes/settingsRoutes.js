@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import { authorize } from "../middleware/authorize.js";
+import { uploadOptionalSingle } from "../middleware/upload.js";
 import {
   getCurrenciesController,
   getAllSettingsController,
@@ -9,6 +10,8 @@ import {
   upsertEmailController,
   getStorageController,
   upsertStorageController,
+  uploadHospitalLogoController,
+  deleteHospitalLogoController,
 } from "../controllers/settingsController.js";
 import { ROLES } from "../constants/domain.js";
 
@@ -29,5 +32,20 @@ router.put("/settings/email", authenticate, authorize([ROLES.SUPERADMIN]), upser
 // Storage (Cloudflare R2) — superadmin only
 router.get("/settings/storage", authenticate, authorize([ROLES.SUPERADMIN]), getStorageController);
 router.put("/settings/storage", authenticate, authorize([ROLES.SUPERADMIN]), upsertStorageController);
+
+// Hospital logo — superadmin only
+router.post(
+  "/settings/hospital-logo",
+  authenticate,
+  authorize([ROLES.SUPERADMIN]),
+  uploadOptionalSingle("hospitalLogo"),
+  uploadHospitalLogoController,
+);
+router.delete(
+  "/settings/hospital-logo",
+  authenticate,
+  authorize([ROLES.SUPERADMIN]),
+  deleteHospitalLogoController,
+);
 
 export default router;

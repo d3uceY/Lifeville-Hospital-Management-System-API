@@ -858,8 +858,15 @@ export const settingsDocuments = pgTable("settings_documents", {
 	labReportFooter: text("lab_report_footer"),
 	printFooterText: text("print_footer_text"),
 	showHospitalHeader: boolean("show_hospital_header").notNull().default(true),
+	hospitalLogoMediaId: integer("hospital_logo_media_id"),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
-});
+}, (table) => [
+	foreignKey({
+		columns: [table.hospitalLogoMediaId],
+		foreignColumns: [mediaContent.id],
+		name: "settings_documents_hospital_logo_media_id_fkey"
+	}).onDelete("set null"),
+]);
 
 export const settingsEmail = pgTable("settings_email", {
 	id: integer().primaryKey().default(1).notNull(),

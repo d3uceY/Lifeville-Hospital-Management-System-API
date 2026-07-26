@@ -66,4 +66,5 @@ export const UPLOAD_SUBFOLDERS = {
   LAB_DOCS:        "lab-test-docs",
   PATIENT_PROFILE: "patient-profiles",
   USER_PROFILE:    "user-profiles",
+  HOSPITAL_LOGO:   "hospital-logos",
 };
