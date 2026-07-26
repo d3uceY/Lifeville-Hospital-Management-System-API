@@ -85,6 +85,7 @@ export const services = pgTable("services", {
 	isSystem: boolean("is_system").notNull().default(false),
 	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
+	index("idx_services_category").using("btree", table.category.asc().nullsLast().op("text_ops")),
 	unique("services_name_key").on(table.name),
 ]);
 
@@ -98,6 +99,9 @@ export const invoices = pgTable("invoices", {
 	status: text().notNull().default("open"),
 	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
+	index("idx_invoices_admission_id").using("btree", table.admissionId.asc().nullsLast().op("int4_ops")),
+	index("idx_invoices_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
+	index("idx_invoices_created_at").using("btree", table.createdAt.asc().nullsLast().op("timestamp_ops")),
 	unique("invoices_invoice_number_key").on(table.invoiceNumber),
 	foreignKey({ columns: [table.admissionId], foreignColumns: [inpatientAdmissions.id], name: "invoices_admission_id_fkey" }).onDelete("set null"),
 	foreignKey({ columns: [table.visitId], foreignColumns: [patientVisits.id], name: "invoices_visit_id_fkey" }).onDelete("set null"),
@@ -121,6 +125,7 @@ export const billItems = pgTable("bill_items", {
 	createdBy: integer("created_by"),
 	createdAt: timestamp("created_at", { mode: "string" }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
+	index("idx_bill_items_invoice_id").using("btree", table.invoiceId.asc().nullsLast().op("int4_ops")),
 	foreignKey({
 		columns: [table.billId],
 		foreignColumns: [bills.id],
@@ -157,6 +162,7 @@ export const billingPayments = pgTable("billing_payments", {
 	foreignKey({ columns: [table.invoiceId], foreignColumns: [invoices.id], name: "billing_payments_invoice_id_fkey" }).onDelete("cascade"),
 	foreignKey({ columns: [table.patientInsuranceId], foreignColumns: [patientInsurance.id], name: "billing_payments_patient_insurance_id_fkey" }).onDelete("set null"),
 	foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "billing_payments_created_by_fkey" }).onDelete("set null"),
+	index("idx_billing_payments_invoice_id").using("btree", table.invoiceId.asc().nullsLast().op("int4_ops")),
 	index("idx_billing_payments_patient_insurance_id").using("btree", table.patientInsuranceId.asc().nullsLast().op("int4_ops")),
 ]);
 
@@ -285,6 +291,8 @@ export const beds = pgTable("beds", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
+	index("idx_beds_bed_type_id").using("btree", table.bedTypeId.asc().nullsLast().op("int4_ops")),
+	index("idx_beds_bed_group_id").using("btree", table.bedGroupId.asc().nullsLast().op("int4_ops")),
 	foreignKey({
 			columns: [table.bedTypeId],
 			foreignColumns: [bedTypes.id],
@@ -353,6 +361,7 @@ export const procedures = pgTable("procedures", {
 			name: "procedures_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_procedures_patient_performed_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.performedAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_procedures_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const doctorsNotes = pgTable("doctors_notes", {
@@ -376,6 +385,7 @@ export const doctorsNotes = pgTable("doctors_notes", {
 			name: "doctors_notes_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_doctors_notes_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_doctors_notes_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const history = pgTable("history", {
@@ -427,6 +437,7 @@ export const vitalSigns = pgTable("vital_signs", {
 			name: "vital_signs_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_vital_signs_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_vital_signs_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const nursesNotes = pgTable("nurses_notes", {
@@ -450,6 +461,7 @@ export const nursesNotes = pgTable("nurses_notes", {
 			name: "nurses_notes_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_nurses_notes_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_nurses_notes_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const notificationReads = pgTable("notification_reads", {
@@ -507,6 +519,7 @@ export const labTests = pgTable("lab_tests", {
 			name: "lab_tests_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_lab_tests_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_lab_tests_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const deathRecords = pgTable("death_records", {
@@ -517,6 +530,7 @@ export const deathRecords = pgTable("death_records", {
 	attachment: text(),
 	report: text(),
 }, (table) => [
+	index("idx_death_records_patient_id").using("btree", table.patientId.asc().nullsLast().op("int4_ops")),
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
@@ -569,6 +583,7 @@ export const complaints = pgTable("complaints", {
 			name: "complaints_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_complaints_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_complaints_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const physicalExaminations = pgTable("physical_examinations", {
@@ -600,6 +615,7 @@ export const physicalExaminations = pgTable("physical_examinations", {
 			name: "physical_examinations_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_physical_examinations_patient_created_at").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.createdAt.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_physical_examinations_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const diagnoses = pgTable("diagnoses", {
@@ -624,6 +640,7 @@ export const diagnoses = pgTable("diagnoses", {
 			name: "diagnoses_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_diagnoses_patient_diagnosis_date").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.diagnosisDate.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_diagnoses_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const prescriptions = pgTable("prescriptions", {
@@ -648,6 +665,7 @@ export const prescriptions = pgTable("prescriptions", {
 			name: "prescriptions_visit_id_fkey"
 		}).onDelete("set null"),
 	index("idx_prescriptions_patient_prescription_date").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.prescriptionDate.desc().nullsFirst().op("timestamp_ops")),
+	index("idx_prescriptions_visit_id").using("btree", table.visitId.asc().nullsLast().op("int4_ops")),
 ]);
 
 export const inpatientJournal = pgTable("inpatient_journal", {
@@ -661,6 +679,8 @@ export const inpatientJournal = pgTable("inpatient_journal", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
+	index("idx_inpatient_journal_admission_id").using("btree", table.admissionId.asc().nullsLast().op("int4_ops")),
+	index("idx_inpatient_journal_patient_id").using("btree", table.patientId.asc().nullsLast().op("int4_ops")),
 	foreignKey({
 			columns: [table.patientId],
 			foreignColumns: [patients.patientId],
@@ -701,6 +721,7 @@ export const patientVisits = pgTable("patient_visits", {
 			name: "patient_visits_admission_id_fkey"
 		}).onDelete("set null"),
 	index("idx_patient_visits_patient_check_in_time").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.checkInTime.desc().nullsFirst().op("timestamptz_ops")),
+	index("idx_patient_visits_doctor_id").using("btree", table.doctorId.asc().nullsLast().op("int4_ops")),
 ]);
 
 // ── Activity Logs ──────────────────────────────────────────────────────────────
@@ -808,6 +829,7 @@ export const patientInsurance = pgTable("patient_insurance", {
 			foreignColumns: [insurancePlans.id],
 			name: "patient_insurance_plan_id_fkey"
 		}).onDelete("set null"),
+	index("idx_patient_insurance_patient_primary_status").using("btree", table.patientId.asc().nullsLast().op("int4_ops"), table.isPrimary.asc().nullsLast().op("bool_ops"), table.status.asc().nullsLast().op("text_ops")),
 	index("idx_patient_insurance_patient_id").using("btree", table.patientId.asc().nullsLast().op("int4_ops")),
 	check("patient_insurance_status_check", sql`(status)::text = ANY ((ARRAY['Active'::character varying, 'Inactive'::character varying, 'Expired'::character varying])::text[])`),
 ]);

@@ -134,6 +134,13 @@
       "when": 1785061951929,
       "tag": "0018_rename_hospital_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785073937437,
+      "tag": "0019_add_missing_indexes",
+      "breakpoints": true
     }
   ]
 }
