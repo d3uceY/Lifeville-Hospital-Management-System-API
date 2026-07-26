@@ -19,10 +19,12 @@ export const upsertHospitalLogo = async (fileBuffer, contentType) => {
   const settings = await getAllSettings();
   const uploadFolder = `${settings.storage.folder_name}/${UPLOAD_SUBFOLDERS.HOSPITAL_LOGO}`;
 
-  const objectKey = storageService.buildObjectKey(uploadFolder, contentType);
-  await storageService.uploadObject(fileBuffer, objectKey, storageService.UPLOAD_PRESETS.DEFAULT, contentType);
+  // Store logo as PNG to preserve alpha transparency
+  const pngContentType = "image/png";
+  const objectKey = storageService.buildObjectKey(uploadFolder, pngContentType);
+  await storageService.uploadObject(fileBuffer, objectKey, storageService.UPLOAD_PRESETS.LOGO, pngContentType);
 
-  const mediaRecord = await mediaContentService.insertMediaContent({ key: objectKey, contentType });
+  const mediaRecord = await mediaContentService.insertMediaContent({ key: objectKey, contentType: pngContentType });
 
   // Link to settings_documents (id=1), clean up old logo if any
   const [current] = await db

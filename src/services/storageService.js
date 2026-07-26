@@ -10,6 +10,7 @@ export const UPLOAD_PRESETS = Object.freeze({
   AVATAR:         "avatar",         // 256×256 cover
   PATIENT_PHOTO:  "patient-photo",  // 400×400 cover
   DEFAULT:        "default",        // 1200×800 inside
+  LOGO:           "logo",           // 600px max, preserves alpha transparency
 });
 
 // ─── Sharp resize presets (same specs as previous Cloudinary uploads) ──────────
@@ -18,6 +19,7 @@ const RESIZE_PRESETS = {
   [UPLOAD_PRESETS.AVATAR]:        { width: 256, height: 256, fit: "cover" },
   [UPLOAD_PRESETS.PATIENT_PHOTO]: { width: 400, height: 400, fit: "cover" },
   [UPLOAD_PRESETS.DEFAULT]:       { width: 1200, height: 800, fit: "inside" },
+  [UPLOAD_PRESETS.LOGO]:          { width: 94, height: 94, fit: "inside" },
 };
 
 const QUALITY = {
@@ -25,13 +27,15 @@ const QUALITY = {
   [UPLOAD_PRESETS.AVATAR]:        70,
   [UPLOAD_PRESETS.PATIENT_PHOTO]: 70,
   [UPLOAD_PRESETS.DEFAULT]:       80,
+  [UPLOAD_PRESETS.LOGO]:          90,
 };
 
 /** MIME → file extension */
 const EXT_MAP = {
-  "image/jpeg": "jpg",
-  "image/png":  "png",
-  "image/webp": "webp",
+  "image/jpeg":     "jpg",
+  "image/png":      "png",
+  "image/webp":     "webp",
+  "image/svg+xml":  "svg",
   "application/pdf": "pdf",
 };
 
@@ -61,17 +65,24 @@ export function buildObjectKey(folder, mimeType) {
 export async function uploadObject(fileBuffer, objectKey, type = "default", mimeType = "image/jpeg") {
   const { client, bucket } = await getR2Client();
 
-  // Only run Sharp for image types — skip for PDFs and other non-image files
-  const isImage = mimeType.startsWith("image/");
+  // Only run Sharp for image types — skip for SVGs, PDFs, and other non-raster files
+  const isImage = mimeType.startsWith("image/") && mimeType !== "image/svg+xml";
   let body = fileBuffer;
 
   if (isImage) {
     const preset = RESIZE_PRESETS[type] !== undefined ? RESIZE_PRESETS[type] : RESIZE_PRESETS.default;
     const quality = QUALITY[type] !== undefined ? QUALITY[type] : QUALITY.default;
 
-    const sharpPipeline = sharp(fileBuffer).jpeg({ quality });
+    const sharpPipeline = sharp(fileBuffer);
     if (preset) sharpPipeline.resize(preset);
-    body = await sharpPipeline.toBuffer();
+
+    // Preserve alpha transparency for logos — use PNG output
+    if (type === UPLOAD_PRESETS.LOGO) {
+      body = await sharpPipeline.png({ quality }).toBuffer();
+      mimeType = "image/png";
+    } else {
+      body = await sharpPipeline.jpeg({ quality }).toBuffer();
+    }
   }
 
   await client.send(new PutObjectCommand({
