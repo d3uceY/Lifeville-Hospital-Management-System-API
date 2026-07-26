@@ -63,6 +63,7 @@ export const getLabTestsByPatientId = async (patientId) => {
     .innerJoin(patients, eq(patients.patientId, labTests.patientId))
     .where(eq(labTests.patientId, patientId))
     .orderBy(desc(labTests.createdAt));
+  return rows;
 };
 
 /** Fetches one lab test by ID.
